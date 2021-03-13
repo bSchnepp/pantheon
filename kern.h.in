@@ -1,0 +1,33 @@
+#ifndef _PANTHEON_KERN_VER_H_
+#define _PANTHEON_KERN_VER_H_
+
+/* clang-format: off */
+#if defined(__cplusplus)
+extern "C"
+{
+#endif
+
+#define PANTHEON_UNUSED(x) ((void)(x))
+
+#define PANTHEON_VERSION_MAJOR @PANTHEON_VERSION_MAJOR@
+#define PANTHEON_VERSION_MINOR @PANTHEON_VERSION_MINOR@
+#define PANTHEON_VERSION_PATCH @PANTHEON_VERSION_PATCH@
+
+#cmakedefine TARGET_SYSTEM
+#cmakedefine TARGET_SYSTEM_BCM2711 @TARGET_SYSTEM_BCM2711@
+#cmakedefine TARGET_SYSTEM_QEMU_AARCH64_VIRT @TARGET_SYSTEM_QEMU_AARCH64_VIRT@
+
+#if defined(__cplusplus)
+}
+#endif
+
+#if defined(TARGET_SYSTEM_QEMU_AARCH64_VIRT)
+#define MEM_BASE_ADDR (0x40000000)
+#define PANTHEON_LOG(fmt, ...) printf((fmt), __VA_ARGS__)
+#else
+#error Unsupported platform
+#endif
+
+/* clang-format: on */
+
+#endif
