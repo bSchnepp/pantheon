@@ -13,6 +13,23 @@ extern "C"
 {
 #endif
 
+int32_t MemCmp(char *Arg1, char *Arg2, uint32_t Amt)
+{
+	for (uint32_t Index = 0; Index < Amt; ++Index)
+	{
+		if (Arg1[Index] != Arg2[Index])
+		{
+			return Index;
+		}
+
+		if (Arg1[Index] == 0)
+		{
+			return Index;
+		}
+	}
+	return 0;
+}
+
 void GetStructEntries(fdt_header *dtb)
 {
 	/* Strings *could* be longer, but don't process those. */
@@ -45,6 +62,7 @@ void GetStructEntries(fdt_header *dtb)
 			 */
 			uint32_t Length = struct_ptr[Index++].GetNumHost();
 			uint32_t StringOffset = struct_ptr[Index++].GetNumHost();
+			volatile char *ItemData = reinterpret_cast<char*>(struct_ptr + Index);
 
 			char *CurStrMem = (((char*)(strings_ptr)) + StringOffset);
 
@@ -55,7 +73,7 @@ void GetStructEntries(fdt_header *dtb)
 				CopyIndex++;
 			}
 
-			/* Skip this entrie's data. */
+			/* Skip this entry's data. */
 			uint32_t Off = 4 - (Length % 4);
 			if (Length % 4)
 			{
