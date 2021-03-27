@@ -20,6 +20,7 @@ SET(CMAKE_EXE_LINKER_FLAGS "-nostdlib -nostartfiles")
 
 SET(TARGET_SYSTEM "qemu-aarch64-virt")
 SET(TARGET_SYSTEM_QEMU_AARCH64_VIRT ON)
+SET(TARGET_SYSTEM_BOARD "board/qemu-aarch64")
 
 # Be sure about the name...
 SET(TARGET_PROCESSOR "aarch64")

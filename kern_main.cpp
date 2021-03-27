@@ -1,21 +1,18 @@
+#include <kern_runtime.hpp>
 #include <kern_integers.hpp>
+#include <kern_datatypes.hpp>
+
 #include <DeviceTree/DeviceTree.hpp>
 
 static fdt_header *dtb_ptr = nullptr;
 
 static BEIntegerU32 *rsmvm_ptr = nullptr;
-static char *strings_ptr = nullptr;
+static CHAR *strings_ptr = nullptr;
 static BEIntegerU32 *struct_ptr = nullptr;
 
-/* clang-format: off */
-#ifdef __cplusplus
-extern "C"
+int32_t MemCmp(CHAR *Arg1, CHAR *Arg2, UINT32 Amt)
 {
-#endif
-
-int32_t MemCmp(char *Arg1, char *Arg2, uint32_t Amt)
-{
-	for (uint32_t Index = 0; Index < Amt; ++Index)
+	for (UINT32 Index = 0; Index < Amt; ++Index)
 	{
 		if (Arg1[Index] != Arg2[Index])
 		{
@@ -30,15 +27,15 @@ int32_t MemCmp(char *Arg1, char *Arg2, uint32_t Amt)
 	return 0;
 }
 
-void GetStructEntries(fdt_header *dtb)
+void GetStructEntries()
 {
 	/* Strings *could* be longer, but don't process those. */
-	static constexpr uint32_t StringBufSz = 512;
-	static volatile char TmpBuffer[StringBufSz];
+	static constexpr UINT32 StringBufSz = 512;
+	static volatile CHAR TmpBuffer[StringBufSz];
 
 	/* Go through the structs pointer. */
 	bool HitEnd = false;
-	uint32_t Index = 0;
+	UINT32 Index = 0;
 	while (!HitEnd)
 	{
 		/* Each item is aligned to 4 bytes.
@@ -48,11 +45,11 @@ void GetStructEntries(fdt_header *dtb)
 		 * Iterate through the list and find them. For now,
 		 * set a breakpoint on this function to 
 		 */
-		uint32_t Current = struct_ptr[Index++].GetNumHost();
+		UINT32 Current = struct_ptr[Index++].GetNumHost();
 		if (Current == FDT_PROP)
 		{
 			/* Clear the old buffer. */
-			for (uint32_t ClearIndex = 0; ClearIndex < StringBufSz; ++ClearIndex)
+			for (UINT32 ClearIndex = 0; ClearIndex < StringBufSz; ++ClearIndex)
 			{
 				TmpBuffer[ClearIndex] = '\0';
 			}
@@ -60,13 +57,13 @@ void GetStructEntries(fdt_header *dtb)
 			/* It's always a struct with 
 			 * these 2 entries right after. 
 			 */
-			uint32_t Length = struct_ptr[Index++].GetNumHost();
-			uint32_t StringOffset = struct_ptr[Index++].GetNumHost();
-			volatile char *ItemData = reinterpret_cast<char*>(struct_ptr + Index);
+			UINT32 Length = struct_ptr[Index++].GetNumHost();
+			UINT32 StringOffset = struct_ptr[Index++].GetNumHost();
+			volatile CHAR *ItemData = reinterpret_cast<CHAR*>(struct_ptr + Index);
 
-			char *CurStrMem = (((char*)(strings_ptr)) + StringOffset);
+			CHAR *CurStrMem = (((CHAR*)(strings_ptr)) + StringOffset);
 
-			uint32_t CopyIndex = 0;
+			UINT32 CopyIndex = 0;
 			while (CurStrMem[CopyIndex] && CopyIndex < StringBufSz - 1)
 			{
 				TmpBuffer[CopyIndex] = CurStrMem[CopyIndex];
@@ -74,7 +71,7 @@ void GetStructEntries(fdt_header *dtb)
 			}
 
 			/* Skip this entry's data. */
-			uint32_t Off = 4 - (Length % 4);
+			UINT32 Off = 4 - (Length % 4);
 			if (Length % 4)
 			{
 				Index += (Length + Off) / 4;
@@ -88,6 +85,12 @@ void GetStructEntries(fdt_header *dtb)
 
 }
 
+/* clang-format: off */
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 void kern_init(fdt_header *dtb)
 {
 	dtb_ptr = dtb;
@@ -98,12 +101,15 @@ void kern_init(fdt_header *dtb)
 		for (;;) {}
 	}
 
-	uint32_t DTBSize = dtb_ptr->totalsize.GetNumHost();
-	rsmvm_ptr = (BEIntegerU32*)(((char*)dtb_ptr) + (dtb_ptr->off_mem_rsvmap.GetNumHost()));
-	strings_ptr = (((char*)dtb_ptr) + (dtb_ptr->off_dt_strings.GetNumHost()));
-	struct_ptr = (BEIntegerU32*)(((char*)dtb_ptr) + (dtb_ptr->off_dt_struct.GetNumHost()));
+	UINT32 DTBSize = dtb_ptr->totalsize.GetNumHost();
+	rsmvm_ptr = (BEIntegerU32*)(((CHAR*)dtb_ptr) + (dtb_ptr->off_mem_rsvmap.GetNumHost()));
+	strings_ptr = (((CHAR*)dtb_ptr) + (dtb_ptr->off_dt_strings.GetNumHost()));
+	struct_ptr = (BEIntegerU32*)(((CHAR*)dtb_ptr) + (dtb_ptr->off_dt_struct.GetNumHost()));
 
-	GetStructEntries(dtb);
+	BoardInit();
+	WriteString("Hello, world!\n");
+
+	GetStructEntries();
 
 	for (;;)
 	{
