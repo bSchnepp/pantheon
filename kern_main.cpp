@@ -27,6 +27,22 @@ int32_t MemCmp(CHAR *Arg1, CHAR *Arg2, UINT32 Amt)
 	return 0;
 }
 
+void ClearBuffer(CHAR *Location, UINT32 Amount)
+{
+	for (UINT32 Index = 0; Index < Amount; ++Index)
+	{
+		Location[Index] = '\0';
+	}
+}
+
+void WriteTabs(UINT32 TabAmt)
+{
+	for (UINT32 Index = 0; Index < TabAmt; ++Index)
+	{
+		WriteSerialChar('\t');
+	}
+}
+
 void GetStructEntries()
 {
 	/* Strings *could* be longer, but don't process those. */
@@ -36,6 +52,7 @@ void GetStructEntries()
 	/* Go through the structs pointer. */
 	bool HitEnd = false;
 	UINT32 Index = 0;
+	UINT32 IndentIndex = 0;
 	while (!HitEnd)
 	{
 		/* Each item is aligned to 4 bytes.
@@ -46,13 +63,20 @@ void GetStructEntries()
 		 * set a breakpoint on this function to 
 		 */
 		UINT32 Current = struct_ptr[Index++].GetNumHost();
+		if (Current == FDT_BEGIN_NODE)
+		{
+			WriteString("<<BEGIN DEVICE PROP>>\n");
+			IndentIndex = 1;
+		}
+		else if (Current == FDT_END_NODE)
+		{
+			WriteString("<<END DEVICE PROP>>\n");
+			IndentIndex = 0;
+		}
 		if (Current == FDT_PROP)
 		{
 			/* Clear the old buffer. */
-			for (UINT32 ClearIndex = 0; ClearIndex < StringBufSz; ++ClearIndex)
-			{
-				TmpBuffer[ClearIndex] = '\0';
-			}
+			ClearBuffer((CHAR*)TmpBuffer, StringBufSz);
 
 			/* It's always a struct with 
 			 * these 2 entries right after. 
@@ -76,9 +100,24 @@ void GetStructEntries()
 			{
 				Index += (Length + Off) / 4;
 			}
+
+			WriteTabs(IndentIndex);
+			WriteString((const CHAR*)TmpBuffer);
+			WriteString(":\n");
+			WriteTabs(IndentIndex);
+
+			ClearBuffer((CHAR*)TmpBuffer, StringBufSz);
+			for (UINT32 ItemIndex = 0; ItemIndex < Length; ++ItemIndex)
+			{
+				TmpBuffer[ItemIndex] = ItemData[ItemIndex];
+			}
+			WriteString((const CHAR*)TmpBuffer);
+			WriteString("\n");
 		}
 		else if (Current == FDT_END)
 		{
+			WriteString("End of device trees\n");
+			IndentIndex = 0;
 			HitEnd = true;
 		}
 	}
@@ -107,8 +146,7 @@ void kern_init(fdt_header *dtb)
 	struct_ptr = (BEIntegerU32*)(((CHAR*)dtb_ptr) + (dtb_ptr->off_dt_struct.GetNumHost()));
 
 	BoardInit();
-	WriteString("Hello, world!\n");
-
+	WriteString("booting based on device tree pointer!\n");
 	GetStructEntries();
 
 	for (;;)
