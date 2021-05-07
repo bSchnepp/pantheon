@@ -53,11 +53,16 @@ void kern_init(fdt_header *dtb)
 		for (;;) {}
 	}
 
-	DeviceTreeState DTBState;
-	InitializeDeviceTreeState(dtb, &DTBState);
+	DeviceTreeBlob DTBState(dtb);
 
 	BoardInit();
 	WriteString("booting based on device tree pointer!\n");
+
+	while (!DTBState.EndStruct())
+	{
+		DTBState.NextStruct();
+	}
+	WriteString("finished going through dtb");
 
 	for (;;)
 	{

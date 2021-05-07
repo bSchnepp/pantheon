@@ -57,12 +57,11 @@ VOID pantheon::pl011::PL011WriteChar(UINT8 Channel, CHAR Char)
 {
 	UINT8 RealChannel = Channel % 8;
 	UINT64 UartAddr = Channels[RealChannel];
-	UINT64 UartData = UartAddr + pantheon::pl011::PL011_DATA_REG;
 
-	UINT32 Unavailable = PL011Read(RealChannel, pantheon::pl011::PL011_FLAG_REG) & 0x20;
-	while (Unavailable)
+	UINT32 Unavailable;
+	do
 	{
 		Unavailable = PL011Read(RealChannel, pantheon::pl011::PL011_FLAG_REG) & 0x20;
-	}
+	} while (Unavailable);
 	PL011Write(RealChannel, pantheon::pl011::PL011_DATA_REG, Char);
 }

@@ -28,6 +28,10 @@ ADD_SUBDIRECTORY(arch)
 ADD_SUBDIRECTORY(Common)
 ADD_SUBDIRECTORY(Devices)
 
+# Also go and add in some external dependencies...
+INCLUDE_DIRECTORIES(externals/printf)
+ADD_SUBDIRECTORY(externals)
+
 # Get definitions specific to this board
 ADD_SUBDIRECTORY(${TARGET_SYSTEM_BOARD})
 
@@ -38,6 +42,7 @@ TARGET_LINK_LIBRARIES(pantheon ArchLib)
 TARGET_LINK_LIBRARIES(pantheon Common)
 TARGET_LINK_LIBRARIES(pantheon Devices)
 TARGET_LINK_LIBRARIES(pantheon Board)
+TARGET_LINK_LIBRARIES(pantheon Printf)
 
 ADD_CUSTOM_COMMAND(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
 	COMMAND ${CMAKE_OBJCOPY} -O binary ${CMAKE_PROJECT_NAME} kernel.img)

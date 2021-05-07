@@ -35,3 +35,12 @@ void BoardInit()
 {
 	pantheon::pl011::PL011Init(DeviceToAddress[DEVICE_TYPE_UART], 0);
 }
+
+void _putchar(char c)
+{
+	if (c == '\n')
+	{
+		WriteSerialChar('\r');
+	}
+	WriteSerialChar(c);
+}

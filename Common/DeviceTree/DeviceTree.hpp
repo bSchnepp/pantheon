@@ -40,20 +40,28 @@ typedef struct fdt_prop
 	BEIntegerU32 nameoff;
 }fdt_prop;
 
-typedef struct DeviceTreeState
+class DeviceTreeBlob
 {
-	UINT64 Index;
-	bool AtEnd;
+public:
+	DeviceTreeBlob(fdt_header *Header);
+	~DeviceTreeBlob();
 
-	void *rsmvm_ptr;
-	void *strings_ptr;
-	void *struct_ptr;
-}DeviceTreeState;
+	void NextStruct();
+	BOOL EndStruct();
+
+	UINT64 GetStructIndex();
+	FDTNodeType GetStructType();
+
+private:
+	UINT64 StructIndex;
+
+	BEIntegerU32 *rsmvm_ptr;
+	CHAR *strings_ptr;
+	BEIntegerU32 *struct_ptr;
+};
 
 
 
 bool CheckHeader(fdt_header *Header);
-void InitializeDeviceTreeState(fdt_header *Header, DeviceTreeState *State);
-void GetNextDeviceTreeNode(DeviceTreeState &CurState);
 
 #endif

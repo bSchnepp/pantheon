@@ -1,3 +1,4 @@
+#include <printf.h>
 #include <kern_datatypes.hpp>
 
 #ifndef _KERN_RUNTIME_HPP_
@@ -23,5 +24,16 @@ INT8  ReadMMIOS8(UINT64 Addr);
 void BoardInit();
 void WriteSerialChar(CHAR Char);
 void WriteString(const CHAR *String);
+
+extern "C"
+{
+	void _putchar(char c);
+}
+
+#if defined(printf)
+#define SERIAL_LOG(fmt, ...) printf((fmt), __VA_ARGS__)
+#else
+#define SERIAL_LOG(fmt, ...)
+#endif
 
 #endif
