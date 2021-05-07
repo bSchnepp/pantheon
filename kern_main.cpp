@@ -62,6 +62,7 @@ void kern_init(fdt_header *dtb)
 	{
 		DTBState.NextStruct();
 	}
+	
 	WriteString("finished going through dtb");
 
 	for (;;)
