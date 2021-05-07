@@ -1,3 +1,4 @@
+#include <kern_datatypes.hpp>
 #include <kern_integers.hpp>
 
 #ifndef _DEVICE_TREE_HPP_
@@ -24,11 +25,14 @@ typedef struct fdt_reserve_entry
 }fdt_reserve_entry;
 
 /* Note that these are host endianness. */
-#define FDT_BEGIN_NODE (0x00000001)
-#define FDT_END_NODE (0x00000002)
-#define FDT_PROP (0x00000003)
-#define FDT_NOP (0x00000004)
-#define FDT_END (0x00000009)
+typedef enum FDTNodeType : UINT32
+{
+	FDT_BEGIN_NODE = 0x00000001,
+	FDT_END_NODE = 0x00000002,
+	FDT_PROP = 0x00000003,
+	FDT_NOP = 0x00000004,
+	FDT_END = 0x00000009,
+}FDTNodeType;
 
 typedef struct fdt_prop
 {
@@ -36,7 +40,20 @@ typedef struct fdt_prop
 	BEIntegerU32 nameoff;
 }fdt_prop;
 
+typedef struct DeviceTreeState
+{
+	UINT64 Index;
+	bool AtEnd;
+
+	void *rsmvm_ptr;
+	void *strings_ptr;
+	void *struct_ptr;
+}DeviceTreeState;
+
+
 
 bool CheckHeader(fdt_header *Header);
+void InitializeDeviceTreeState(fdt_header *Header, DeviceTreeState *State);
+void GetNextDeviceTreeNode(DeviceTreeState &CurState);
 
 #endif

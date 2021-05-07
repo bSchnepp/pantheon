@@ -7,9 +7,11 @@
 extern "C"
 {
 
+[[noreturn]]
 void __cxa_pure_virtual()
 {
 	/* Do nothing. Possibly warn? */
+	for (;;){}
 }
 
 int __cxa_atexit(void (*f)(void*), void *obj, void *dso)
