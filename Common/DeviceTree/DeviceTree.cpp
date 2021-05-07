@@ -149,3 +149,83 @@ FDTNodeType DeviceTreeBlob::GetStructType()
 {
 	return static_cast<FDTNodeType>(this->struct_ptr[this->StructIndex].GetNumHost());
 }
+
+/**
+ * \~english @brief Obtains the offset into the strings table where the name of
+ * the currently active struct is located. This function is only valid if the
+ * currently active FDT node type is an FDT_PROP.
+ * \~english @author Brian Schnepp
+ * \~english @returns The offset of the strings table where the property name is
+ * located. If not valid, then 0 is returned.
+ * @see FDTNodeType
+ * @see GetStructType
+ */
+UINT64 DeviceTreeBlob::GetPropStructNameIndex()
+{
+	if (this->struct_ptr[this->StructIndex].GetNumHost() != FDT_PROP)
+	{
+		return 0;
+	}
+
+	return this->struct_ptr[this->StructIndex + 2].GetNumHost();
+}
+
+/**
+ * \~english @brief Copies a string from the string table, given an offset,
+ * into another user-supplied buffer. If the null string is reached, or the
+ * buffer given is filled, then the function terminates filling the buffer.
+ * \~english @details The resulting string will be copied up to the end of the
+ * buffer, or the end of the string. Should the given string exceed the buffer
+ * size, the string will be terminated at that location, and the null character
+ * is placed at the end, ensuring strings are always null-terminated.
+ * \~english @author Brian Schnepp
+ */
+void DeviceTreeBlob::CopyStringFromOffset(UINT64 Offset, CHAR *Buffer, UINT64 BufferSize)
+{
+	UINT64 CurrentAmt = 0;
+	for (CurrentAmt = 0; CurrentAmt < BufferSize; ++CurrentAmt)
+	{
+		Buffer[CurrentAmt] = this->strings_ptr[Offset + CurrentAmt];
+		if (Buffer[CurrentAmt] == '\0')
+		{
+			break;
+		}
+	}
+	Buffer[BufferSize - 1] = '\0';
+}
+
+/**
+ * \~english @brief Copies a string from the current begin node into another buffer.
+ * \~english @details The resulting string will be copied up to the end of the
+ * buffer, or the end of the string. Should the given string exceed the buffer
+ * size, the string will be terminated at that location, and the null character
+ * is placed at the end, ensuring strings are always null-terminated.
+ * 
+ * This function will not modify the supplied buffer if the current node is not
+ * an FDT_BEGIN_NODE. Thus, this function should only be used if the current
+ * node is an FDT_BEGIN_NODE.
+ * 
+ * \~english @author Brian Schnepp
+ */
+void DeviceTreeBlob::CopyStringFromStructBeginNode(CHAR *Buffer, UINT64 BufferSize)
+{
+	if (this->struct_ptr[this->StructIndex].GetNumHost() != FDT_BEGIN_NODE)
+	{
+		return;
+	}
+
+	CHAR *StringBuf = (CHAR*)(this->struct_ptr);
+	StringBuf += (sizeof(BEIntegerU32) * (this->StructIndex + 1));
+
+	UINT64 CurrentAmt = 0;
+	for (CurrentAmt = 0; CurrentAmt < BufferSize; ++CurrentAmt)
+	{
+		Buffer[CurrentAmt] = StringBuf[CurrentAmt];
+		if (Buffer[CurrentAmt] == '\0')
+		{
+			break;
+		}
+	}
+	Buffer[BufferSize - 1] = '\0';
+
+}

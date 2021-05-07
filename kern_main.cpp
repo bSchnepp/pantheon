@@ -58,11 +58,33 @@ void kern_init(fdt_header *dtb)
 	BoardInit();
 	WriteString("booting based on device tree pointer!\n");
 
+	CHAR CurDevNode[512];
+	ClearBuffer(CurDevNode, 512);
+
 	while (!DTBState.EndStruct())
 	{
 		DTBState.NextStruct();
+		FDTNodeType CurNode = DTBState.GetStructType();
+		if (CurNode == FDT_PROP)
+		{
+			UINT64 Offset = DTBState.GetPropStructNameIndex();
+			CHAR Buffer[512];
+			DTBState.CopyStringFromOffset(Offset, Buffer, 512);
+			WriteString(CurDevNode);
+			WriteString(" : ");
+			WriteString(Buffer);
+			WriteString("\n");
+		}
+		else if (CurNode == FDT_BEGIN_NODE)
+		{
+			ClearBuffer(CurDevNode, 512);
+			DTBState.CopyStringFromStructBeginNode(CurDevNode, 512);
+			WriteString("<<");
+			WriteString(CurDevNode);
+			WriteString(">>\n");
+		}
 	}
-	
+
 	WriteString("finished going through dtb");
 
 	for (;;)

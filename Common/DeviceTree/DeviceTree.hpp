@@ -46,11 +46,16 @@ public:
 	DeviceTreeBlob(fdt_header *Header);
 	~DeviceTreeBlob();
 
+	void CopyStringFromOffset(UINT64 Offset, CHAR *Buffer, UINT64 BufferSize);
+
 	void NextStruct();
 	BOOL EndStruct();
 
 	UINT64 GetStructIndex();
 	FDTNodeType GetStructType();
+
+	UINT64 GetPropStructNameIndex();
+	void CopyStringFromStructBeginNode(CHAR *Buffer, UINT64 BufferSize);
 
 private:
 	UINT64 StructIndex;
