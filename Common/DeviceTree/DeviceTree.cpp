@@ -1,9 +1,21 @@
-#include <kern_integers.hpp>
-
 #include "DeviceTree.hpp"
 
 #include <kern_runtime.hpp>
+#include <kern_integers.hpp>
 
+/**
+ * @file Common/DeviceTree/DeviceTree.cpp
+ * \~english @brief Definitions for management of the device tree blob present
+ * on a device, after initialization by underlying firmware (ie, Das-U-Boot)
+ * \~english @author Brian Schnepp
+ */
+
+/**
+ * \~english @brief Checks the validity of the DeviceTree header, ensuring
+ * that it correctly follows the specification with alignment and it's magic number.
+ * \~english @author Brian Schnepp
+ * \~english @param Header The location of the DeviceTree flattened binary header
+ */
 bool CheckHeader(fdt_header *Header)
 {
 	/* Specification mandates this be aligned to 8 bytes. */
@@ -15,7 +27,14 @@ bool CheckHeader(fdt_header *Header)
 	return Header->magic.GetNumHost() == 0xd00dfeed;
 }
 
-
+/**
+ * \~english @brief Initializes a class representing the state of traversal down the
+ * device tree blob structure. All accesses to the DeviceTree are done as read-only,
+ * such that allocations of multiple DeviceTreeBlob objects are thread-safe.
+ * \~english @author Brian Schnepp
+ * \~english @param Header The location of the DeviceTree flattened binary header. Header is assumed to be valid, as per CheckHeader
+ * @see CheckHeader
+ */
 DeviceTreeBlob::DeviceTreeBlob(fdt_header *Header)
 {
 	this->StructIndex = 0;
@@ -29,6 +48,13 @@ DeviceTreeBlob::~DeviceTreeBlob()
 
 }
 
+/**
+ * \~english @brief Iterates the current DeviceTreeBlob structure to move to the
+ * next entry in the flattened device tree.
+ * \~english @author Brian Schnepp
+ * \~english @param Header The location of the DeviceTree flattened binary header. Header is assumed to be valid, as per CheckHeader
+ * @see CheckHeader
+ */
 void DeviceTreeBlob::NextStruct()
 {
 	if (this->EndStruct())
@@ -38,6 +64,7 @@ void DeviceTreeBlob::NextStruct()
 
 	FDTNodeType CurType = (FDTNodeType)(this->struct_ptr[this->StructIndex].GetNumHost());
 	this->StructIndex++;
+
 	switch (CurType)
 	{
 		case FDT_BEGIN_NODE:
@@ -83,16 +110,41 @@ void DeviceTreeBlob::NextStruct()
 	}
 }
 
+/**
+ * \~english @brief Checks if the current iterator has reached the end of the
+ * device tree. Per the DeviceTree specification, this is true if and only if
+ * the last node eached is FDT_END.
+ * \~english @author Brian Schnepp
+ * \~english @returns True if there is any more nodes in the DTB to process,
+ * false if FDT_END was reached.
+ * @see FDT_END
+ */
 BOOL DeviceTreeBlob::EndStruct()
 {
 	return this->struct_ptr[this->StructIndex].GetNumHost() == FDT_END;
 }
 
+/**
+ * \~english @brief Obtains the raw pointer offset used for the DeviceTree blob.
+ * It is important to note that this is not the index of the current node being
+ * processed, but is instead of location from the start of the structure pointer
+ * that is currently active.
+ * \~english @author Brian Schnepp
+ * \~english @returns An offset from the start of the DeviceTree that is currently
+ * being parsed.
+ */
 UINT64 DeviceTreeBlob::GetStructIndex()
 {
 	return this->StructIndex;
 }
 
+/**
+ * \~english @brief Obtains the current FDT node type from the currently
+ * active DeviceTree node. This can be one of any valid type of FDTNodeType.
+ * \~english @author Brian Schnepp
+ * \~english @returns The currently selected FDT node type.
+ * @see FDTNodeType
+ */
 FDTNodeType DeviceTreeBlob::GetStructType()
 {
 	return static_cast<FDTNodeType>(this->struct_ptr[this->StructIndex].GetNumHost());
