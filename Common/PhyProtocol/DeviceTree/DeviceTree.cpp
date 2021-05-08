@@ -301,6 +301,55 @@ void DeviceTreeBlob::CopyU64FromStructPropNode(UINT64 *Buffer)
 	*Buffer = AsU64->GetNumHost();
 }
 
+/**
+ * \~english @brief Parses a node begin type name to a node name and unit address.
+ * \~english @details The supplied node name should be obtained from FDT_BEGIN_NODE.
+ * Per the DeviceTree Specification, the string supplied as data for that node
+ * must be of the form `node-name@unit-address`, and if such a node name or address
+ * does not exist, '/' is used instead. Should it have no reg property inside, the
+ * `@unit-address` portion is omitted. This function, appropriately, handles the
+ * cases supplied by writing a zero to the address if no address is supplied, and
+ * writes "/" to the DeviceType if no type is defined as well.
+ * \~english @author Brian Schnepp
+ * @see FDT_BEGIN_NODE
+ */
+void DeviceTreeBlob::NodeNameToAddress(CHAR *Buffer, CHAR *DeviceType, UINT64 DeviceTypeBufferSpace, UINT64 *Address)
+{
+	/* Can't do anything really. */
+	if (DeviceTypeBufferSpace < 2)
+	{
+		return;
+	}
+
+	UINT64 StrLen = 0;
+	UINT64 AtLocation = 0;
+	for (UINT64 Index = 0; Buffer[Index] != '\0'; ++Index)
+	{
+		StrLen++;
+		if (Buffer[Index] == '@')
+		{
+			AtLocation = Index;
+		}
+	}
+
+	for (UINT64 NameIndex = 0; NameIndex < DeviceTypeBufferSpace; ++NameIndex)
+	{
+		if (AtLocation && NameIndex >= AtLocation)
+		{
+			DeviceType[NameIndex] = '\0';
+			break;
+		}
+		DeviceType[NameIndex] = Buffer[NameIndex];
+	}
+	DeviceType[DeviceTypeBufferSpace - 1] = '\0';
+
+	*Address = 0;
+	if (AtLocation)
+	{
+		
+	}
+}
+
 
 constexpr const CHAR *StringPropTypes[] =
 {

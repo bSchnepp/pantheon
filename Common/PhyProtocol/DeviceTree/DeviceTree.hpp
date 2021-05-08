@@ -1,5 +1,5 @@
-#include <kern_datatypes.hpp>
 #include <kern_integers.hpp>
+#include <kern_datatypes.hpp>
 
 #ifndef _DEVICE_TREE_HPP_
 #define _DEVICE_TREE_HPP_
@@ -65,6 +65,8 @@ public:
 	void CopyStringFromStructPropNode(CHAR *Buffer, UINT64 BufferSize);
 	void CopyU32FromStructPropNode(UINT32 *Buffer);
 	void CopyU64FromStructPropNode(UINT64 *Buffer);
+
+	void NodeNameToAddress(CHAR *Buffer, CHAR *DeviceType, UINT64 DeviceTypeBufferSpace, UINT64 *Address);
 
 private:
 	UINT64 StructIndex;

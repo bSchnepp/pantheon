@@ -281,8 +281,6 @@ bool operator==(BigEndianInteger<T> LHS, Integer<T> RHS)
 }
 
 /* TODO: Maybe add big endian + system endian integers? And other math. */
-
-
 COMPILER_ASSERT(sizeof(Integer<uint8_t>) == sizeof(uint8_t));
 COMPILER_ASSERT(sizeof(Integer<uint16_t>) == sizeof(uint16_t));
 COMPILER_ASSERT(sizeof(Integer<uint32_t>) == sizeof(uint32_t));

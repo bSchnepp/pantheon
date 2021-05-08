@@ -2,7 +2,7 @@
 #include <kern_integers.hpp>
 #include <kern_datatypes.hpp>
 
-#include <DeviceTree/DeviceTree.hpp>
+#include <PhyProtocol/DeviceTree/DeviceTree.hpp>
 
 constexpr UINT32 ConstStrLen(const CHAR *Str)
 {
