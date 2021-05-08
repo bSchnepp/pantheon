@@ -40,6 +40,9 @@ typedef struct fdt_prop
 	BEIntegerU32 nameoff;
 }fdt_prop;
 
+BOOL IsStringPropType(const CHAR *Prop);
+BOOL IsStringListPropType(const CHAR *Prop);
+
 class DeviceTreeBlob
 {
 public:
@@ -56,6 +59,7 @@ public:
 
 	UINT64 GetPropStructNameIndex();
 	void CopyStringFromStructBeginNode(CHAR *Buffer, UINT64 BufferSize);
+	void CopyStringFromStructPropNode(CHAR *Buffer, UINT64 BufferSize);
 
 private:
 	UINT64 StructIndex;

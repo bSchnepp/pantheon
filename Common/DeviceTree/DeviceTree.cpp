@@ -229,3 +229,82 @@ void DeviceTreeBlob::CopyStringFromStructBeginNode(CHAR *Buffer, UINT64 BufferSi
 	Buffer[BufferSize - 1] = '\0';
 
 }
+
+/**
+ * \~english @brief Copies a string from the current property into another buffer.
+ * \~english @details The resulting string will be copied up to the end of the
+ * buffer, or the end of the string. Should the given string exceed the buffer
+ * size, the string will be terminated at that location, and the null character
+ * is placed at the end, ensuring strings are always null-terminated.
+ * 
+ * This function will not modify the supplied buffer if the current node is not
+ * an FDT_PROP. Thus, this function should only be used if the current
+ * node is an FDT_PROP.
+ * 
+ * \~english @author Brian Schnepp
+ */
+void DeviceTreeBlob::CopyStringFromStructPropNode(CHAR *Buffer, UINT64 BufferSize)
+{
+	if (this->struct_ptr[this->StructIndex].GetNumHost() != FDT_PROP)
+	{
+		return;
+	}
+
+	CHAR *StringBuf = (CHAR*)(this->struct_ptr);
+	StringBuf += (sizeof(BEIntegerU32) * (this->StructIndex + 3));
+
+	UINT64 CurrentAmt = 0;
+	for (CurrentAmt = 0; CurrentAmt < BufferSize; ++CurrentAmt)
+	{
+		Buffer[CurrentAmt] = StringBuf[CurrentAmt];
+		if (Buffer[CurrentAmt] == '\0')
+		{
+			break;
+		}
+	}
+	Buffer[BufferSize - 1] = '\0';	
+}
+
+constexpr CHAR *StringPropTypes[] =
+{
+	"model",
+	"status",
+	"bootargs",
+	"stdout-path",
+	"stdin-path",
+	"device_type",
+	"power-isa-version",
+	"mmu-type",
+	"label",
+	"phy-connection-type",
+};
+
+constexpr CHAR *StringListPropTypes[] =
+{
+	"compatible",
+	"enable-method",
+};
+
+BOOL IsStringPropType(const CHAR *Prop)
+{
+	for (const CHAR *Item : StringPropTypes)
+	{
+		if (StringCompare((void*)Item, (void*)Prop, 32))
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+BOOL IsStringListPropType(const CHAR *Prop)
+{
+	for (const CHAR *Item : StringListPropTypes)
+	{
+		if (StringCompare((void*)Item, (void*)Prop, 32))
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}

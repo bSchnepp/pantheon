@@ -30,6 +30,8 @@ extern "C"
 	void _putchar(char c);
 }
 
+UINT64 StringCompare(void *L, void *R, UINT64 Amt);
+
 #if defined(printf)
 #define SERIAL_LOG(fmt, ...) printf((fmt), __VA_ARGS__)
 #else

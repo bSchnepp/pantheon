@@ -151,3 +151,22 @@ int64_t SwapBytes(int64_t Item)
 {
 	return __builtin_bswap64(Item);
 }
+
+UINT64 StringCompare(void *L, void *R, UINT64 Amt)
+{
+	CHAR *CL = reinterpret_cast<CHAR*>(L);
+	CHAR *CR = reinterpret_cast<CHAR*>(R);
+
+	for (UINT64 Index = 0; Index < Amt; ++Index)
+	{
+		if (CL[Index] != CR[Index])
+		{
+			return FALSE;
+		}
+		if (CL[Index] == '\0')
+		{
+			break;
+		}
+	}
+	return TRUE;
+}

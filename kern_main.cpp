@@ -73,6 +73,14 @@ void kern_init(fdt_header *dtb)
 			WriteString(CurDevNode);
 			WriteString(" : ");
 			WriteString(Buffer);
+			if (IsStringPropType(Buffer) || IsStringListPropType(Buffer))
+			{
+				CHAR Buffer2[512];
+				DTBState.CopyStringFromStructPropNode(Buffer2, 512);
+				WriteString(" (");
+				WriteString(Buffer2);
+				WriteString(")");
+			}
 			WriteString("\n");
 		}
 		else if (CurNode == FDT_BEGIN_NODE)
