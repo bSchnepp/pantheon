@@ -59,7 +59,10 @@ public:
 
 	UINT64 GetPropStructNameIndex();
 	void CopyStringFromStructBeginNode(CHAR *Buffer, UINT64 BufferSize);
+
 	void CopyStringFromStructPropNode(CHAR *Buffer, UINT64 BufferSize);
+	void CopyU32FromStructPropNode(UINT32 *Buffer);
+	void CopyU64FromStructPropNode(UINT64 *Buffer);
 
 private:
 	UINT64 StructIndex;

@@ -262,8 +262,45 @@ void DeviceTreeBlob::CopyStringFromStructPropNode(CHAR *Buffer, UINT64 BufferSiz
 			break;
 		}
 	}
-	Buffer[BufferSize - 1] = '\0';	
+	Buffer[BufferSize - 1] = '\0';
 }
+
+/**
+ * \~english @brief Copies a u32 from the current property into another buffer. 
+ * \~english @author Brian Schnepp
+ */
+void DeviceTreeBlob::CopyU32FromStructPropNode(UINT32 *Buffer)
+{
+	if (this->struct_ptr[this->StructIndex].GetNumHost() != FDT_PROP)
+	{
+		return;
+	}
+
+	CHAR *RawBuf = (CHAR*)(this->struct_ptr);
+	RawBuf += (sizeof(BEIntegerU32) * (this->StructIndex + 3));
+
+	BEIntegerU32 *AsU32 = (BEIntegerU32*)RawBuf;
+	*Buffer = AsU32->GetNumHost();
+}
+
+/**
+ * \~english @brief Copies a u64 from the current property into another buffer. 
+ * \~english @author Brian Schnepp
+ */
+void DeviceTreeBlob::CopyU64FromStructPropNode(UINT64 *Buffer)
+{
+	if (this->struct_ptr[this->StructIndex].GetNumHost() != FDT_PROP)
+	{
+		return;
+	}
+
+	CHAR *RawBuf = (CHAR*)(this->struct_ptr);
+	RawBuf += (sizeof(BEIntegerU32) * (this->StructIndex + 3));
+
+	BEIntegerU64 *AsU64 = (BEIntegerU64*)RawBuf;
+	*Buffer = AsU64->GetNumHost();
+}
+
 
 constexpr CHAR *StringPropTypes[] =
 {
@@ -308,3 +345,4 @@ BOOL IsStringListPropType(const CHAR *Prop)
 	}
 	return FALSE;
 }
+
