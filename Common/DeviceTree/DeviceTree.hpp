@@ -42,6 +42,8 @@ typedef struct fdt_prop
 
 BOOL IsStringPropType(const CHAR *Prop);
 BOOL IsStringListPropType(const CHAR *Prop);
+BOOL IsU32PropType(const CHAR *Prop);
+BOOL IsU64PropType(const CHAR *Prop);
 
 class DeviceTreeBlob
 {

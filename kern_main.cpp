@@ -56,7 +56,7 @@ void kern_init(fdt_header *dtb)
 	DeviceTreeBlob DTBState(dtb);
 
 	BoardInit();
-	WriteString("booting based on device tree pointer!\n");
+	SERIAL_LOG("%s\n", "booting based on device tree pointer!");
 
 	CHAR CurDevNode[512];
 	ClearBuffer(CurDevNode, 512);
@@ -70,30 +70,46 @@ void kern_init(fdt_header *dtb)
 			UINT64 Offset = DTBState.GetPropStructNameIndex();
 			CHAR Buffer[512];
 			DTBState.CopyStringFromOffset(Offset, Buffer, 512);
-			WriteString(CurDevNode);
-			WriteString(" : ");
-			WriteString(Buffer);
+			SERIAL_LOG("%s", CurDevNode);
+			SERIAL_LOG("%s", " : ");
+			SERIAL_LOG("%s", Buffer);
 			if (IsStringPropType(Buffer) || IsStringListPropType(Buffer))
 			{
 				CHAR Buffer2[512];
 				DTBState.CopyStringFromStructPropNode(Buffer2, 512);
-				WriteString(" (");
-				WriteString(Buffer2);
-				WriteString(")");
+				SERIAL_LOG("%s", " (");
+				SERIAL_LOG("%s", Buffer2);
+				SERIAL_LOG("%s", ")");
 			}
-			WriteString("\n");
+			else if (IsU32PropType(Buffer))
+			{
+				UINT32 U32;
+				DTBState.CopyU32FromStructPropNode(&U32);
+				SERIAL_LOG("%s", " (");
+				SERIAL_LOG("%u", U32);
+				SERIAL_LOG("%s", ")");
+			}
+			else if (IsU64PropType(Buffer))
+			{
+				UINT64 U64;
+				DTBState.CopyU64FromStructPropNode(&U64);
+				SERIAL_LOG("%s", " (");
+				SERIAL_LOG("%u", U64);
+				SERIAL_LOG("%s", ")");
+			}
+			SERIAL_LOG("%s", "\n");
 		}
 		else if (CurNode == FDT_BEGIN_NODE)
 		{
 			ClearBuffer(CurDevNode, 512);
 			DTBState.CopyStringFromStructBeginNode(CurDevNode, 512);
-			WriteString("<<");
-			WriteString(CurDevNode);
-			WriteString(">>\n");
+			SERIAL_LOG("%s", "<<");
+			SERIAL_LOG("%s", CurDevNode);
+			SERIAL_LOG("%s", ">>\n");
 		}
 	}
 
-	WriteString("finished going through dtb");
+	SERIAL_LOG("%s\n", "finished going through dtb");
 
 	for (;;)
 	{

@@ -302,7 +302,7 @@ void DeviceTreeBlob::CopyU64FromStructPropNode(UINT64 *Buffer)
 }
 
 
-constexpr CHAR *StringPropTypes[] =
+constexpr const CHAR *StringPropTypes[] =
 {
 	"model",
 	"status",
@@ -316,10 +316,28 @@ constexpr CHAR *StringPropTypes[] =
 	"phy-connection-type",
 };
 
-constexpr CHAR *StringListPropTypes[] =
+constexpr const CHAR *StringListPropTypes[] =
 {
 	"compatible",
 	"enable-method",
+};
+
+constexpr const CHAR *UInt32PropTypes[] =
+{
+	"phandle",
+	"#address-cells",
+	"#size-cells",
+	"#interrupt-cells",
+	"virtual-reg",
+};
+
+constexpr const CHAR *UInt64PropTypes[] =
+{
+	"phandle",
+	"#address-cells",
+	"#size-cells",
+	"#interrupt-cells",
+	"virtual-reg",
 };
 
 BOOL IsStringPropType(const CHAR *Prop)
@@ -337,6 +355,30 @@ BOOL IsStringPropType(const CHAR *Prop)
 BOOL IsStringListPropType(const CHAR *Prop)
 {
 	for (const CHAR *Item : StringListPropTypes)
+	{
+		if (StringCompare((void*)Item, (void*)Prop, 32))
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+BOOL IsU32PropType(const CHAR *Prop)
+{
+	for (const CHAR *Item : UInt32PropTypes)
+	{
+		if (StringCompare((void*)Item, (void*)Prop, 32))
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+BOOL IsU64PropType(const CHAR *Prop)
+{
+	for (const CHAR *Item : UInt64PropTypes)
 	{
 		if (StringCompare((void*)Item, (void*)Prop, 32))
 		{
