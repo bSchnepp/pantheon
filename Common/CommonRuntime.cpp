@@ -94,7 +94,7 @@ UINT64 StringCompare(void *L, void *R, UINT64 Amt)
 		{
 			return FALSE;
 		}
-		if (CL[Index] == '\0')
+		else if (CL[Index] == '\0')
 		{
 			break;
 		}
