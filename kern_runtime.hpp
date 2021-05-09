@@ -46,6 +46,19 @@ T CharStarNumberAtoi(CHAR *Input)
 	return Result;
 }
 
+template <typename T>
+class Optional
+{
+public:
+	Optional();
+	Optional(T v);
+	~Optional();
+
+private:
+	BOOL Okay;
+	T Value;
+};
+
 extern "C"
 {
 	void _putchar(char c);

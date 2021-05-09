@@ -4,15 +4,11 @@
 #ifndef _PCIE_HPP_
 #define _PCIE_HPP_
 
-class PCIe
+namespace pantheon::pcie
 {
-public:
-	PCIe(void *Address);
-	~PCIe();
 
-private:
-	void *Address;
-};
+void InitPCIe(void *Address);
 
+}
 
 #endif
