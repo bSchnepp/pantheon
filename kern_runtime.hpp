@@ -25,6 +25,27 @@ void BoardInit();
 void WriteSerialChar(CHAR Char);
 void WriteString(const CHAR *String);
 
+
+template <typename T>
+T CharStarNumberAtoi(CHAR *Input)
+{
+	T Result = 0;
+	UINT64 Index = 0;
+	for (Index = 0; Input[Index] != '\0'; ++Index)
+	{
+		/* Move the place over by 10. */
+		Result *= 10;
+
+		/* Find the diff between the current item and the ASCII code 
+		 * for 0. Since they're all ordered nicely, there's no mapping
+		 * function needed--each number is direct mapped to it's value
+		 * plus offset.
+		 */
+		Result += (Input[Index] - '0');
+	}
+	return Result;
+}
+
 extern "C"
 {
 	void _putchar(char c);

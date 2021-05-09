@@ -2,6 +2,7 @@
 #include <kern_integers.hpp>
 #include <kern_datatypes.hpp>
 
+#include <Devices/kern_drivers.hpp>
 #include <PhyProtocol/DeviceTree/DeviceTree.hpp>
 
 constexpr UINT32 ConstStrLen(const CHAR *Str)
@@ -106,6 +107,11 @@ void kern_init(fdt_header *dtb)
 			SERIAL_LOG("%s", "<<");
 			SERIAL_LOG("%s", CurDevNode);
 			SERIAL_LOG("%s", ">>\n");
+
+			CHAR DevName[512];
+			UINT64 Addr;
+			DTBState.NodeNameToAddress(CurDevNode, DevName, 512, &Addr);
+			InitDriver(DevName, Addr);
 		}
 	}
 
