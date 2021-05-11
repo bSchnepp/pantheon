@@ -10,7 +10,7 @@ static char BasicMemory[HeapSpace];
 COMPILER_ASSERT(sizeof(BlockHeader) == sizeof(UINT64));
 
 template<typename T>
-T Max(T L, T R)
+static T Max(T L, T R)
 {
 	return (L > R) ? L : R;
 }
@@ -101,8 +101,16 @@ static FreeList *GlobalFreeList = nullptr;
 static void *CurrentArea = nullptr;
 static UINT64 CurrentSize = 0;
 
+static BOOL InitMemoryOkay = FALSE;
+
 void InitBasicMemory()
 {
+	/*  lazilly handle basic malloc memory */
+	if (InitMemoryOkay)
+	{
+		return;
+	}
+
 	/* Double check this, just to be sure. */
 	GlobalFreeList = nullptr;
 	CurrentArea = nullptr;
@@ -116,10 +124,8 @@ void InitBasicMemory()
 	GlobalFreeList = reinterpret_cast<FreeList*>(BasicMemory + sizeof(BlockHeader));
 	SetSizeAlloc(GetHeader((char*)GlobalFreeList), FALSE, HeapSpace - MinBlockSize);
 	SetSizeAlloc(GetFooter((char*)GlobalFreeList), FALSE, HeapSpace - MinBlockSize);
+	InitMemoryOkay = TRUE;
 }
-
-
-static BOOL InitMemoryOkay = FALSE;
 
 /**
  * \~english @brief Tries to allocate a block of memory from a static heap.
@@ -151,13 +157,7 @@ static BOOL InitMemoryOkay = FALSE;
  */
 Optional<void*> BasicMalloc(UINT64 Amt)
 {
-	/*  lazilly handle basic malloc memory */
-	if (!InitMemoryOkay)
-	{
-		InitBasicMemory();
-		InitMemoryOkay = TRUE;
-	}
-
+	InitBasicMemory();
 	UINT64 Amount = Max(Align(Amt, (sizeof(BlockHeader))), MinBlockSize);
 
 	/* Look through the explicit free list for any space. */

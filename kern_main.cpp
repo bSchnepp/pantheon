@@ -108,9 +108,16 @@ void Initialize(fdt_header *dtb)
 			InitDriver(DevName, Addr);
 		}
 	}
-
 	SERIAL_LOG("%s\n", "finished going through dtb");
 }
+
+/* Pantheon can have up to 255 processors in theory.
+ * In practice, this should probably be cut down to 8 or 16, which is
+ * way more realistic for a SoM I can actually buy. 
+ * 256 thread x86 systems barely exist, so it's highly unlikely for any aarch64
+ * systems with that many cores or more to exist.
+ */
+static pantheon::CPU::CoreInfo CoreInfo[255];
 
 /* clang-format: off */
 #ifdef __cplusplus
@@ -121,22 +128,23 @@ extern "C"
 void kern_init(fdt_header *dtb)
 {
 	UINT8 CpuNo = pantheon::CPU::GetProcessorNumber();
-	if (CpuNo != 0)
-	{
-		/* Hang for now... */
-		for (;;)
-		{
+	pantheon::CPU::InitCoreInfo(&(CoreInfo[CpuNo]));
 
-		}
+	if (CpuNo == 0)
+	{
+		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);
+		BoardInit();
+		SERIAL_LOG("%s\n", "booting based on device tree pointer!");
+		Initialize(dtb);
+		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_OK);
 	}
 
-	pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);
+	while (pantheon::GetKernelStatus() != pantheon::KERNEL_STATUS_OK)
+	{
+		/* Loop until core 0 finished initializing the kernel */
+	}
 
-	BoardInit();
-	SERIAL_LOG("%s\n", "booting based on device tree pointer!");
-	Initialize(dtb);
-
-	pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_OK);
+	SERIAL_LOG("Pantheon booted with core %hhu", CpuNo);
 	for (;;)
 	{
 	}
