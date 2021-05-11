@@ -50,14 +50,54 @@ template <typename T>
 class Optional
 {
 public:
-	Optional();
-	Optional(T v);
-	~Optional();
+	Optional()
+	{
+		this->Okay = FALSE;
+		this->Value = T();
+	}
+
+	Optional(T v)
+	{
+		this->Okay = TRUE;
+		this->Value = v;
+	}
+
+	~Optional()
+	{
+
+	}
+
+	BOOL operator*()
+	{
+		return this->Okay;
+	}
+
+	T operator()()
+	{
+		if (this->Okay)
+		{
+			return this->Value;
+		}
+		return T();
+	}
+
+	BOOL GetOkay()
+	{
+		return this->Okay;
+	}
+
+	T &GetValue()
+	{
+		return this->Value;
+	}
 
 private:
 	BOOL Okay;
 	T Value;
 };
+
+Optional<void*> BasicMalloc(UINT64 Amt);
+void BasicFree(void *Addr);
 
 extern "C"
 {

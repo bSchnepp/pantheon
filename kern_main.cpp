@@ -1,7 +1,9 @@
+#include <kern_status.hpp>
 #include <kern_runtime.hpp>
 #include <kern_integers.hpp>
 #include <kern_datatypes.hpp>
 
+#include <Proc/kern_cpu.hpp>
 #include <Devices/kern_drivers.hpp>
 #include <PhyProtocol/DeviceTree/DeviceTree.hpp>
 
@@ -39,13 +41,7 @@ void ClearBuffer(CHAR *Location, UINT32 Amount)
 	}
 }
 
-/* clang-format: off */
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
-void kern_init(fdt_header *dtb)
+void Initialize(fdt_header *dtb)
 {
 	volatile bool CheckMe = CheckHeader(dtb);
 	if (!CheckMe)
@@ -55,10 +51,6 @@ void kern_init(fdt_header *dtb)
 	}
 
 	DeviceTreeBlob DTBState(dtb);
-
-	BoardInit();
-	SERIAL_LOG("%s\n", "booting based on device tree pointer!");
-
 	CHAR CurDevNode[512];
 	ClearBuffer(CurDevNode, 512);
 
@@ -70,6 +62,7 @@ void kern_init(fdt_header *dtb)
 		{
 			UINT64 Offset = DTBState.GetPropStructNameIndex();
 			CHAR Buffer[512];
+			ClearBuffer(Buffer, 512);
 			DTBState.CopyStringFromOffset(Offset, Buffer, 512);
 			SERIAL_LOG("%s", CurDevNode);
 			SERIAL_LOG("%s", " : ");
@@ -77,6 +70,7 @@ void kern_init(fdt_header *dtb)
 			if (IsStringPropType(Buffer) || IsStringListPropType(Buffer))
 			{
 				CHAR Buffer2[512];
+				ClearBuffer(Buffer2, 512);
 				DTBState.CopyStringFromStructPropNode(Buffer2, 512);
 				SERIAL_LOG("%s", " (");
 				SERIAL_LOG("%s", Buffer2);
@@ -116,7 +110,33 @@ void kern_init(fdt_header *dtb)
 	}
 
 	SERIAL_LOG("%s\n", "finished going through dtb");
+}
 
+/* clang-format: off */
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+void kern_init(fdt_header *dtb)
+{
+	UINT8 CpuNo = pantheon::CPU::GetProcessorNumber();
+	if (CpuNo != 0)
+	{
+		/* Hang for now... */
+		for (;;)
+		{
+
+		}
+	}
+
+	pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);
+
+	BoardInit();
+	SERIAL_LOG("%s\n", "booting based on device tree pointer!");
+	Initialize(dtb);
+
+	pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_OK);
 	for (;;)
 	{
 	}

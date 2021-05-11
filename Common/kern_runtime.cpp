@@ -1,4 +1,5 @@
 #include <kern.h>
+#include <kern_runtime.hpp>
 #include <kern_integers.hpp>
 #include <kern_datatypes.hpp>
 
