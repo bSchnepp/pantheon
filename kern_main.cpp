@@ -140,6 +140,7 @@ extern "C"
 
 void kern_init_core(UINT8 CpuNo)
 {
+
 	pantheon::CPU::InitCoreInfo(&(CoreInfo[CpuNo]));	
 
 	while (pantheon::GetKernelStatus() != pantheon::KERNEL_STATUS_OK)
@@ -148,7 +149,7 @@ void kern_init_core(UINT8 CpuNo)
 	}
 	
 	SERIAL_LOG("Pantheon booted with core %hhu", CpuNo);
-	
+
 	for (;;)
 	{
 	}

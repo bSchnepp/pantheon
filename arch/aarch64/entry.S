@@ -1,5 +1,6 @@
 .section ".text.early"
 .globl _cpu_start
+.global asm_kern_init_core
 
 _cpu_start:
 	/* Set up the stack */
@@ -16,6 +17,11 @@ _cpu_start:
 	b _hang
 
 _hang:
+	b _hang
+
+asm_kern_init_core:
+	mov sp, x0
+	bl kern_init_core
 	b _hang
 
 _zero_bss:

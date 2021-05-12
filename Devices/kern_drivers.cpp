@@ -10,7 +10,7 @@
 #include <Common/PhyProtocol/PSCI/PSCI.hpp>
 #include <Common/PhyProtocol/DeviceTree/DeviceTree.hpp>
 
-extern "C" void kern_init_core(UINT8 Index);
+extern "C" void asm_kern_init_core(UINT64 Stack);
 
 void InitDriver(CHAR *DriverName, UINT64 Address)
 {
@@ -91,7 +91,14 @@ void FiniDriver(CHAR *DriverName, UINT64 Address)
 	{
 		for (UINT8 Index = 0; Index < 255; ++Index)
 		{
-			INT32 Result = psci::PSCICpuOn(Index, (UINT64)kern_init_core, Index);
+			/* 16k stack is a huge amount of space... */
+			Optional<void*> MaybeStack = BasicMalloc(16 * 1024);
+			if (!MaybeStack.GetOkay())
+			{
+				break;
+			}
+
+			INT32 Result = psci::PSCICpuOn(Index, (UINT64)asm_kern_init_core, (UINT64)(MaybeStack.GetValue()));
 			
 			/* Then there are no more CPUs on this node. */
 			if (Result == psci::PSCI_INVALID_PARAMETERS)
