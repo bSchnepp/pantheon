@@ -59,10 +59,7 @@ typedef struct CoreInfo
 
 void InitCoreInfo(CoreInfo *Block);
 
-/**
- * \~english @brief Gets the processor number of the current core
- * \~english @author Brian Schnepp
- */
+
 UINT8 GetProcessorNumber();
 
 }

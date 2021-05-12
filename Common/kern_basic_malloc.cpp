@@ -58,7 +58,7 @@ static void SetSize(char *Loc, UINT64 Size)
 static void SetSizeAlloc(char *Loc, BOOL Used, UINT64 Size)
 {
 	BlockHeader *Reinterp = reinterpret_cast<BlockHeader*>(Loc);
-	*Reinterp = Size | Used != 0;
+	*Reinterp = Size | (Used != 0);
 }
 
 static char *GetFooter(char *Loc)

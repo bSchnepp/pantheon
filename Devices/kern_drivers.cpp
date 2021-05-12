@@ -14,6 +14,7 @@ extern "C" void asm_kern_init_core(UINT64 Stack);
 
 void InitDriver(CHAR *DriverName, UINT64 Address)
 {
+	PANTHEON_UNUSED(Address);
 	if (StringCompare((void*)DriverName, (void*)"pl011", 5))
 	{
 		/* Currently do nothing! BoardInit should have handled the
@@ -69,6 +70,7 @@ void DriverHandleDTB(CHAR *DriverName, DeviceTreeBlob *CurState)
 
 void FiniDriver(CHAR *DriverName, UINT64 Address)
 {
+	PANTHEON_UNUSED(Address);
 	if (StringCompare((void*)DriverName, (void*)"pl011", 5))
 	{
 		/* Currently do nothing! BoardInit should have handled the

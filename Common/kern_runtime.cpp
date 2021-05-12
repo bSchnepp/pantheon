@@ -3,6 +3,10 @@
 #include <kern_integers.hpp>
 #include <kern_datatypes.hpp>
 
+#include <Sync/kern_mutex.hpp>
+
+#include <printf/printf.h>
+
 VOID WriteMMIOU64(UINT64 Addr, UINT64 Value)
 {
 	*(volatile UINT64*)Addr = Value;
@@ -101,4 +105,17 @@ UINT64 StringCompare(void *L, void *R, UINT64 Amt)
 		}
 	}
 	return TRUE;
+}
+
+static pantheon::Mutex PrintMutex;
+
+void SERIAL_LOG(const char *Fmt, ...)
+{
+	PrintMutex.Acquire();
+	va_list Args;
+
+	va_start(Args, Fmt);
+	vprintf(Fmt, Args);
+	va_end(Args);
+	PrintMutex.Release();
 }

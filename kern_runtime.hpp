@@ -1,4 +1,3 @@
-#include <printf.h>
 #include <kern_datatypes.hpp>
 
 #ifndef _KERN_RUNTIME_HPP_
@@ -106,10 +105,6 @@ extern "C"
 
 UINT64 StringCompare(void *L, void *R, UINT64 Amt);
 
-#if defined(printf)
-#define SERIAL_LOG(fmt, ...) printf((fmt), __VA_ARGS__)
-#else
-#define SERIAL_LOG(fmt, ...)
-#endif
+void SERIAL_LOG(const char *Fmt, ...);
 
 #endif
