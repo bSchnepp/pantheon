@@ -5,11 +5,12 @@ static pantheon::KernelStatus CurStatus;
 
 void pantheon::SetKernelStatus(pantheon::KernelStatus Status)
 {
-	/* TODO: Lock behind a mutex? */
+	/* FIXME: Make atomic! */
 	CurStatus = Status;
 }
 
 pantheon::KernelStatus pantheon::GetKernelStatus()
 {
+	/* FIXME: Make atomic! */
 	return CurStatus;
 }

@@ -92,6 +92,11 @@ void Initialize(fdt_header *dtb)
 				SERIAL_LOG("%u", U64);
 				SERIAL_LOG("%s", ")");
 			}
+			
+			CHAR DevName[512];
+			UINT64 Addr;
+			DTBState.NodeNameToAddress(CurDevNode, DevName, 512, &Addr);
+			DriverHandleDTB(DevName, &DTBState);
 			SERIAL_LOG("%s", "\n");
 		}
 		else if (CurNode == FDT_BEGIN_NODE)
@@ -106,6 +111,14 @@ void Initialize(fdt_header *dtb)
 			UINT64 Addr;
 			DTBState.NodeNameToAddress(CurDevNode, DevName, 512, &Addr);
 			InitDriver(DevName, Addr);
+
+		}
+		else if (CurNode == FDT_END_NODE)
+		{
+			CHAR DevName[512];
+			UINT64 Addr;
+			DTBState.NodeNameToAddress(CurDevNode, DevName, 512, &Addr);
+			FiniDriver(DevName, Addr);
 		}
 	}
 	SERIAL_LOG("%s\n", "finished going through dtb");
