@@ -10,7 +10,7 @@
 #include <Common/PhyProtocol/PSCI/PSCI.hpp>
 #include <Common/PhyProtocol/DeviceTree/DeviceTree.hpp>
 
-extern "C" void kern_init(void *dtb);
+extern "C" void kern_init_core(UINT8 Index);
 
 void InitDriver(CHAR *DriverName, UINT64 Address)
 {
@@ -91,7 +91,13 @@ void FiniDriver(CHAR *DriverName, UINT64 Address)
 	{
 		for (UINT8 Index = 0; Index < 255; ++Index)
 		{
-			SERIAL_LOG("%d\n", psci::PSCICpuOn(Index, (UINT64)kern_init, Index));
+			INT32 Result = psci::PSCICpuOn(Index, (UINT64)kern_init_core, Index);
+			
+			/* Then there are no more CPUs on this node. */
+			if (Result == psci::PSCI_INVALID_PARAMETERS)
+			{
+				break;
+			}
 		}
 	}
 }

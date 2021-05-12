@@ -35,6 +35,7 @@ static INT64 CallHVC(UINT64 X0, UINT64 X1, UINT64 X2, UINT64 X3)
 	UINT64 Three asm ("x2") = X2;
 	UINT64 Four asm ("x3") = X3;
 	asm volatile ("hvc #0" : "=r"(Result) : "r"(One), "r"(Two), "r"(Three), "r"(Four));
+	asm volatile ("mov %0, x0" : "=r"(Result));
 	return Result;
 }
 

@@ -138,11 +138,26 @@ extern "C"
 {
 #endif
 
+void kern_init_core(UINT8 CpuNo)
+{
+	pantheon::CPU::InitCoreInfo(&(CoreInfo[CpuNo]));	
+
+	while (pantheon::GetKernelStatus() != pantheon::KERNEL_STATUS_OK)
+	{
+		/* Loop until core 0 finished initializing the kernel */
+	}
+	
+	SERIAL_LOG("Pantheon booted with core %hhu", CpuNo);
+	
+	for (;;)
+	{
+	}
+
+}
+
 void kern_init(fdt_header *dtb)
 {
 	UINT8 CpuNo = pantheon::CPU::GetProcessorNumber();
-	pantheon::CPU::InitCoreInfo(&(CoreInfo[CpuNo]));
-
 	if (CpuNo == 0)
 	{
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);
@@ -151,16 +166,7 @@ void kern_init(fdt_header *dtb)
 		Initialize(dtb);
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_OK);
 	}
-
-	while (pantheon::GetKernelStatus() != pantheon::KERNEL_STATUS_OK)
-	{
-		/* Loop until core 0 finished initializing the kernel */
-	}
-
-	SERIAL_LOG("Pantheon booted with core %hhu", CpuNo);
-	for (;;)
-	{
-	}
+	kern_init_core(CpuNo);
 }
 
 #ifdef __cplusplus
