@@ -3,7 +3,7 @@
 #include <kern_integers.hpp>
 #include <kern_datatypes.hpp>
 
-#include <Sync/kern_mutex.hpp>
+#include <Sync/kern_spinlock.hpp>
 
 #include <printf/printf.h>
 
@@ -107,7 +107,11 @@ UINT64 StringCompare(void *L, void *R, UINT64 Amt)
 	return TRUE;
 }
 
-static pantheon::Mutex PrintMutex;
+/* Note that until some of the issues with static constructors are resolved,
+ * this mutex is technically in undefined state. We'll need .init_array to work
+ * right first...
+ */
+static pantheon::Spinlock PrintMutex;
 
 void SERIAL_LOG(const char *Fmt, ...)
 {

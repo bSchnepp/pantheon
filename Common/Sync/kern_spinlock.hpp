@@ -1,4 +1,4 @@
-
+#include <kern_datatypes.hpp>
 
 #ifndef _KERN_MUTEX_HPP_
 #define _KERN_MUTEX_HPP_
@@ -6,17 +6,17 @@
 namespace pantheon
 {
 
-class Mutex
+class Spinlock
 {
 public:
-	Mutex();
-	~Mutex();
+	Spinlock();
+	~Spinlock();
 
 	void Acquire();
 	void Release();
 
 private:
-	bool Locked; 
+	BOOL Locked; 
 };
 
 }
