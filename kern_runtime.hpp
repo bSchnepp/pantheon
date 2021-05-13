@@ -46,6 +46,53 @@ T CharStarNumberAtoi(CHAR *Input)
 }
 
 template <typename T>
+T CharStarNumberAtoiB16(CHAR *Input)
+{
+	T Result = 0;
+	UINT64 Index = 0;
+	for (Index = 0; Input[Index] != '\0'; ++Index)
+	{
+		/* Move the place over by 16. */
+		Result *= 16;
+
+		/* Find the diff between the current item and the ASCII code 
+		 * for 0. Since they're all ordered nicely, there's no mapping
+		 * function needed--each number is direct mapped to it's value
+		 * plus offset.
+		 */
+		if (Input[Index] == 'a' || Input[Index] == 'A')
+		{
+			Result += 10;
+		}
+		else if (Input[Index] == 'b' || Input[Index] == 'B')
+		{
+			Result += 11;
+		}
+		else if (Input[Index] == 'c' || Input[Index] == 'C')
+		{
+			Result += 12;
+		}
+		else if (Input[Index] == 'd' || Input[Index] == 'D')
+		{
+			Result += 13;
+		}
+		else if (Input[Index] == 'e' || Input[Index] == 'E')
+		{
+			Result += 14;
+		}
+		else if (Input[Index] == 'f' || Input[Index] == 'F')
+		{
+			Result += 15;
+		}
+		else
+		{
+			Result += (Input[Index] - '0');
+		}
+	}
+	return Result;
+}
+
+template <typename T>
 class Optional
 {
 public:
