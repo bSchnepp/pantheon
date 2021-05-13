@@ -1,6 +1,6 @@
 .section ".text.early"
 .globl _cpu_start
-.global asm_kern_init_core
+.globl asm_kern_init_core
 
 _cpu_start:
 	/* Set up the stack */
