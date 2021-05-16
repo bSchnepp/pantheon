@@ -43,8 +43,9 @@ void BoardInit()
 	pantheon::pl011::PL011Init(DeviceToAddress[DEVICE_TYPE_UART], 0);
 	pantheon::arm::LoadInterruptTable(&interrupt_table);
 
+	pantheon::arm::GICSetMMIOAddr(pantheon::arm::GIC_CLASS_DISTRIBUTOR, DeviceToAddress[DEVICE_TYPE_GIC_DIST]);
+	pantheon::arm::GICSetMMIOAddr(pantheon::arm::GIC_CLASS_CPU_INTERFACE, DeviceToAddress[DEVICE_TYPE_GIC_CPU]);
 
-	pantheon::arm::GICSetBaseAddr(DeviceToAddress[DEVICE_TYPE_GIC_CPU]);
 	pantheon::arm::GICInit();
 	pantheon::arm::GICEnable();
 }

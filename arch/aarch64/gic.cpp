@@ -5,15 +5,17 @@
 
 #include "gic.hpp"
 
-static UINT64 MMIOAddr;
+
+static UINT64 GICAddresses[pantheon::arm::GIC_CLASS_TYPE_MAX];
+
 
 static UINT8 NumCPUs = 0;
 static UINT32 InterruptLines = 0;
 static BOOL SecurityExtn = FALSE;
 
-VOID pantheon::arm::GICSetBaseAddr(UINT64 Address)
+VOID pantheon::arm::GICSetMMIOAddr(pantheon::arm::GICClassType Type, UINT64 Addr)
 {
-	MMIOAddr = Address;
+	GICAddresses[Type] = Addr;
 }
 
 VOID pantheon::arm::GICInit()
@@ -48,6 +50,8 @@ VOID pantheon::arm::GICEnable()
 
 	GICWrite(GIC_CLASS_CPU_INTERFACE, GICC_PMR, 0, 0xFF);
 	GICWrite(GIC_CLASS_CPU_INTERFACE, GICC_BPR, 0, 0x00);
+
+	GICInitCore();
 }
 
 VOID pantheon::arm::GICDisable()
@@ -59,14 +63,14 @@ VOID pantheon::arm::GICDisable()
 UINT32 pantheon::arm::GICRead(GICClassType Type, 
 	GICRegisterOffsets Offset, UINT32 ArrayIndex)
 {
-	UINT64 Value = MMIOAddr + Offset + Type + (ArrayIndex * 4);
+	UINT64 Value = GICAddresses[Type] + Offset + (ArrayIndex * 4);
 	return ReadMMIOU32(Value);
 }
 
 VOID pantheon::arm::GICWrite(GICClassType Type, 
 	GICRegisterOffsets Offset, UINT32 ArrayIndex, UINT32 Value)
 {
-	UINT64 Addr = MMIOAddr + Offset + Type + (ArrayIndex * 4);
+	UINT64 Addr = GICAddresses[Type] + Offset + (ArrayIndex * 4);
 	WriteMMIOU32(Addr, Value);
 }
 
