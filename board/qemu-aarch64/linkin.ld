@@ -10,6 +10,12 @@ SECTIONS
 		*(.text.early)
 		*(.text)
 	}
+
+	. = ALIGN(0x800);
+	.text.exceptions :
+	{
+		*(.text.exceptions)
+	}
 	
 	.rodata :
 	{

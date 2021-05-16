@@ -6,6 +6,7 @@
 #include <Devices/PL011/PL011.hpp>
 
 #include <arch/aarch64/gic.hpp>
+#include <arch/aarch64/ints.hpp>
 
 static constexpr UINT64 DeviceToAddress[] =
 {
@@ -35,9 +36,17 @@ void WriteString(const CHAR *String)
 	}
 }
 
+extern char interrupt_table[];
+
 void BoardInit()
 {
 	pantheon::pl011::PL011Init(DeviceToAddress[DEVICE_TYPE_UART], 0);
+	pantheon::arm::LoadInterruptTable(&interrupt_table);
+
+
+	pantheon::arm::GICSetBaseAddr(DeviceToAddress[DEVICE_TYPE_GIC_CPU]);
+	pantheon::arm::GICInit();
+	pantheon::arm::GICEnable();
 }
 
 void _putchar(char c)
