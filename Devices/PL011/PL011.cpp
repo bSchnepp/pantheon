@@ -38,7 +38,7 @@ VOID pantheon::pl011::PL011Init(UINT64 Addr, UINT8 Channel)
 	pantheon::pl011::PL011Write(RealChannel, PL011_INT_BAUD_REG, IntBaud.Raw);
 	pantheon::pl011::PL011Write(RealChannel, PL011_FRACT_BAUD_REG, FractBaud.Raw);
 	pantheon::pl011::PL011Write(RealChannel, PL011_LINE_CTRL_REG, LineCtrl.Raw);
-	//pantheon::pl011::PL011Write(RealChannel, PL011_CTRL_REG, Control.Raw);
+	pantheon::pl011::PL011Write(RealChannel, PL011_CTRL_REG, Control.Raw);
 }
 
 VOID pantheon::pl011::PL011Write(UINT8 Channel, PL011UARTOffset Offset, UINT32 Value)
@@ -56,8 +56,6 @@ UINT32 pantheon::pl011::PL011Read(UINT8 Channel, PL011UARTOffset Offset)
 VOID pantheon::pl011::PL011WriteChar(UINT8 Channel, CHAR Char)
 {
 	UINT8 RealChannel = Channel % 8;
-	UINT64 UartAddr = Channels[RealChannel];
-
 	UINT32 Unavailable;
 	do
 	{

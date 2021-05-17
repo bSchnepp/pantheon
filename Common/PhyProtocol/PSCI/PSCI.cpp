@@ -1,3 +1,5 @@
+#include <kern_runtime.hpp>
+
 #include <kern_datatypes.hpp>
 #include <PhyProtocol/PSCI/PSCI.hpp>
 
@@ -16,26 +18,23 @@ typedef enum PSCIFunctionID : UINT32
 
 static psci::PsciState CurDriverState = psci::PSCI_DRIVER_NOT_INIT;
 
-static INT64 CallSMC(UINT64 X0, UINT64 X1, UINT64 X2, UINT64 X3)
+extern "C" INT64 CallSMC(UINT64 X0, UINT64 X1, UINT64 X2, UINT64 X3)
 {
-	INT64 Result asm ("x0");
-	UINT64 One asm ("x0") = X0;
-	UINT64 Two asm ("x1") = X1;
-	UINT64 Three asm ("x2") = X2;
-	UINT64 Four asm ("x3") = X3;
-	asm volatile ("smc #0" : "=r"(Result) : "r"(One), "r"(Two), "r"(Three), "r"(Four));
+	volatile INT64 Result;
+	asm volatile (
+		"smc #0\n" 		
+		"mov %0, x0\n"
+			: "=r"(Result): "r"(X0), "r"(X1), "r"(X2), "r"(X3));
 	return Result;
 }
 
-static INT64 CallHVC(UINT64 X0, UINT64 X1, UINT64 X2, UINT64 X3)
+extern "C" INT64 CallHVC(UINT64 X0, UINT64 X1, UINT64 X2, UINT64 X3)
 {
-	INT64 Result asm ("x0");
-	UINT64 One asm ("x0") = X0;
-	UINT64 Two asm ("x1") = X1;
-	UINT64 Three asm ("x2") = X2;
-	UINT64 Four asm ("x3") = X3;
-	asm volatile ("hvc #0" : "=r"(Result) : "r"(One), "r"(Two), "r"(Three), "r"(Four));
-	asm volatile ("mov %0, x0" : "=r"(Result));
+	volatile INT64 Result;
+	asm volatile (
+		"hvc #0\n" 
+		"mov %0, x0\n"
+			: "=r"(Result): "r"(X0), "r"(X1), "r"(X2), "r"(X3));
 	return Result;
 }
 

@@ -10,8 +10,6 @@ static UINT64 GICAddresses[pantheon::arm::GIC_CLASS_TYPE_MAX];
 
 
 static UINT8 NumCPUs = 0;
-static UINT32 InterruptLines = 0;
-static BOOL SecurityExtn = FALSE;
 
 VOID pantheon::arm::GICSetMMIOAddr(pantheon::arm::GICClassType Type, UINT64 Addr)
 {
@@ -39,6 +37,13 @@ VOID pantheon::arm::GICInitCore()
 	{
 		GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_IPRIORITYR, Index, 0x00000000);
 	}
+
+	/* Everything must go to CPU 0, with the same priority */
+	UINT32 InterruptLines = 32 * ((GICRead(GIC_CLASS_DISTRIBUTOR, GICD_TYPER, 0) & 0x1F) + 1);
+	for (UINT32 Index = 0; Index < InterruptLines / 4; ++Index)
+	{
+		GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_ITARGETSR, Index, 0x01010101);
+	}	
 
 	SERIAL_LOG("%s\n", "core was inited");
 }

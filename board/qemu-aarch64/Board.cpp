@@ -48,6 +48,8 @@ void BoardInit()
 
 	pantheon::arm::GICInit();
 	pantheon::arm::GICEnable();
+
+	pantheon::arm::RearmSystemTimer(1);
 }
 
 void _putchar(char c)
