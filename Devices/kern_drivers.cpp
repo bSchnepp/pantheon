@@ -6,9 +6,16 @@
 #include <PL011/PL011.hpp>
 #endif
 
+#if defined(__aarch64__)
+#include <arch/aarch64/gic.hpp>
+#endif
+
 #include <Common/PhyProtocol/PCI/PCIe.hpp>
 #include <Common/PhyProtocol/PSCI/PSCI.hpp>
 #include <Common/PhyProtocol/DeviceTree/DeviceTree.hpp>
+
+
+static BOOL UseGIC = FALSE;
 
 extern "C" void asm_kern_init_core(UINT64 Stack);
 
@@ -66,6 +73,27 @@ void DriverHandleDTB(CHAR *DriverName, DeviceTreeBlob *CurState)
 			}			
 		}
 	}
+	if (StringCompare(DriverName, (void*)("intc"), 5))
+	{
+		UINT64 Offset = CurState->GetPropStructNameIndex();
+		CHAR Buffer[512];
+		CHAR Buffer2[512];
+		for (UINT32 Index = 0; Index < 512; ++Index)
+		{
+			Buffer[Index] = '\0';
+			Buffer2[Index] = '\0';
+		}
+		CurState->CopyStringFromOffset(Offset, Buffer, 512);
+
+		if (StringCompare(Buffer, (void*)("compatible"), 9))
+		{
+			CurState->CopyStringFromStructPropNode(Buffer2, 512);
+			if (StringCompare(Buffer2, (void*)("arm,cortex-a15-gic"), 18))
+			{
+				UseGIC = TRUE;
+			}
+		}		
+	}
 }
 
 void FiniDriver(CHAR *DriverName, UINT64 Address)
@@ -108,5 +136,13 @@ void FiniDriver(CHAR *DriverName, UINT64 Address)
 				break;
 			}
 		}
+	}
+}
+
+void PerCoreInit()
+{
+	if (UseGIC)
+	{
+		pantheon::arm::GICInitCore();
 	}
 }

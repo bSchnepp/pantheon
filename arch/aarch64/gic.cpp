@@ -43,9 +43,7 @@ VOID pantheon::arm::GICInitCore()
 	for (UINT32 Index = 0; Index < InterruptLines / 4; ++Index)
 	{
 		GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_ITARGETSR, Index, 0x01010101);
-	}	
-
-	SERIAL_LOG("%s\n", "core was inited");
+	}
 }
 
 VOID pantheon::arm::GICEnable()
@@ -55,8 +53,6 @@ VOID pantheon::arm::GICEnable()
 
 	GICWrite(GIC_CLASS_CPU_INTERFACE, GICC_PMR, 0, 0xFF);
 	GICWrite(GIC_CLASS_CPU_INTERFACE, GICC_BPR, 0, 0x00);
-
-	GICInitCore();
 }
 
 VOID pantheon::arm::GICDisable()

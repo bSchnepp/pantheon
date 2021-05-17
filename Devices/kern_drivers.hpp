@@ -11,4 +11,6 @@ void InitDriver(CHAR *DriverName, UINT64 Address);
 void DriverHandleDTB(CHAR *DriverName, DeviceTreeBlob *CurState);
 void FiniDriver(CHAR *DriverName, UINT64 Address);
 
+void PerCoreInit();
+
 #endif

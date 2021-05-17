@@ -148,6 +148,7 @@ void kern_init_core()
 		/* Loop until core 0 finished initializing the kernel */
 	}
 	
+	PerCoreInit();
 	SERIAL_LOG("Pantheon booted with core %hhu\n", CpuNo);
 
 	for (;;)
