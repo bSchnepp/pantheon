@@ -4,6 +4,8 @@
 .globl _cpu_start
 .globl asm_kern_init_core
 .globl interrupt_table
+.globl CallHVC
+.globl CallSMC
 
 _cpu_start:
 	/* Set up the stack */
@@ -36,6 +38,13 @@ _zero_bss:
 _zero_bss_end:
 	ret
 
+CallSMC:
+	smc #0
+	ret
+
+CallHVC:
+	hvc #0
+	ret
 
 .macro DEFINE_ISR func
 .align 7	/* Must be aligned to 128 bytes, and NEVER EXCEED IT. */

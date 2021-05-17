@@ -18,25 +18,8 @@ typedef enum PSCIFunctionID : UINT32
 
 static psci::PsciState CurDriverState = psci::PSCI_DRIVER_NOT_INIT;
 
-extern "C" INT64 CallSMC(UINT64 X0, UINT64 X1, UINT64 X2, UINT64 X3)
-{
-	volatile INT64 Result;
-	asm volatile (
-		"smc #0\n" 		
-		"mov %0, x0\n"
-			: "=r"(Result): "r"(X0), "r"(X1), "r"(X2), "r"(X3));
-	return Result;
-}
-
-extern "C" INT64 CallHVC(UINT64 X0, UINT64 X1, UINT64 X2, UINT64 X3)
-{
-	volatile INT64 Result;
-	asm volatile (
-		"hvc #0\n" 
-		"mov %0, x0\n"
-			: "=r"(Result): "r"(X0), "r"(X1), "r"(X2), "r"(X3));
-	return Result;
-}
+extern "C" INT64 CallSMC(UINT64 X0, UINT64 X1, UINT64 X2, UINT64 X3);
+extern "C" INT64 CallHVC(UINT64 X0, UINT64 X1, UINT64 X2, UINT64 X3);
 
 void psci::PSCIInit()
 {
