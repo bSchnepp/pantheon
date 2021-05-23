@@ -1,4 +1,5 @@
 #include "ints.hpp"
+#include "gic.hpp"
 
 #include <kern.h>
 #include <kern_runtime.hpp>
@@ -43,6 +44,9 @@ extern "C" void fiq_handler_el1()
 extern "C" void irq_handler_el1()
 {
 	SERIAL_LOG("%s\n", "ERR: IRQ HANDLER EL1");
+	/* Dispatch to timer interrupt... */
+	pantheon::arm::GICAckInterrupt(30);
+	pantheon::arm::RearmSystemTimer(1);
 }
 
 
@@ -90,6 +94,7 @@ extern "C" void irq_handler_el0_32()
 VOID pantheon::arm::LoadInterruptTable(VOID *Table)
 {
 	asm volatile ("msr vbar_el1, %0\n" :: "r"(Table) : "memory");
+	asm volatile("msr daifclr, #15\n");
 }
 
 UINT64 pantheon::arm::GetSystemTimerClock()

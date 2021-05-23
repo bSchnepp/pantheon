@@ -5,11 +5,8 @@
 
 #include "gic.hpp"
 
-
-static UINT64 GICAddresses[pantheon::arm::GIC_CLASS_TYPE_MAX];
-
-
 static UINT8 NumCPUs = 0;
+static UINT64 GICAddresses[pantheon::arm::GIC_CLASS_TYPE_MAX];
 
 VOID pantheon::arm::GICSetMMIOAddr(pantheon::arm::GICClassType Type, UINT64 Addr)
 {
@@ -28,22 +25,6 @@ UINT8 pantheon::arm::GICGetNumCPUs()
 
 VOID pantheon::arm::GICInitCore()
 {
-	/* Enable banked interrupts */
-	GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_ISENABLER, 0, 0xFFFFFFFF);
-	GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_IGROUPR, 0, 0x00000000);
-
-	/* iprority0 - 7 are banked for each processor */
-	for (UINT32 Index = 0; Index < 8; ++Index)
-	{
-		GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_IPRIORITYR, Index, 0x00000000);
-	}
-
-	/* Everything must go to CPU 0, with the same priority */
-	UINT32 InterruptLines = 32 * ((GICRead(GIC_CLASS_DISTRIBUTOR, GICD_TYPER, 0) & 0x1F) + 1);
-	for (UINT32 Index = 0; Index < InterruptLines / 4; ++Index)
-	{
-		GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_ITARGETSR, Index, 0x01010101);
-	}
 }
 
 VOID pantheon::arm::GICEnable()
