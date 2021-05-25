@@ -1,11 +1,12 @@
 #include <kern_integers.hpp>
 #include <kern_datatypes.hpp>
+#include <kern_runtime.hpp>
 
 #include "PCIe.hpp"
 
-static void *PCIeAddr;
+static pantheon::pcie::ECAMTable *PCIeAddr;
 
 void pantheon::pcie::InitPCIe(void *Addr)
 {
-	PCIeAddr = Addr;
+	PCIeAddr = (pantheon::pcie::ECAMTable *)Addr;
 }

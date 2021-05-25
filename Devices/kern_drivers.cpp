@@ -16,6 +16,7 @@
 
 
 static BOOL UseGIC = FALSE;
+static BOOL UseECAM = FALSE;
 
 extern "C" void asm_kern_init_core(UINT64 Stack);
 
@@ -73,7 +74,7 @@ void DriverHandleDTB(CHAR *DriverName, DeviceTreeBlob *CurState)
 			}			
 		}
 	}
-	if (StringCompare(DriverName, (void*)("intc"), 5))
+	else if (StringCompare(DriverName, (void*)("intc"), 5))
 	{
 		UINT64 Offset = CurState->GetPropStructNameIndex();
 		CHAR Buffer[512];
@@ -94,11 +95,31 @@ void DriverHandleDTB(CHAR *DriverName, DeviceTreeBlob *CurState)
 			}
 		}		
 	}
+	else if (StringCompare(DriverName, (void*)("pcie"), 5))
+	{
+		UINT64 Offset = CurState->GetPropStructNameIndex();
+		CHAR Buffer[512];
+		CHAR Buffer2[512];
+		for (UINT32 Index = 0; Index < 512; ++Index)
+		{
+			Buffer[Index] = '\0';
+			Buffer2[Index] = '\0';
+		}
+		CurState->CopyStringFromOffset(Offset, Buffer, 512);
+
+		if (StringCompare(Buffer, (void*)("compatible"), 9))
+		{
+			CurState->CopyStringFromStructPropNode(Buffer2, 512);
+			if (StringCompare(Buffer2, (void*)("pci-host-ecam-generic"), 18))
+			{
+				UseECAM = TRUE;
+			}
+		}		
+	}
 }
 
 void FiniDriver(CHAR *DriverName, UINT64 Address)
 {
-	PANTHEON_UNUSED(Address);
 	if (StringCompare((void*)DriverName, (void*)"pl011", 5))
 	{
 		/* Currently do nothing! BoardInit should have handled the
@@ -107,7 +128,7 @@ void FiniDriver(CHAR *DriverName, UINT64 Address)
 	}
 	else if (StringCompare((void*)DriverName, (void*)"pcie", 4))
 	{
-		
+		pantheon::pcie::InitPCIe((void*)Address);
 	}
 	else if (StringCompare((void*)DriverName, (void*)"pl061", 5))
 	{
