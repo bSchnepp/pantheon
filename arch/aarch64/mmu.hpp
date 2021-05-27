@@ -1,3 +1,4 @@
+#include <kern_macro.hpp>
 #include <kern_datatypes.hpp>
 
 #ifndef _AARCH64_MMU_HPP_
@@ -25,10 +26,11 @@ typedef struct PageEntry
 			UINT8 INDX : 3;
 			BOOL TB : 1;
 			BOOL VB : 1;
-		};
-		
+		}__attribute__((packed));	
 	};
 }__attribute__((packed)) PageEntry;
+
+COMPILER_ASSERT(sizeof(PageEntry) == sizeof(UINT64));
 
 }
 
