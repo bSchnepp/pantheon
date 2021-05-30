@@ -56,9 +56,6 @@ void BoardInit()
 	pantheon::arm::GICSetCore(TimerIRQ, 0x01);
 	pantheon::arm::GICAckInterrupt(TimerIRQ);
 	pantheon::arm::GICEnableInterrupt(TimerIRQ);
-
-	pantheon::arm::RearmSystemTimer(1);
-
 }
 
 void _putchar(char c)

@@ -10,8 +10,9 @@ typedef enum KernelStatus : UINT32
 {
 	KERNEL_STATUS_ERR = 0,
 	KERNEL_STATUS_INIT = 1,
-	KERNEL_STATUS_OK = 2,
-	KERNEL_STATUS_HUNG = 3,
+	KERNEL_STATUS_SECOND_STAGE = 2,
+	KERNEL_STATUS_OK = 3,
+	KERNEL_STATUS_HUNG = 4,
 }KernelStatus;
 
 void SetKernelStatus(KernelStatus Status);

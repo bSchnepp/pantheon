@@ -1,3 +1,4 @@
+#include <arch.hpp>
 #include <kern_datatypes.hpp>
 
 #ifndef _KERN_SCHED_HPP_
