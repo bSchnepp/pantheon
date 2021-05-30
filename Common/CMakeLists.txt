@@ -1,6 +1,7 @@
 LIST(APPEND COMMON_HEADERS kern_integers.hpp)
 LIST(APPEND COMMON_HEADERS kern_macro.hpp)
 LIST(APPEND COMMON_HEADERS kern_status.hpp)
+LIST(APPEND COMMON_HEADERS kern_container.hpp)
 LIST(APPEND COMMON_HEADERS Sync/kern_spinlock.hpp)
 
 LIST(APPEND COMMON_SOURCES kern_runtime.cpp)

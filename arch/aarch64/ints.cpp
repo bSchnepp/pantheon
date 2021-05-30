@@ -45,8 +45,10 @@ extern "C" void fiq_handler_el1()
 
 extern "C" void irq_handler_el1()
 {
-	SERIAL_LOG("%s\n", "ERR: IRQ HANDLER EL1");
-	/* Dispatch to timer interrupt... */
+	/* For now, the only interrupt we get from the GIC 
+	 * is the timer interrupt. This should be more properly
+	 * checked later...
+	 */
 	pantheon::arm::GICAckInterrupt(30);
 	pantheon::arm::RearmSystemTimer(TimerClock);
 }
