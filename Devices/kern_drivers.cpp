@@ -23,25 +23,8 @@ extern "C" void asm_kern_init_core(UINT64 Stack);
 void InitDriver(CHAR *DriverName, UINT64 Address)
 {
 	PANTHEON_UNUSED(Address);
-	if (StringCompare((void*)DriverName, (void*)"pl011", 5))
-	{
-		/* Currently do nothing! BoardInit should have handled the
-		 * uart we're actually going to use...
-		 */
-	}
-	else if (StringCompare((void*)DriverName, (void*)"pcie", 4))
-	{
-		
-	}
-	else if (StringCompare((void*)DriverName, (void*)"pl061", 5))
-	{
-		
-	}
-	else if (StringCompare((void*)DriverName, (void*)"pl031", 5))
-	{
-		
-	}
-	else if (StringCompare((void*)DriverName, (void*)"psci", 5))
+	/* For now, only actually do something if we have psci available. */
+	if (StringCompare((void*)DriverName, (void*)"psci", 5))
 	{
 		psci::PSCIInit();
 	}
@@ -120,23 +103,10 @@ void DriverHandleDTB(CHAR *DriverName, DeviceTreeBlob *CurState)
 
 void FiniDriver(CHAR *DriverName, UINT64 Address)
 {
-	if (StringCompare((void*)DriverName, (void*)"pl011", 5))
-	{
-		/* Currently do nothing! BoardInit should have handled the
-		 * uart we're actually going to use...
-		 */
-	}
-	else if (StringCompare((void*)DriverName, (void*)"pcie", 4))
+	/* For now, only actually do something if we have pcie or psci... */
+	if (StringCompare((void*)DriverName, (void*)"pcie", 4))
 	{
 		pantheon::pcie::InitPCIe((void*)Address);
-	}
-	else if (StringCompare((void*)DriverName, (void*)"pl061", 5))
-	{
-		
-	}
-	else if (StringCompare((void*)DriverName, (void*)"pl031", 5))
-	{
-		
 	}
 	else if (StringCompare((void*)DriverName, (void*)"psci", 5))
 	{

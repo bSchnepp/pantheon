@@ -87,9 +87,9 @@ void InitBasicMemory()
 	CurrentArea = nullptr;
 	CurrentSize = 0;
 
-	for (UINT64 Index = 0; Index < HeapSpace; ++Index)
+	for (char &Item : BasicMemory)
 	{
-		BasicMemory[Index] = 0;
+		Item = '\0';
 	}
 
 	GlobalFreeList = reinterpret_cast<FreeList*>(BasicMemory + sizeof(BlockHeader));

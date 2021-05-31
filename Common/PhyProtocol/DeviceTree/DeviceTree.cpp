@@ -133,7 +133,8 @@ BOOL DeviceTreeBlob::EndStruct()
  * \~english @returns An offset from the start of the DeviceTree that is currently
  * being parsed.
  */
-UINT64 DeviceTreeBlob::GetStructIndex()
+[[nodiscard]]
+UINT64 DeviceTreeBlob::GetStructIndex() const
 {
 	return this->StructIndex;
 }
@@ -145,7 +146,8 @@ UINT64 DeviceTreeBlob::GetStructIndex()
  * \~english @returns The currently selected FDT node type.
  * @see FDTNodeType
  */
-FDTNodeType DeviceTreeBlob::GetStructType()
+[[nodiscard]]
+FDTNodeType DeviceTreeBlob::GetStructType() const
 {
 	return static_cast<FDTNodeType>(this->struct_ptr[this->StructIndex].GetNumHost());
 }

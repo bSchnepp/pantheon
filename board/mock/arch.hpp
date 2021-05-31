@@ -1,8 +1,8 @@
 #include <kern.h>
 #include <kern_datatypes.hpp>
 
-#ifndef _MOCK_ARCH_HPP_
-#define _MOCK_ARCH_HPP_
+#ifndef MOCK_ARCH_HPP_
+#define MOCK_ARCH_HPP_
 
 namespace pantheon
 {

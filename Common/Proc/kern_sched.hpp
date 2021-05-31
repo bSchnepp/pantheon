@@ -90,7 +90,7 @@ public:
 
 private:
 	UINT64 CurThread; 
-	ArrayList<Thread*> Threads;
+	ArrayList<Thread> Threads;
 };
 
 }

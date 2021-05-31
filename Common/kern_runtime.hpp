@@ -26,7 +26,7 @@ void WriteString(const CHAR *String);
 
 
 template <typename T>
-T CharStarNumberAtoi(CHAR *Input)
+T CharStarNumberAtoi(const CHAR *Input)
 {
 	T Result = 0;
 	UINT64 Index = 0;
@@ -46,7 +46,7 @@ T CharStarNumberAtoi(CHAR *Input)
 }
 
 template <typename T>
-T CharStarNumberAtoiB16(CHAR *Input)
+T CharStarNumberAtoiB16(const CHAR *Input)
 {
 	T Result = 0;
 	UINT64 Index = 0;

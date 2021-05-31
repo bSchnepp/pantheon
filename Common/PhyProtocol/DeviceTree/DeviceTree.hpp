@@ -56,8 +56,8 @@ public:
 	void NextStruct();
 	BOOL EndStruct();
 
-	UINT64 GetStructIndex();
-	FDTNodeType GetStructType();
+	[[nodiscard]] UINT64 GetStructIndex() const;
+	[[nodiscard]] FDTNodeType GetStructType() const;
 
 	UINT64 GetPropStructNameIndex();
 	void CopyStringFromStructBeginNode(CHAR *Buffer, UINT64 BufferSize);
