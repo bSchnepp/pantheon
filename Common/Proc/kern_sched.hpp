@@ -48,10 +48,11 @@ public:
 	~Scheduler();
 
 	void Reschedule();
+	Process *MyProc();
 
 private:
-	UINT64 Val; /* NYI!!! */
-
+	UINT64 CurProc; 
+	ArrayList<Process*> Processes;
 };
 
 }

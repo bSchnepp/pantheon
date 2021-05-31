@@ -4,6 +4,9 @@
 #ifndef _KERN_CONTAINER_HPP_
 #define _KERN_CONTAINER_HPP_
 
+typedef Optional<void*> (*AllocatorMallocFn)(UINT64);
+typedef void (*AllocatorFreeFn)(void*);
+
 template<typename T>
 class ArrayList
 {
@@ -12,7 +15,10 @@ public:
 
 	ArrayList(UINT64 InitCount)
 	{
-		auto MaybeMem = BasicMalloc(sizeof(T) * InitCount);
+		this->Malloc = BasicMalloc;
+		this->Free = BasicFree;
+
+		auto MaybeMem = this->Malloc(sizeof(T) * InitCount);
 		if (MaybeMem.GetOkay() != FALSE)
 		{
 			this->Content = (T*)MaybeMem.GetValue();
@@ -30,6 +36,16 @@ public:
 		return Optional<T>();
 	}
 
+	T* Get(UINT64 Index)
+	{
+		return this->Content[Index];
+	}
+
+	UINT64 Size()
+	{
+		return this->EntryCount;
+	}
+
 	void Add(T& NewItem)
 	{
 		if (EntryCount + 1 < SpaceCount)
@@ -40,7 +56,7 @@ public:
 		else
 		{
 			this->SpaceCount *= 2;
-			auto MaybeMem = BasicMalloc(sizeof(T) * this->SpaceCount);
+			auto MaybeMem = this->Malloc(sizeof(T) * this->SpaceCount);
 			if (MaybeMem.GetOkay() != FALSE)
 			{
 				T* NewContent = (T*)MaybeMem.GetValue();
@@ -48,7 +64,7 @@ public:
 				{
 					NewContent[Index] = this->Content[Index];
 				}
-				BasicFree(this->Content);
+				this->Free(this->Content);
 				this->Content = NewContent;
 				this->Add(NewItem);
 			}			
@@ -66,6 +82,9 @@ public:
 	}
 
 private:
+	AllocatorMallocFn Malloc;
+	AllocatorFreeFn Free;
+
 	UINT64 SpaceCount;
 	UINT64 EntryCount;
 	T *Content;

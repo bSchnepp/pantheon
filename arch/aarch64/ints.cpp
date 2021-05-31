@@ -48,6 +48,9 @@ extern "C" void irq_handler_el1()
 	/* For now, the only interrupt we get from the GIC 
 	 * is the timer interrupt. This should be more properly
 	 * checked later...
+	 * 
+	 * TODO: Send IMIs to other processors, so that those reschedule
+	 * jobs too.
 	 */
 	pantheon::arm::GICAckInterrupt(30);
 	pantheon::arm::RearmSystemTimer(TimerClock);
