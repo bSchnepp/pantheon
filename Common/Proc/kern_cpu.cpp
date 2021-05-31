@@ -25,7 +25,7 @@ void pantheon::CPU::InitCoreInfo(CoreInfo *Block)
 UINT8 pantheon::CPU::GetProcessorNumber()
 {
 	/* TODO: Portability to riscv!!! */
-	UINT64 RetVal;
+	UINT64 RetVal = 0;
 #ifndef ONLY_TESTS
 	asm volatile ("mrs %0, mpidr_el1\n" : "=r"(RetVal) ::);
 #endif
