@@ -64,33 +64,25 @@ void Initialize(fdt_header *dtb)
 			CHAR Buffer[512];
 			ClearBuffer(Buffer, 512);
 			DTBState.CopyStringFromOffset(Offset, Buffer, 512);
-			SERIAL_LOG("%s", CurDevNode);
-			SERIAL_LOG("%s", " : ");
-			SERIAL_LOG("%s", Buffer);
+			SERIAL_LOG("%s%s%s", CurDevNode, " : ", Buffer);
 			if (IsStringPropType(Buffer) || IsStringListPropType(Buffer))
 			{
 				CHAR Buffer2[512];
 				ClearBuffer(Buffer2, 512);
 				DTBState.CopyStringFromStructPropNode(Buffer2, 512);
-				SERIAL_LOG("%s", " (");
-				SERIAL_LOG("%s", Buffer2);
-				SERIAL_LOG("%s", ")");
+				SERIAL_LOG("%s%s%s", " (", Buffer2, ")");
 			}
 			else if (IsU32PropType(Buffer))
 			{
 				UINT32 U32;
 				DTBState.CopyU32FromStructPropNode(&U32);
-				SERIAL_LOG("%s", " (");
-				SERIAL_LOG("%u", U32);
-				SERIAL_LOG("%s", ")");
+				SERIAL_LOG("%s%u%s", " (", U32, ")");
 			}
 			else if (IsU64PropType(Buffer))
 			{
 				UINT64 U64;
 				DTBState.CopyU64FromStructPropNode(&U64);
-				SERIAL_LOG("%s", " (");
-				SERIAL_LOG("%u", U64);
-				SERIAL_LOG("%s", ")");
+				SERIAL_LOG("%s%u%s", " (", U64, ")");
 			}
 			
 			CHAR DevName[512];
@@ -103,9 +95,7 @@ void Initialize(fdt_header *dtb)
 		{
 			ClearBuffer(CurDevNode, 512);
 			DTBState.CopyStringFromStructBeginNode(CurDevNode, 512);
-			SERIAL_LOG("%s", "<<");
-			SERIAL_LOG("%s", CurDevNode);
-			SERIAL_LOG("%s", ">>\n");
+			SERIAL_LOG("%s%s%s", "<<", CurDevNode, ">>\n");
 
 			CHAR DevName[512];
 			UINT64 Addr;
@@ -124,13 +114,13 @@ void Initialize(fdt_header *dtb)
 	SERIAL_LOG("%s\n", "finished going through dtb");
 }
 
-/* Pantheon can have up to 255 processors in theory.
+/* Pantheon can have up to 256 processors in theory.
  * In practice, this should probably be cut down to 8 or 16, which is
  * way more realistic for a SoM I can actually buy. 
  * 256 thread x86 systems barely exist, so it's highly unlikely for any aarch64
  * systems with that many cores or more to exist.
  */
-static pantheon::CPU::CoreInfo CoreInfo[255];
+static pantheon::CPU::CoreInfo CoreInfo[256];
 
 /* clang-format: off */
 #ifdef __cplusplus
