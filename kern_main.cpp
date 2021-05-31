@@ -17,7 +17,7 @@ constexpr UINT32 ConstStrLen(const CHAR *Str)
 	return Count;
 }
 
-int32_t MemCmp(const CHAR *Arg1, const CHAR *Arg2, UINT32 Amt)
+int32_t StringCompare(const CHAR *Arg1, const CHAR *Arg2, UINT32 Amt)
 {
 	for (UINT32 Index = 0; Index < Amt; ++Index)
 	{
