@@ -2,9 +2,9 @@
 
 #include "kern_sched.hpp"
 
-pantheon::Thread::Thread()
+pantheon::Thread::Thread(Process *ParentProcess)
 {
-
+	this->ParentProcess = ParentProcess;
 }
 
 pantheon::Thread::~Thread()
@@ -33,27 +33,22 @@ pantheon::Scheduler::~Scheduler()
 }
 
 /**
- * \~english @brief Changes the currently active process of this core.
- * \~english @details Reschedules the current processor core to use a thread
- * from some other process on it's list of processes. The general relationship
- * for the scheduler is that one process is assigned to multiple different
- * schedulers, each of which run precisely one thread at a time.
+ * \~english @brief Changes the current thread of this core.
+ * \~english @details Forcefully changes the current thread by iterating to
+ * the next thread in the list of threads belonging to this core. The active
+ * count for the current thread is set to zero, and the new thread is run until
+ * either the core is forcefully rescheduled, or the timer indicates the current
+ * thread should quit.
  * 
  * \~english @author Brian Schnepp
  */
 void pantheon::Scheduler::Reschedule()
 {
-	this->CurProc++;
-	this->CurProc %= this->Processes.Size();
-	/* exec that process... TODO! */
+	/* NYI */
 }
 
 pantheon::Process *pantheon::Scheduler::MyProc()
 {
-	UINT64 ProcCount = this->Processes.Size();
-	if (ProcCount == 0 || this->CurProc > ProcCount)
-	{
-		return nullptr;
-	}
-	return this->Processes[this->CurProc].GetValue();
+	/* NYI */
+	return nullptr;
 }

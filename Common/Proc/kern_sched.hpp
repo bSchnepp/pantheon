@@ -5,18 +5,45 @@
 #ifndef _KERN_SCHED_HPP_
 #define _KERN_SCHED_HPP_
 
+
 namespace pantheon
 {
+
+typedef enum ThreadState
+{
+	THREAD_STATE_INIT,
+	THREAD_STATE_RUNNING,
+	THREAD_STATE_BLOCKED,
+	THREAD_STATE_TERMINATED,
+}ThreadState;
+
+typedef enum ThreadPriority
+{
+	THREAD_PRIORITY_VERYLOW = 0,
+	THREAD_PRIORITY_LOW = 1,
+	THREAD_PRIORITY_NORMAL = 2,
+	THREAD_PRIORITY_HIGH = 3,
+	THREAD_PRIORITY_VERYHIGH = 4,
+}ThreadPriority;
+
+class Process;
 
 /* NOT YET IMPLEMENTED! Placeholder for CPUInfo!!!! */
 class Thread
 {
 public:
-	Thread();
+	Thread(Process *ParentProcess);
 	~Thread();
 
 private:
+	CpuContext Registers;
+	Process *ParentProcess;
+
+	ThreadState State;
+	ThreadPriority Priority;
+
 	UINT64 PreemptCount;
+	UINT64 RemainingTicks;
 };
 
 typedef enum ProcessState
@@ -27,6 +54,15 @@ typedef enum ProcessState
 	PROCESS_STATE_TERMINATED,
 }ProcessState;
 
+typedef enum ProcessPriority
+{
+	PROCESS_PRIORITY_VERYLOW = 0,
+	PROCESS_PRIORITY_LOW = 1,
+	PROCESS_PRIORITY_NORMAL = 2,
+	PROCESS_PRIORITY_HIGH = 3,
+	PROCESS_PRIORITY_VERYHIGH = 4,
+}ProcessPriority;
+
 /* NOT YET IMPLEMENTED! Placeholder for CPUInfo!!!! */
 class Process
 {
@@ -36,6 +72,7 @@ public:
 
 private:
 	ProcessState CurState;
+	ProcessPriority Priority;
 	ArrayList<Thread> Threads;
 };
 
@@ -49,10 +86,11 @@ public:
 
 	void Reschedule();
 	Process *MyProc();
+	Thread *MyThread();
 
 private:
-	UINT64 CurProc; 
-	ArrayList<Process*> Processes;
+	UINT64 CurThread; 
+	ArrayList<Thread*> Threads;
 };
 
 }
