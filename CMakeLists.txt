@@ -9,6 +9,9 @@ SET(CMAKE_INSTALL_MESSAGE NEVER)
 
 PROJECT(pantheon CXX C ASM)
 
+SET(CMAKE_CXX_CLANG_TIDY clang-tidy -header-filter=. -warnings-as-errors=*)
+SET(CMAKE_C_CLANG_TIDY clang-tidy -header-filter=. -warnings-as-errors=*)
+
 SET(PANTHEON_VERSION_MAJOR 0)
 SET(PANTHEON_VERSION_MINOR 0)
 SET(PANTHEON_VERSION_PATCH 1)

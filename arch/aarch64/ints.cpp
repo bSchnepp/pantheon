@@ -113,7 +113,7 @@ UINT64 pantheon::arm::GetSystemTimerClock()
 
 VOID pantheon::arm::RearmSystemTimer(UINT64 Frequency)
 {
-	volatile UINT64 ClockSpeed;
+	UINT64 ClockSpeed;
 	asm volatile ("mrs %0, cntfrq_el0\n" : "=r"(ClockSpeed));
 	ClockSpeed /= Frequency;
 	TimerClock = Frequency;
@@ -122,5 +122,5 @@ VOID pantheon::arm::RearmSystemTimer(UINT64 Frequency)
 
 	asm volatile ("msr cntp_tval_el0, %0\n" 
 			"msr cntp_ctl_el0, %1"
-			:: "r"((UINT32)ClockSpeed), "r"(TimerCtl) : "memory");
+			:: "r"(ClockSpeed), "r"(TimerCtl) : "memory");
 }

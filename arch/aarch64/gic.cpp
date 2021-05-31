@@ -88,7 +88,7 @@ VOID pantheon::arm::GICSetConfig(UINT32 Interrupt, UINT32 Value)
 	UINT32 Shift = 2 * (Interrupt % 16);
 	UINT32 NANDValue = 0x03 << Shift;
 
-	volatile UINT32 CurValue = pantheon::arm::GICRead(
+	UINT32 CurValue = pantheon::arm::GICRead(
 		GIC_CLASS_DISTRIBUTOR, GICD_ICFGR, Interrupt / 16);
 
 	CurValue &= ~NANDValue;
@@ -102,7 +102,7 @@ VOID pantheon::arm::GICSetPriority(UINT32 Interrupt, UINT32 Value)
 	UINT32 Shift = 8 * (Interrupt % 4);
 	UINT32 NANDValue = 0xFF << Shift;
 
-	volatile UINT32 CurValue = pantheon::arm::GICRead(
+	UINT32 CurValue = pantheon::arm::GICRead(
 		GIC_CLASS_DISTRIBUTOR, GICD_IPRIORITYR, Interrupt / 4);
 
 	CurValue &= ~NANDValue;
@@ -115,7 +115,7 @@ VOID pantheon::arm::GICSetCore(UINT32 Interrupt, UINT32 Value)
 	UINT32 Shift = 8 * (Interrupt % 4);
 	UINT32 NANDValue = 0xFF << Shift;
 
-	volatile UINT32 CurValue = pantheon::arm::GICRead(
+	UINT32 CurValue = pantheon::arm::GICRead(
 		GIC_CLASS_DISTRIBUTOR, GICD_ITARGETSR, Interrupt / 4);
 
 	CurValue &= ~NANDValue;

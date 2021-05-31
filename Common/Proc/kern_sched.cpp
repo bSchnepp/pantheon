@@ -5,6 +5,15 @@
 pantheon::Thread::Thread(Process *ParentProcess)
 {
 	this->ParentProcess = ParentProcess;
+
+	PANTHEON_UNUSED(Registers);
+	PANTHEON_UNUSED(ParentProcess);
+
+	PANTHEON_UNUSED(State);
+	PANTHEON_UNUSED(Priority);
+
+	PANTHEON_UNUSED(PreemptCount);
+	PANTHEON_UNUSED(RemainingTicks);	
 }
 
 pantheon::Thread::~Thread()
@@ -14,7 +23,8 @@ pantheon::Thread::~Thread()
 
 pantheon::Process::Process()
 {
-
+	PANTHEON_UNUSED(CurState);
+	PANTHEON_UNUSED(Priority);
 }
 
 pantheon::Process::~Process()

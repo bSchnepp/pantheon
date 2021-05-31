@@ -8,12 +8,13 @@
 #include <arch/aarch64/gic.hpp>
 #include <arch/aarch64/ints.hpp>
 
-static constexpr UINT64 DeviceToAddress[] =
+typedef enum DeviceToAddress
 {
-	[DEVICE_TYPE_UART] = 0x09000000,
-	[DEVICE_TYPE_GIC_DIST] = 0x08000000,
-	[DEVICE_TYPE_GIC_CPU] = 0x08010000,
-};
+	DEVICE_TYPE_UART = 0x09000000,
+	DEVICE_TYPE_GIC_DIST = 0x08000000,
+	DEVICE_TYPE_GIC_CPU = 0x08010000,
+}DeviceToAddress;
+
 
 void WriteSerialChar(CHAR Char)
 {
@@ -40,10 +41,10 @@ extern char interrupt_table[];
 
 void BoardInit()
 {
-	pantheon::pl011::PL011Init(DeviceToAddress[DEVICE_TYPE_UART], 0);
+	pantheon::pl011::PL011Init(DEVICE_TYPE_UART, 0);
 
-	pantheon::arm::GICSetMMIOAddr(pantheon::arm::GIC_CLASS_DISTRIBUTOR, DeviceToAddress[DEVICE_TYPE_GIC_DIST]);
-	pantheon::arm::GICSetMMIOAddr(pantheon::arm::GIC_CLASS_CPU_INTERFACE, DeviceToAddress[DEVICE_TYPE_GIC_CPU]);
+	pantheon::arm::GICSetMMIOAddr(pantheon::arm::GIC_CLASS_DISTRIBUTOR, DEVICE_TYPE_GIC_DIST);
+	pantheon::arm::GICSetMMIOAddr(pantheon::arm::GIC_CLASS_CPU_INTERFACE, DEVICE_TYPE_GIC_CPU);
 
 	pantheon::arm::GICInit();
 

@@ -31,30 +31,6 @@ static UINT64 GetSize(char *Loc)
 	return ((*Reinterp) & ~0x01);
 }
 
-static UINT8 GetAlloc(char *Loc)
-{
-	BlockHeader *Reinterp = reinterpret_cast<BlockHeader*>(Loc);
-	return ((*Reinterp) & 0x01);
-}
-
-
-/* Note that "Val != 0" is needed to guarantee either a 0 or 1 as output. */
-static void SetAlloc(char *Loc, BOOL Val)
-{
-	char *NewLoc = GetHeader(Loc);
-	BlockHeader *Reinterp = reinterpret_cast<BlockHeader*>(NewLoc);
-	UINT64 Size = GetSize((char*)Reinterp);
-	*Reinterp = (Size | (Val != 0));
-}
-
-static void SetSize(char *Loc, UINT64 Size)
-{
-	char *NewLoc = GetHeader(Loc);
-	BlockHeader *Reinterp = reinterpret_cast<BlockHeader*>(NewLoc);
-	BOOL Used = GetAlloc((char*)Reinterp);
-	*Reinterp = (Size | Used);
-}
-
 static void SetSizeAlloc(char *Loc, BOOL Used, UINT64 Size)
 {
 	BlockHeader *Reinterp = reinterpret_cast<BlockHeader*>(Loc);
@@ -69,11 +45,6 @@ static char *GetFooter(char *Loc)
 static char *NextBlock(char *Loc)
 {
 	return Loc + GetSize(GetHeader(Loc));
-}
-
-static char *PrevBlock(char *Loc)
-{
-	return Loc - GetSize(GetHeader(Loc)) - sizeof(BlockHeader);
 }
 
 typedef struct FreeList
@@ -196,4 +167,5 @@ Optional<void*> BasicMalloc(UINT64 Amt)
 void BasicFree(void *Addr)
 {
 	/* Do nothing for now... */
+	PANTHEON_UNUSED(Addr);
 }
