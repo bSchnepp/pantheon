@@ -1,3 +1,4 @@
+#include <arch.hpp>
 #include <kern_status.hpp>
 #include <kern_runtime.hpp>
 #include <kern_integers.hpp>

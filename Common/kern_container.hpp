@@ -1,3 +1,4 @@
+#include <kern.h>
 #include <kern_runtime.hpp>
 #include <kern_datatypes.hpp>
 
@@ -74,11 +75,14 @@ public:
 	void Delete(UINT64 Index)
 	{
 		/* NYI */
+		PANTHEON_UNUSED(Index);
 	}
 
 	BOOL Contains(T& Item)
 	{
 		/* NYI */
+		PANTHEON_UNUSED(Item);
+		return FALSE;
 	}
 
 private:

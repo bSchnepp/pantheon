@@ -162,8 +162,10 @@ void FiniDriver(CHAR *DriverName, UINT64 Address)
 
 void PerCoreInit()
 {
+#if defined(__aarch64__)
 	if (UseGIC)
 	{
 		pantheon::arm::GICInitCore();
 	}
+#endif
 }
