@@ -3,6 +3,7 @@
 #include <kern_runtime.hpp>
 #include <kern_container.hpp>
 
+#include <Common/Proc/kern_cpu.hpp>
 #include <Common/Proc/kern_sched.hpp>
 
 #ifndef SCHED_TESTS_HPP_
@@ -83,6 +84,16 @@ TEST(Scheduler, CreateThreadAddTicks)
 	UINT64 OrigTicks = T.TicksLeft();
 	T.AddTicks(100);
 	ASSERT_EQ(T.TicksLeft(), OrigTicks + 100);
+}
+
+TEST(CPUCore, CoreInfoInit)
+{
+	pantheon::CPU::CoreInfo InitCoreData;
+
+	pantheon::CPU::InitCoreInfo(&InitCoreData);
+	ASSERT_EQ(InitCoreData.CurProcess, nullptr);
+	ASSERT_EQ(InitCoreData.CurThread, nullptr);
+	ASSERT_NE(InitCoreData.CurSched, nullptr);
 }
 
 #endif

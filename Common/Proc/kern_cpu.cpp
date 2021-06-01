@@ -15,5 +15,5 @@ void pantheon::CPU::InitCoreInfo(CoreInfo *Block)
 	
 	Block->CurThread = nullptr;
 	Block->CurProcess = nullptr;
-	Block->CurSched = nullptr;
+	Block->CurSched = (pantheon::Scheduler*)(BasicMalloc(sizeof(pantheon::Scheduler)).GetValue());
 }

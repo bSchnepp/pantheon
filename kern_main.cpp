@@ -110,6 +110,7 @@ void kern_init_core()
 
 	for (;;)
 	{
+		CoreInfo[CpuNo].CurSched->Reschedule();
 	}
 
 }
