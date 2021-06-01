@@ -7,5 +7,5 @@ scan-build -plist --force-analyze-debug-code -analyze-headers -o analyzer_report
 scan-build -plist --force-analyze-debug-code -analyze-headers -o analyzer_reports make -j`nproc`
 ./pantheon --gtest_output=xml:./gtests.xml
 cd ..
-gcovr -r . --xml-pretty > build/coverage.xml
+gcovr --exclude-directories tests/ --exclude-directories externals/ -r . --xml-pretty > build/coverage.xml
 sonar-scanner

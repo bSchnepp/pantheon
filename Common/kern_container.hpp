@@ -37,7 +37,7 @@ public:
 		return Optional<T>();
 	}
 
-	T* Get(UINT64 Index)
+	T &Get(UINT64 Index)
 	{
 		return this->Content[Index];
 	}
@@ -47,7 +47,7 @@ public:
 		return this->EntryCount;
 	}
 
-	void Add(T& NewItem)
+	void Add(T NewItem)
 	{
 		if (EntryCount + 1 < SpaceCount)
 		{
@@ -78,7 +78,7 @@ public:
 		PANTHEON_UNUSED(Index);
 	}
 
-	BOOL Contains(T& Item)
+	BOOL Contains(T Item)
 	{
 		/* NYI */
 		PANTHEON_UNUSED(Item);
