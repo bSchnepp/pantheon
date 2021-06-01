@@ -105,15 +105,6 @@ BOOL StringCompare(const CHAR *Arg1, const CHAR *Arg2, UINT64 Amt)
 	return TRUE;
 }
 
-constexpr UINT32 ConstStrLen(const CHAR *Str)
-{
-	UINT32 Count = 0;
-	for (Count = 0; Str[Count] != '\0'; ++Count)
-	{
-	}
-	return Count;
-}
-
 void ClearBuffer(CHAR *Location, UINT32 Amount)
 {
 	for (UINT32 Index = 0; Index < Amount; ++Index)
