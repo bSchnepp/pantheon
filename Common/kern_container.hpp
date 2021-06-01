@@ -19,6 +19,10 @@ public:
 		this->Malloc = BasicMalloc;
 		this->Free = BasicFree;
 
+		this->SpaceCount = 0;
+		this->EntryCount = 0;
+		this->Content = nullptr;
+
 		auto MaybeMem = this->Malloc(sizeof(T) * InitCount);
 		if (MaybeMem.GetOkay() != FALSE)
 		{
@@ -53,23 +57,22 @@ public:
 		{
 			this->Content[this->EntryCount] = NewItem;
 			this->EntryCount++;
+			return;
 		}
-		else
+		
+		this->SpaceCount *= 2;
+		auto MaybeMem = this->Malloc(sizeof(T) * this->SpaceCount);
+		if (MaybeMem.GetOkay())
 		{
-			this->SpaceCount *= 2;
-			auto MaybeMem = this->Malloc(sizeof(T) * this->SpaceCount);
-			if (MaybeMem.GetOkay() != FALSE)
+			T* NewContent = (T*)MaybeMem.GetValue();
+			for (UINT64 Index = 0; Index < this->EntryCount; ++Index)
 			{
-				T* NewContent = (T*)MaybeMem.GetValue();
-				for (UINT64 Index = 0; Index < this->EntryCount; ++Index)
-				{
-					NewContent[Index] = this->Content[Index];
-				}
-				this->Free(this->Content);
-				this->Content = NewContent;
-				this->Add(NewItem);
-			}			
-		}
+				NewContent[Index] = this->Content[Index];
+			}
+			this->Free(this->Content);
+			this->Content = NewContent;
+			this->Add(NewItem);
+		}			
 	}
 
 	void Delete(UINT64 Index)

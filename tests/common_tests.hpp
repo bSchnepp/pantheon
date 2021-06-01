@@ -3,6 +3,9 @@
 #include <kern_runtime.hpp>
 #include <kern_container.hpp>
 
+#ifndef COMMON_TESTS_HPP_
+#define COMMON_TESTS_HPP_
+
 TEST(BasicMalloc, AllocOkay)
 {
 	Optional<void*> Alloc = BasicMalloc(1024);
@@ -97,8 +100,8 @@ TEST(ArrayList, BasicGet)
 	ArrayList<INT32> Arr;
 	Arr.Add(3);
 	Arr.Add(4);
-	ASSERT_EQ(Arr.Get(0), 3);
-	ASSERT_EQ(Arr.Get(1), 4);
+	ASSERT_EQ(Arr.Get(0), Arr[0].GetValue());
+	ASSERT_EQ(Arr.Get(1), Arr[1].GetValue());
 }
 
 TEST(ArrayList, ReallocAdd)
@@ -132,8 +135,4 @@ TEST(ArrayList, ReallocIndexNotExisting)
 	ASSERT_FALSE(Arr[100].GetOkay());
 }
 
-int main(int argc, char **argv)
-{
-	::testing::InitGoogleTest(&argc, argv);
-	return RUN_ALL_TESTS();
-}
+#endif

@@ -33,7 +33,21 @@ class Thread
 {
 public:
 	Thread(Process *ParentProcess);
+	Thread(Process *ParentProcess, ThreadPriority Priority);
 	~Thread();
+
+	Process *MyProc();
+
+	ThreadState MyState();
+	ThreadPriority MyPriority();
+
+	[[nodiscard]] UINT64 Preempts() const;
+	[[nodiscard]] UINT64 TicksLeft() const;
+
+	VOID AddTicks(UINT64 TickCount);
+
+	VOID SetState(ThreadState State);
+	VOID SetPriority(ThreadPriority Priority);
 
 private:
 	CpuContext Registers;
