@@ -1,7 +1,9 @@
 #include <gtest/gtest.h>
 
+#include <kern.h>
 #include <kern_runtime.hpp>
 #include <kern_container.hpp>
+#include <kern_integers.hpp>
 
 #ifndef COMMON_TESTS_HPP_
 #define COMMON_TESTS_HPP_
@@ -374,5 +376,38 @@ TEST(VolatileMMIO, S64)
 	WriteMMIOS64((UINT64)(&Item), -4);
 	ASSERT_EQ(ReadMMIOS64((UINT64)(&Item)), -4);
 }
+
+TEST(CPPRT, SwapBytes8Bit)
+{
+	UINT8 Item = 0x5F;
+	INT8 Item2 = -0x5F;
+	ASSERT_EQ(SwapBytes(Item), Item);
+	ASSERT_EQ(SwapBytes(Item2), Item2);
+}
+
+TEST(CPPRT, SwapBytes16Bit)
+{
+	UINT16 Item = 0x5F6A;
+	INT16 Item2 = -0x5F6A;
+	ASSERT_EQ(SwapBytes(Item), 0x6A5F);
+	ASSERT_NE(SwapBytes(Item2), Item2);
+}
+
+TEST(CPPRT, SwapBytes32Bit)
+{
+	UINT32 Item = 0x5F6A7B8C;
+	INT32 Item2 = -0x5F6A7B8C;
+	ASSERT_EQ(SwapBytes(Item), 0x8C7B6A5F);
+	ASSERT_NE(SwapBytes(Item2), Item2);
+}
+
+TEST(CPPRT, SwapBytes64Bit)
+{
+	UINT64 Item = 0x5F6A7B8C9AADBCDE;
+	INT64 Item2 = -0x5F6A7B8C9AADBCDE;
+	ASSERT_EQ(SwapBytes(Item), 0xDEBCAD9A8C7B6A5F);
+	ASSERT_NE(SwapBytes(Item2), Item2);
+}
+
 
 #endif

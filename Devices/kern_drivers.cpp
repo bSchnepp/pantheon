@@ -20,7 +20,7 @@ static BOOL UseECAM = FALSE;
 
 extern "C" void asm_kern_init_core(UINT64 Stack);
 
-void InitDriver(CHAR *DriverName, UINT64 Address)
+void InitDriver(const CHAR *DriverName, UINT64 Address)
 {
 	PANTHEON_UNUSED(Address);
 	/* For now, only actually do something if we have psci available. */
@@ -30,7 +30,7 @@ void InitDriver(CHAR *DriverName, UINT64 Address)
 	}
 }
 
-void DriverHandleDTB(CHAR *DriverName, DeviceTreeBlob *CurState)
+void DriverHandleDTB(const CHAR *DriverName, DeviceTreeBlob *CurState)
 {
 	if (StringCompare(DriverName, "psci", 4))
 	{
@@ -101,7 +101,7 @@ void DriverHandleDTB(CHAR *DriverName, DeviceTreeBlob *CurState)
 	}
 }
 
-void FiniDriver(CHAR *DriverName, UINT64 Address)
+void FiniDriver(const CHAR *DriverName, UINT64 Address)
 {
 	/* For now, only actually do something if we have pcie or psci... */
 	if (StringCompare(DriverName, "pcie", 4))

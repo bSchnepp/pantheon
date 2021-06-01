@@ -2,6 +2,7 @@
 #include <kern_runtime.hpp>
 #include <kern_integers.hpp>
 #include <kern_datatypes.hpp>
+#include <Sync/kern_spinlock.hpp>
 
 typedef UINT64 BlockHeader;
 static constexpr UINT64 HeapSpace = 2 * 1024 * 1024;
@@ -98,6 +99,8 @@ void InitBasicMemory()
 	InitMemoryOkay = TRUE;
 }
 
+static pantheon::Spinlock AllocLock;
+
 /**
  * \~english @brief Tries to allocate a block of memory from a static heap.
  * \~english @details An attempt is made to allocate against a statically 
@@ -128,6 +131,7 @@ void InitBasicMemory()
  */
 Optional<void*> BasicMalloc(UINT64 Amt)
 {
+	AllocLock.Acquire();
 	InitBasicMemory();
 	UINT64 Amount = Max(Align(Amt, (sizeof(BlockHeader))), MinBlockSize);
 
@@ -157,15 +161,19 @@ Optional<void*> BasicMalloc(UINT64 Amt)
 				GlobalFreeList->Prev = NewItem;
 			}
 			GlobalFreeList = NewItem;
-						
+
+			AllocLock.Release();			
 			return Optional<void*>(Indexer);
 		}
 	}
+	AllocLock.Release();
 	return Optional<void*>();
 }
 
 void BasicFree(void *Addr)
 {
+	AllocLock.Acquire();
 	/* Do nothing for now... */
 	PANTHEON_UNUSED(Addr);
+	AllocLock.Release();
 }

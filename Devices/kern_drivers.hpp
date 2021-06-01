@@ -7,9 +7,9 @@
 #ifndef _KERN_DRIVERS_HPP_
 #define _KERN_DRIVERS_HPP_
 
-void InitDriver(CHAR *DriverName, UINT64 Address);
-void DriverHandleDTB(CHAR *DriverName, DeviceTreeBlob *CurState);
-void FiniDriver(CHAR *DriverName, UINT64 Address);
+void InitDriver(const CHAR *DriverName, UINT64 Address);
+void DriverHandleDTB(const CHAR *DriverName, DeviceTreeBlob *CurState);
+void FiniDriver(const CHAR *DriverName, UINT64 Address);
 
 void PerCoreInit();
 
