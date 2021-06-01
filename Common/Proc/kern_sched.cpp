@@ -33,7 +33,7 @@ pantheon::Thread::Thread(Process *OwningProcess)
 pantheon::Thread::Thread(Process *OwningProcess, ThreadPriority Priority)
 {
 	this->ParentProcess = OwningProcess;
-	PANTHEON_UNUSED(Registers);
+	this->Registers.Wipe();
 
 	this->State = pantheon::THREAD_STATE_INIT;
 	this->Priority = Priority;
