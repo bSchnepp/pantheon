@@ -51,6 +51,13 @@ typedef struct CpuContext
 
 VOID RearmSystemTimer(UINT64 Freq);
 
+namespace CPU
+{
+
+UINT8 GetProcessorNumber();
+
+}
+
 }
 
 #endif

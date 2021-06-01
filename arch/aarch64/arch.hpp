@@ -14,6 +14,16 @@ inline VOID RearmSystemTimer(UINT64 Freq)
 	pantheon::arm::RearmSystemTimer(Freq);
 }
 
+namespace CPU
+{
+
+/**
+ * \~english @brief Gets the processor number of the current core
+ * \~english @author Brian Schnepp
+ */
+UINT8 GetProcessorNumber();
+
+}
 }
 
 #endif
