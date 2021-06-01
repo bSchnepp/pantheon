@@ -24,7 +24,7 @@ void InitDriver(CHAR *DriverName, UINT64 Address)
 {
 	PANTHEON_UNUSED(Address);
 	/* For now, only actually do something if we have psci available. */
-	if (StringCompare((void*)DriverName, (void*)"psci", 5))
+	if (StringCompare(DriverName, "psci", 5))
 	{
 		psci::PSCIInit();
 	}
@@ -32,7 +32,7 @@ void InitDriver(CHAR *DriverName, UINT64 Address)
 
 void DriverHandleDTB(CHAR *DriverName, DeviceTreeBlob *CurState)
 {
-	if (StringCompare(DriverName, (void*)"psci", 4))
+	if (StringCompare(DriverName, "psci", 4))
 	{
 		UINT64 Offset = CurState->GetPropStructNameIndex();
 		CHAR Buffer[512];
@@ -44,20 +44,20 @@ void DriverHandleDTB(CHAR *DriverName, DeviceTreeBlob *CurState)
 		}
 		CurState->CopyStringFromOffset(Offset, Buffer, 512);
 
-		if (StringCompare(Buffer, (void*)("method"), 9))
+		if (StringCompare(Buffer, ("method"), 9))
 		{
 			CurState->CopyStringFromStructPropNode(Buffer2, 512);
-			if (StringCompare(Buffer2, (void*)("smc"), 3))
+			if (StringCompare(Buffer2, ("smc"), 3))
 			{
 				psci::PSCISetMethod(psci::PSCI_USE_SMC);
 			}
-			else if (StringCompare(Buffer2, (void*)("hvc"), 3))
+			else if (StringCompare(Buffer2, ("hvc"), 3))
 			{
 				psci::PSCISetMethod(psci::PSCI_USE_HVC);
 			}			
 		}
 	}
-	else if (StringCompare(DriverName, (void*)("intc"), 5))
+	else if (StringCompare(DriverName, ("intc"), 5))
 	{
 		UINT64 Offset = CurState->GetPropStructNameIndex();
 		CHAR Buffer[512];
@@ -69,16 +69,16 @@ void DriverHandleDTB(CHAR *DriverName, DeviceTreeBlob *CurState)
 		}
 		CurState->CopyStringFromOffset(Offset, Buffer, 512);
 
-		if (StringCompare(Buffer, (void*)("compatible"), 9))
+		if (StringCompare(Buffer, ("compatible"), 9))
 		{
 			CurState->CopyStringFromStructPropNode(Buffer2, 512);
-			if (StringCompare(Buffer2, (void*)("arm,cortex-a15-gic"), 18))
+			if (StringCompare(Buffer2, ("arm,cortex-a15-gic"), 18))
 			{
 				UseGIC = TRUE;
 			}
 		}		
 	}
-	else if (StringCompare(DriverName, (void*)("pcie"), 5))
+	else if (StringCompare(DriverName, ("pcie"), 5))
 	{
 		UINT64 Offset = CurState->GetPropStructNameIndex();
 		CHAR Buffer[512];
@@ -90,10 +90,10 @@ void DriverHandleDTB(CHAR *DriverName, DeviceTreeBlob *CurState)
 		}
 		CurState->CopyStringFromOffset(Offset, Buffer, 512);
 
-		if (StringCompare(Buffer, (void*)("compatible"), 9))
+		if (StringCompare(Buffer, ("compatible"), 9))
 		{
 			CurState->CopyStringFromStructPropNode(Buffer2, 512);
-			if (StringCompare(Buffer2, (void*)("pci-host-ecam-generic"), 18))
+			if (StringCompare(Buffer2, ("pci-host-ecam-generic"), 18))
 			{
 				UseECAM = TRUE;
 			}
@@ -104,11 +104,11 @@ void DriverHandleDTB(CHAR *DriverName, DeviceTreeBlob *CurState)
 void FiniDriver(CHAR *DriverName, UINT64 Address)
 {
 	/* For now, only actually do something if we have pcie or psci... */
-	if (StringCompare((void*)DriverName, (void*)"pcie", 4))
+	if (StringCompare(DriverName, "pcie", 4))
 	{
 		pantheon::pcie::InitPCIe((void*)Address);
 	}
-	else if (StringCompare((void*)DriverName, (void*)"psci", 5))
+	else if (StringCompare(DriverName, "psci", 5))
 	{
 		for (UINT8 Index = 0; Index < 255; ++Index)
 		{

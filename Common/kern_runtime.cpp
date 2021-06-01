@@ -88,23 +88,38 @@ INT8  ReadMMIOS8(UINT64 Addr)
 	return *(volatile INT8*)Addr;
 }
 
-UINT64 StringCompare(void *L, void *R, UINT64 Amt)
+BOOL StringCompare(const CHAR *Arg1, const CHAR *Arg2, UINT64 Amt)
 {
-	CHAR *CL = reinterpret_cast<CHAR*>(L);
-	CHAR *CR = reinterpret_cast<CHAR*>(R);
-
 	for (UINT64 Index = 0; Index < Amt; ++Index)
 	{
-		if (CL[Index] != CR[Index])
+		if (Arg1[Index] != Arg2[Index])
 		{
 			return FALSE;
 		}
-		else if (CL[Index] == '\0')
+
+		if (Arg1[Index] == 0)
 		{
 			break;
 		}
 	}
 	return TRUE;
+}
+
+constexpr UINT32 ConstStrLen(const CHAR *Str)
+{
+	UINT32 Count = 0;
+	for (Count = 0; Str[Count] != '\0'; ++Count)
+	{
+	}
+	return Count;
+}
+
+void ClearBuffer(CHAR *Location, UINT32 Amount)
+{
+	for (UINT32 Index = 0; Index < Amount; ++Index)
+	{
+		Location[Index] = '\0';
+	}
 }
 
 /* Note that until some of the issues with static constructors are resolved,

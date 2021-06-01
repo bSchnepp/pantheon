@@ -150,7 +150,9 @@ extern "C"
 	void _putchar(char c);
 }
 
-UINT64 StringCompare(void *L, void *R, UINT64 Amt);
+BOOL StringCompare(const CHAR *Arg1, const CHAR *Arg2, UINT64 Amt);
+void ClearBuffer(CHAR *Location, UINT32 Amount);
+constexpr UINT32 ConstStrLen(const CHAR *Str);
 
 void SERIAL_LOG(const char *Fmt, ...);
 

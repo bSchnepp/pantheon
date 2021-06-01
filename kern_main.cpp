@@ -8,40 +8,6 @@
 #include <Devices/kern_drivers.hpp>
 #include <PhyProtocol/DeviceTree/DeviceTree.hpp>
 
-constexpr UINT32 ConstStrLen(const CHAR *Str)
-{
-	UINT32 Count = 0;
-	for (Count = 0; Str[Count] != '\0'; ++Count)
-	{
-	}
-	return Count;
-}
-
-int32_t StringCompare(const CHAR *Arg1, const CHAR *Arg2, UINT32 Amt)
-{
-	for (UINT32 Index = 0; Index < Amt; ++Index)
-	{
-		if (Arg1[Index] != Arg2[Index])
-		{
-			return Index;
-		}
-
-		if (Arg1[Index] == 0)
-		{
-			return Index;
-		}
-	}
-	return 0;
-}
-
-void ClearBuffer(CHAR *Location, UINT32 Amount)
-{
-	for (UINT32 Index = 0; Index < Amount; ++Index)
-	{
-		Location[Index] = '\0';
-	}
-}
-
 void Initialize(fdt_header *dtb)
 {
 	volatile bool CheckMe = CheckHeader(dtb);

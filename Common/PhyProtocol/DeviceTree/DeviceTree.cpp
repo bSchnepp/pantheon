@@ -395,7 +395,7 @@ BOOL IsStringPropType(const CHAR *Prop)
 {
 	for (const CHAR *Item : StringPropTypes)
 	{
-		if (StringCompare((void*)Item, (void*)Prop, 32))
+		if (StringCompare(Item, Prop, 32))
 		{
 			return TRUE;
 		}
@@ -407,7 +407,7 @@ BOOL IsStringListPropType(const CHAR *Prop)
 {
 	for (const CHAR *Item : StringListPropTypes)
 	{
-		if (StringCompare((void*)Item, (void*)Prop, 32))
+		if (StringCompare(Item, Prop, 32))
 		{
 			return TRUE;
 		}
@@ -419,7 +419,7 @@ BOOL IsU32PropType(const CHAR *Prop)
 {
 	for (const CHAR *Item : UInt32PropTypes)
 	{
-		if (StringCompare((void*)Item, (void*)Prop, 32))
+		if (StringCompare(Item, Prop, 32))
 		{
 			return TRUE;
 		}
@@ -431,7 +431,7 @@ BOOL IsU64PropType(const CHAR *Prop)
 {
 	for (const CHAR *Item : UInt64PropTypes)
 	{
-		if (StringCompare((void*)Item, (void*)Prop, 32))
+		if (StringCompare(Item, Prop, 32))
 		{
 			return TRUE;
 		}
