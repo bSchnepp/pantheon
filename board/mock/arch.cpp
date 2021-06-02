@@ -7,3 +7,11 @@ UINT8 pantheon::CPU::GetProcessorNumber()
 {
 	return 0;
 }
+
+VOID pantheon::CPU::CLI()
+{
+}
+
+VOID pantheon::CPU::STI()
+{
+}

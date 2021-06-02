@@ -53,8 +53,20 @@ extern "C" void irq_handler_el1()
 	 * TODO: Send IMIs to other processors, so that those reschedule
 	 * jobs too.
 	 */
-	pantheon::arm::GICAckInterrupt(30);
-	pantheon::arm::RearmSystemTimer(TimerClock);
+	for (UINT64 Index = 0; Index < pantheon::arm::GICGetNumInterrupts(); ++Index)
+	{
+		/* dirty method to make smp work... */
+		if (!pantheon::arm::GICPollInterrupt(Index))
+		{
+			continue;
+		}
+
+		pantheon::arm::GICAckInterrupt(Index);
+		if (Index == 30)
+		{
+			pantheon::arm::RearmSystemTimer(TimerClock);
+		}
+	}
 }
 
 
@@ -133,4 +145,14 @@ VOID pantheon::arm::DisableSystemTimer()
 	asm volatile ("msr cntp_tval_el0, %0\n" 
 			"msr cntp_ctl_el0, %1"
 			:: "r"(ClockSpeed), "r"(TimerCtl) : "memory");	
+}
+
+VOID pantheon::arm::CLI()
+{
+	pantheon::arm::GICDisable();
+}
+
+VOID pantheon::arm::STI()
+{
+	pantheon::arm::GICEnable();
 }

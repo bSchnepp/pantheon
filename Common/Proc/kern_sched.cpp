@@ -151,7 +151,7 @@ pantheon::Process::~Process()
 
 pantheon::Scheduler::Scheduler()
 {
-
+	this->CurThread = 0;
 }
 
 pantheon::Scheduler::~Scheduler()

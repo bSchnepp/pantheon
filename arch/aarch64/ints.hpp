@@ -13,6 +13,9 @@ UINT64 GetSystemTimerClock();
 VOID RearmSystemTimer(UINT64 Frequency);
 VOID DisableSystemTimer();
 
+VOID CLI();
+VOID STI();
+
 }
 
 }

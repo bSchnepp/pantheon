@@ -97,6 +97,7 @@ extern "C"
 
 void kern_init_core()
 {
+	pantheon::CPU::CLI();
 	UINT8 CpuNo = pantheon::CPU::GetProcessorNumber();
 	pantheon::CPU::InitCoreInfo(&(CoreInfo[CpuNo]));
 
@@ -108,6 +109,7 @@ void kern_init_core()
 	PerCoreInit();
 	pantheon::RearmSystemTimer(1000);
 	SERIAL_LOG("Pantheon booted with core %hhu\n", CpuNo);
+	pantheon::CPU::STI();
 
 	for (;;)
 	{

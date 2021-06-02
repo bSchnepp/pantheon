@@ -28,6 +28,9 @@ namespace CPU
  */
 UINT8 GetProcessorNumber();
 
+VOID CLI();
+VOID STI();
+
 }
 }
 

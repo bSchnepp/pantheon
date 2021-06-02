@@ -1,3 +1,4 @@
+#include <kern_macro.hpp>
 #include <kern_datatypes.hpp>
 
 #ifndef _PANTHEON_ARM_GIC_HPP_
@@ -99,9 +100,28 @@ typedef struct GICv2_GICD_IIDR
 			UINT8 Variant : 4;
 			UINT8 Revision : 4;
 			UINT16 Implementer : 12;
-		};
+		}__attribute__((__packed__));
 	};
 }__attribute__((__packed__)) GICv2_GICD_IIDR;
+COMPILER_ASSERT(sizeof(GICv2_GICD_IIDR) == sizeof(UINT32));
+
+typedef struct GICv2_GICD_TYPER
+{
+	union
+	{
+		UINT32 Raw;
+		struct
+		{
+			UINT16 RESERVED2 : 16;
+			UINT8 LSPI : 5;
+			UINT8 SecurityExtn : 1;
+			UINT8 RESERVED1 : 2;
+			UINT8 CpuNumber : 3;
+			UINT8 ITLinesNumber : 5;
+		}__attribute__((__packed__));
+	};
+}__attribute__((__packed__)) GICv2_GICD_TYPER;
+COMPILER_ASSERT(sizeof(GICv2_GICD_TYPER) == sizeof(UINT32));
 
 typedef struct GICv2_GICD_PPISR
 {
@@ -119,9 +139,10 @@ typedef struct GICv2_GICD_PPISR
 			BOOL ID26Status : 1;
 			BOOL ID25Status : 1;
 			UINT8 Reserved0;
-		};
+		}__attribute__((__packed__));
 	};
 }__attribute__((__packed__)) GICv2_GICD_PPISR;
+COMPILER_ASSERT(sizeof(GICv2_GICD_PPISR) == sizeof(UINT32));
 
 typedef struct GICv2_GICD_ICFGRn
 {
@@ -133,9 +154,10 @@ typedef struct GICv2_GICD_ICFGRn
 			UINT16 Reserved1;
 			UINT8 PPIStatus;
 			UINT8 Reserved0;
-		};
+		}__attribute__((__packed__));
 	};
 }__attribute__((__packed__)) GICv2_GICD_ICFGRn;
+COMPILER_ASSERT(sizeof(GICv2_GICD_ICFGRn) == sizeof(UINT32));
 
 typedef struct GICv2_GICD_SPISRn
 {
@@ -176,9 +198,10 @@ typedef struct GICv2_GICD_SPISRn
 			BOOL Two : 1;
 			BOOL One : 1;
 			BOOL Zero : 1;
-		};
+		}__attribute__((__packed__));
 	};
 }__attribute__((__packed__)) GICv2_GICD_SPISRn;
+COMPILER_ASSERT(sizeof(GICv2_GICD_SPISRn) == sizeof(UINT32));
 
 typedef struct GICv2_GICH_VTR
 {
@@ -191,10 +214,10 @@ typedef struct GICv2_GICH_VTR
 			UINT8 PREBits : 3;
 			UINT32 Reserved : 20;
 			UINT8 ListRegs : 6;
-		};
+		}__attribute__((__packed__));
 	};
 }__attribute__((__packed__)) GICv2_GICH_VTR;
-
+COMPILER_ASSERT(sizeof(GICv2_GICH_VTR) == sizeof(UINT32));
 
 VOID GICSetMMIOAddr(GICClassType Type, UINT64 Addr);
 
@@ -213,12 +236,14 @@ VOID GICWrite(GICClassType Type,
 VOID GICEnableInterrupt(UINT32 Interrupt);
 VOID GICDisableInterrupt(UINT32 Interrupt);
 VOID GICAckInterrupt(UINT32 Interrupt);
+BOOL GICPollInterrupt(UINT32 Interrupt);
 
 VOID GICSetConfig(UINT32 Interrupt, UINT32 Value);
 VOID GICSetPriority(UINT32 Interrupt, UINT32 Value);
 VOID GICSetCore(UINT32 Interrupt, UINT32 Value);
 
 UINT8 GICGetNumCPUs();
+UINT64 GICGetNumInterrupts();
 
 
 
