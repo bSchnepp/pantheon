@@ -11,6 +11,7 @@ VOID LoadInterruptTable(VOID *Table);
 UINT64 GetSystemTimerClock();
 
 VOID RearmSystemTimer(UINT64 Frequency);
+VOID DisableSystemTimer();
 
 }
 

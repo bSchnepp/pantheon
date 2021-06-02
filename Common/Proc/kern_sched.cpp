@@ -171,10 +171,28 @@ pantheon::Scheduler::~Scheduler()
  */
 void pantheon::Scheduler::Reschedule()
 {
+	/* Disable the system timer while a process 
+	 * might need to be scheduled. 
+	 */
+	pantheon::DisableSystemTimer();
+
+
+	/* Just before a process is restarted, make sure it's set 
+	 * to use a 1000Mhz clock. This is to preempt processes as often as
+	 * reasonable, and ensure the system feels low latency.
+	 * (Contrast to say, Linux at 250Mhz which prioritizes throughput.)
+	 */
+	pantheon::RearmSystemTimer(1000);
 	/* NYI */
 }
 
 pantheon::Process *pantheon::Scheduler::MyProc()
+{
+	/* NYI */
+	return nullptr;
+}
+
+pantheon::Thread *pantheon::Scheduler::MyThread()
 {
 	/* NYI */
 	return nullptr;

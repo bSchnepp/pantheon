@@ -125,3 +125,12 @@ VOID pantheon::arm::RearmSystemTimer(UINT64 Frequency)
 			"msr cntp_ctl_el0, %1"
 			:: "r"(ClockSpeed), "r"(TimerCtl) : "memory");
 }
+
+VOID pantheon::arm::DisableSystemTimer()
+{
+	UINT64 ClockSpeed = 0xFFFFFFFFFFFFFFFF;
+	volatile UINT64 TimerCtl = 1;
+	asm volatile ("msr cntp_tval_el0, %0\n" 
+			"msr cntp_ctl_el0, %1"
+			:: "r"(ClockSpeed), "r"(TimerCtl) : "memory");	
+}

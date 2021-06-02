@@ -14,6 +14,11 @@ inline VOID RearmSystemTimer(UINT64 Freq)
 	pantheon::arm::RearmSystemTimer(Freq);
 }
 
+inline VOID DisableSystemTimer()
+{
+	pantheon::arm::DisableSystemTimer();
+}
+
 namespace CPU
 {
 

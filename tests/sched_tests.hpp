@@ -86,6 +86,14 @@ TEST(Scheduler, CreateThreadAddTicks)
 	ASSERT_EQ(T.TicksLeft(), OrigTicks + 100);
 }
 
+TEST(Scheduler, SchedulerNoThreadsNoSchedule)
+{
+	pantheon::Scheduler Sched;
+	Sched.Reschedule();
+	ASSERT_EQ(Sched.MyThread(), nullptr);
+	ASSERT_EQ(Sched.MyProc(), nullptr);
+}
+
 TEST(CPUCore, CoreInfoInit)
 {
 	pantheon::CPU::CoreInfo InitCoreData;
