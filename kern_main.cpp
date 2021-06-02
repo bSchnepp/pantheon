@@ -106,6 +106,7 @@ void kern_init_core()
 	}
 	
 	PerCoreInit();
+	pantheon::RearmSystemTimer(1000);
 	SERIAL_LOG("Pantheon booted with core %hhu\n", CpuNo);
 
 	for (;;)
@@ -125,7 +126,6 @@ void kern_init(fdt_header *dtb)
 		SERIAL_LOG("%s\n", "booting based on device tree pointer!");
 		Initialize(dtb);
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_SECOND_STAGE);
-		pantheon::RearmSystemTimer(1000);
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_OK);
 	}
 	kern_init_core();

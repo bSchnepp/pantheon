@@ -25,15 +25,34 @@ UINT8 pantheon::arm::GICGetNumCPUs()
 
 VOID pantheon::arm::GICInitCore()
 {
+	GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_ISENABLER, 0, 0xFFFFFFFF);
+
+	for (UINT8 Index = 0; Index < 8; ++Index)
+	{
+		/* Everything's priority needs to be 0. */
+		GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_IPRIORITYR, Index * 4, 0x00000000);
+	}
+
+	/* Everything's group is 0. */
+	GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_IGROUPR, 0, 0x00000000);
+
+	UINT32 GICCControl = 0;
+	GICCControl |= (0 << 9); /* Set EOImodeNS */
+	GICCControl |= (1 << 9); /* Set common binary point */
+	GICCControl |= (0 << 4); /* Set CBPR enabled */
+	GICCControl |= (0 << 3); /* Set FIQ enabled */
+	GICCControl |= (1 << 2); /* Set ACK control */
+	GICCControl |= (1 << 1); /* Enable group 1 */
+	GICCControl |= (1 << 0); /* Enable group 0 */
+	GICWrite(GIC_CLASS_CPU_INTERFACE, GICC_CTLR, 0, GICCControl);
+
+	GICWrite(GIC_CLASS_CPU_INTERFACE, GICC_PMR, 0, 0xFF);
+	GICWrite(GIC_CLASS_CPU_INTERFACE, GICC_BPR, 0, 0x07);
 }
 
 VOID pantheon::arm::GICEnable()
 {
-	GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_CTLR, 0, TRUE);
-	GICWrite(GIC_CLASS_CPU_INTERFACE, GICC_CTLR, 0, TRUE);
-
-	GICWrite(GIC_CLASS_CPU_INTERFACE, GICC_PMR, 0, 0xFF);
-	GICWrite(GIC_CLASS_CPU_INTERFACE, GICC_BPR, 0, 0x00);
+	GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_CTLR, 0, 0x03);
 }
 
 VOID pantheon::arm::GICDisable()

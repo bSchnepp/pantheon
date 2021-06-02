@@ -91,6 +91,7 @@ TEST(CPUCore, CoreInfoInit)
 	pantheon::CPU::CoreInfo InitCoreData;
 
 	pantheon::CPU::InitCoreInfo(&InitCoreData);
+	ASSERT_EQ(InitCoreData.CurState, pantheon::CPU::CPU_STATE_IDLE);
 	ASSERT_EQ(InitCoreData.CurProcess, nullptr);
 	ASSERT_EQ(InitCoreData.CurThread, nullptr);
 	ASSERT_NE(InitCoreData.CurSched, nullptr);

@@ -130,6 +130,9 @@ void FiniDriver(const CHAR *DriverName, UINT64 Address)
 	}
 }
 
+/* HACK: This should be put in a better place.. */
+extern VOID PerCoreBoardInit();
+
 void PerCoreInit()
 {
 #if defined(__aarch64__)
@@ -138,4 +141,5 @@ void PerCoreInit()
 		pantheon::arm::GICInitCore();
 	}
 #endif
+	PerCoreBoardInit();
 }

@@ -40,3 +40,8 @@ extern "C" VOID asm_kern_init_core()
 {
 
 }
+
+VOID PerCoreBoardInit()
+{
+	
+}
