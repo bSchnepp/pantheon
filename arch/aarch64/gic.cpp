@@ -5,8 +5,10 @@
 
 #include "gic.hpp"
 
-static UINT8 NumCPUs = 0;
+static UINT8 NumSockets = 0;
 static UINT64 NumInterrupts = 0;
+static BOOL SecurityExtensions = FALSE;
+
 static UINT64 GICAddresses[pantheon::arm::GIC_CLASS_TYPE_MAX];
 
 VOID pantheon::arm::GICSetMMIOAddr(pantheon::arm::GICClassType Type, UINT64 Addr)
@@ -14,27 +16,52 @@ VOID pantheon::arm::GICSetMMIOAddr(pantheon::arm::GICClassType Type, UINT64 Addr
 	GICAddresses[Type] = Addr;
 }
 
+/* 
+ * The GIC can be thought up as having a FSM attached for up to 1024 interrupt
+ * lines. That DFA, as pseudocode, can be visualized as:
+ * 
+ * INACTIVE : SIG -> PENDING
+ * PENDING : RECV -> ACTIVE
+ * ACTIVE : ACK -> INACTIVE
+ * ACTIVE : SIG -> ACTIVE_PENDING
+ * ACTIVE_PENDING : ACK -> PENDING
+ */
+
 VOID pantheon::arm::GICInit()
 {
-	GICv2_GICD_TYPER TypeR;
+	/* TODO: Create functions to more easilly get this info.*/
+	UINT32 TypeR = GICRead(GIC_CLASS_DISTRIBUTOR, GICD_TYPER, 0);
+	NumInterrupts = 32 * ((TypeR & 0x1F) + 1);
+	NumSockets = ((TypeR >> 5) & 0b111) + 1;
+	SecurityExtensions = ((TypeR >> 10) & 0x01);
 
-	TypeR.Raw = GICRead(GIC_CLASS_DISTRIBUTOR, GICD_TYPER, 0);
-	NumInterrupts = 32 * (TypeR.ITLinesNumber + 1);
-	NumCPUs = TypeR.CpuNumber + 1;
+	/* Enable group0 and group1 */
+	UINT32 CTLR = (1 << 0) | (1 << 1);
+	GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_CTLR, 0, CTLR);
 
-	/* Don't permit interrupts from firing when we're setting up.*/
-	pantheon::arm::GICDisable();
-
-	/* Forcefully ensure everything's enabled. */
-	for (UINT8 Index = 0; Index < TypeR.ITLinesNumber; ++Index)
+	for (UINT32 Index = 0; Index < (NumInterrupts / 32); ++Index)
 	{
-		GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_ISENABLER, Index, 0xFFFFFFFF);
+		/* Disable it first, just in case. */
+		GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_ICENABLER, Index, 0xFFFFFFFF);
+
+		/* While here, also ensure it's going to group 0 always. */
+		GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_IGROUPR, Index, 0x00000000);
+	}
+
+	/* Everything goes to interface 0, with the same priority. */
+	for (UINT64 Index = 0; Index < NumInterrupts / 4; ++Index)
+	{
+		if (Index >= 8)
+		{
+			GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_ITARGETSR, Index, 0x01010101);
+		}
+		GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_IPRIORITYR, Index, 0x00000000);
 	}
 }
 
-UINT8 pantheon::arm::GICGetNumCPUs()
+UINT8 pantheon::arm::GICGetNumSockets()
 {
-	return NumCPUs;
+	return NumSockets;
 }
 
 VOID pantheon::arm::GICInitCore()
@@ -44,7 +71,7 @@ VOID pantheon::arm::GICInitCore()
 	for (UINT8 Index = 0; Index < 8; ++Index)
 	{
 		/* Everything's priority needs to be 0. */
-		GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_IPRIORITYR, Index * 4, 0x00000000);
+		GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_IPRIORITYR, Index, 0x00000000);
 	}
 
 	/* Everything's group is 0. */
@@ -53,28 +80,20 @@ VOID pantheon::arm::GICInitCore()
 	GICWrite(GIC_CLASS_CPU_INTERFACE, GICC_PMR, 0, 0xFF);
 	GICWrite(GIC_CLASS_CPU_INTERFACE, GICC_BPR, 0, 0x07);
 
-	GICEnable();
+	GICEnable();	
 }
 
 VOID pantheon::arm::GICEnable()
 {
-	UINT32 GICCControl = 0;
-	GICCControl |= (0 << 9); /* Set EOImodeNS */
-	GICCControl |= (1 << 9); /* Set common binary point */
-	GICCControl |= (0 << 4); /* Set CBPR enabled */
-	GICCControl |= (0 << 3); /* Set FIQ enabled */
-	GICCControl |= (1 << 2); /* Set ACK control */
-	GICCControl |= (1 << 1); /* Enable group 1 */
-	GICCControl |= (1 << 0); /* Enable group 0 */
-	GICWrite(GIC_CLASS_CPU_INTERFACE, GICC_CTLR, 0, GICCControl);
-	
+	/* Refer to GIC spec. Enable group 0, 1, and AckCtrl */
+	GICWrite(GIC_CLASS_CPU_INTERFACE, GICC_CTLR, 0, 0x05);
 	GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_CTLR, 0, 0x03);
 }
 
 VOID pantheon::arm::GICDisable()
 {
-	GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_CTLR, 0, FALSE);
-	GICWrite(GIC_CLASS_CPU_INTERFACE, GICC_CTLR, 0, FALSE);
+	GICWrite(GIC_CLASS_CPU_INTERFACE, GICC_CTLR, 0, 0);
+	GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_CTLR, 0, 0);
 }
 
 UINT32 pantheon::arm::GICRead(GICClassType Type, 
@@ -109,13 +128,9 @@ VOID pantheon::arm::GICDisableInterrupt(UINT32 Interrupt)
 		GICD_ICENABLER, Interface, (1 << IRQNumber));
 }
 
-VOID pantheon::arm::GICAckInterrupt(UINT32 Interrupt)
+VOID pantheon::arm::GICAckInterrupt(UINT32 Value)
 {
-	UINT32 Interface = Interrupt / 32;
-	UINT32 IRQNumber = Interrupt % 32;
-
-	GICWrite(GIC_CLASS_DISTRIBUTOR, 
-		GICD_ICPENDR, Interface, (1 << IRQNumber));
+	GICWrite(GIC_CLASS_CPU_INTERFACE, GICC_EOIR, 0, Value);
 }
 
 BOOL pantheon::arm::GICPollInterrupt(UINT32 Interrupt)
@@ -171,4 +186,9 @@ VOID pantheon::arm::GICSetCore(UINT32 Interrupt, UINT32 Value)
 UINT64 pantheon::arm::GICGetNumInterrupts()
 {
 	return NumInterrupts;
+}
+
+UINT32 pantheon::arm::GICRecvInterrupt()
+{
+	return GICRead(GIC_CLASS_CPU_INTERFACE, GICC_IAR, 0);
 }

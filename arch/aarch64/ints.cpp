@@ -46,26 +46,11 @@ extern "C" void fiq_handler_el1()
 
 extern "C" void irq_handler_el1()
 {
-	/* For now, the only interrupt we get from the GIC 
-	 * is the timer interrupt. This should be more properly
-	 * checked later...
-	 * 
-	 * TODO: Send IMIs to other processors, so that those reschedule
-	 * jobs too.
-	 */
-	for (UINT64 Index = 0; Index < pantheon::arm::GICGetNumInterrupts(); ++Index)
+	UINT32 IAR = pantheon::arm::GICRecvInterrupt();
+	pantheon::arm::GICAckInterrupt(IAR);
+	if ((IAR & 0x3FF) == 30)
 	{
-		/* dirty method to make smp work... */
-		if (!pantheon::arm::GICPollInterrupt(Index))
-		{
-			continue;
-		}
-
-		pantheon::arm::GICAckInterrupt(Index);
-		if (Index == 30)
-		{
-			pantheon::arm::RearmSystemTimer(TimerClock);
-		}
+		pantheon::arm::RearmSystemTimer(TimerClock);
 	}
 }
 

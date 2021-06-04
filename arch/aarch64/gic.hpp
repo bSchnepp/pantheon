@@ -88,137 +88,6 @@ typedef enum GICRegisterOffsets
 	GICV_DIR = 0x1000,
 }GICRegisterOffsets;
 
-typedef struct GICv2_GICD_IIDR
-{
-	union
-	{
-		UINT32 Raw;
-		struct
-		{
-			UINT8 ProductID;
-			UINT8 Reserved : 4;
-			UINT8 Variant : 4;
-			UINT8 Revision : 4;
-			UINT16 Implementer : 12;
-		}__attribute__((__packed__));
-	};
-}__attribute__((__packed__)) GICv2_GICD_IIDR;
-COMPILER_ASSERT(sizeof(GICv2_GICD_IIDR) == sizeof(UINT32));
-
-typedef struct GICv2_GICD_TYPER
-{
-	union
-	{
-		UINT32 Raw;
-		struct
-		{
-			UINT16 RESERVED2 : 16;
-			UINT8 LSPI : 5;
-			UINT8 SecurityExtn : 1;
-			UINT8 RESERVED1 : 2;
-			UINT8 CpuNumber : 3;
-			UINT8 ITLinesNumber : 5;
-		}__attribute__((__packed__));
-	};
-}__attribute__((__packed__)) GICv2_GICD_TYPER;
-COMPILER_ASSERT(sizeof(GICv2_GICD_TYPER) == sizeof(UINT32));
-
-typedef struct GICv2_GICD_PPISR
-{
-	union
-	{
-		UINT32 Raw;
-		struct
-		{
-			UINT16 Reserved1;
-			BOOL ID31Status : 1;
-			BOOL ID30Status : 1;
-			BOOL ID29Status : 1;
-			BOOL ID28Status : 1;
-			BOOL ID27Status : 1;
-			BOOL ID26Status : 1;
-			BOOL ID25Status : 1;
-			UINT8 Reserved0;
-		}__attribute__((__packed__));
-	};
-}__attribute__((__packed__)) GICv2_GICD_PPISR;
-COMPILER_ASSERT(sizeof(GICv2_GICD_PPISR) == sizeof(UINT32));
-
-typedef struct GICv2_GICD_ICFGRn
-{
-	union
-	{
-		UINT32 Raw;
-		struct
-		{
-			UINT16 Reserved1;
-			UINT8 PPIStatus;
-			UINT8 Reserved0;
-		}__attribute__((__packed__));
-	};
-}__attribute__((__packed__)) GICv2_GICD_ICFGRn;
-COMPILER_ASSERT(sizeof(GICv2_GICD_ICFGRn) == sizeof(UINT32));
-
-typedef struct GICv2_GICD_SPISRn
-{
-	union
-	{
-		UINT32 Raw;
-		struct
-		{
-			BOOL ThirtyOne : 1;
-			BOOL Thirty : 1;
-			BOOL TwentyNine : 1;
-			BOOL TwentyEight : 1;
-			BOOL TwentySeven : 1;
-			BOOL TwentySix : 1;
-			BOOL TwentyFive : 1;
-			BOOL TwentyFour : 1;
-			BOOL TwentyThree : 1;
-			BOOL TwentyTwo : 1;
-			BOOL TwentyOne : 1;
-			BOOL Twenty : 1;			
-			BOOL Nineteen : 1;
-			BOOL Eighteen : 1;
-			BOOL Seventeen : 1;
-			BOOL Sixteen : 1;
-			BOOL Fifteen : 1;
-			BOOL Fourteen : 1;
-			BOOL Thirteen : 1;
-			BOOL Twelve : 1;
-			BOOL Eleven : 1;
-			BOOL Ten : 1;
-			BOOL Nine : 1;
-			BOOL Eight : 1;
-			BOOL Seven : 1;
-			BOOL Six : 1;
-			BOOL Five : 1;
-			BOOL Four : 1;
-			BOOL Three : 1;
-			BOOL Two : 1;
-			BOOL One : 1;
-			BOOL Zero : 1;
-		}__attribute__((__packed__));
-	};
-}__attribute__((__packed__)) GICv2_GICD_SPISRn;
-COMPILER_ASSERT(sizeof(GICv2_GICD_SPISRn) == sizeof(UINT32));
-
-typedef struct GICv2_GICH_VTR
-{
-	union
-	{
-		UINT32 Raw;
-		struct
-		{
-			UINT8 PRIBits : 3;
-			UINT8 PREBits : 3;
-			UINT32 Reserved : 20;
-			UINT8 ListRegs : 6;
-		}__attribute__((__packed__));
-	};
-}__attribute__((__packed__)) GICv2_GICH_VTR;
-COMPILER_ASSERT(sizeof(GICv2_GICH_VTR) == sizeof(UINT32));
-
 VOID GICSetMMIOAddr(GICClassType Type, UINT64 Addr);
 
 VOID GICInit();
@@ -235,17 +104,19 @@ VOID GICWrite(GICClassType Type,
 
 VOID GICEnableInterrupt(UINT32 Interrupt);
 VOID GICDisableInterrupt(UINT32 Interrupt);
-VOID GICAckInterrupt(UINT32 Interrupt);
-BOOL GICPollInterrupt(UINT32 Interrupt);
 
 VOID GICSetConfig(UINT32 Interrupt, UINT32 Value);
 VOID GICSetPriority(UINT32 Interrupt, UINT32 Value);
 VOID GICSetCore(UINT32 Interrupt, UINT32 Value);
 
-UINT8 GICGetNumCPUs();
+UINT8 GICGetNumSockets();
 UINT64 GICGetNumInterrupts();
 
+UINT32 GICRecvInterrupt();
+VOID GICAckInterrupt(UINT32 IAR);
 
+BOOL GICPollInterrupt(UINT32 Interrupt);
+VOID GICIgnoreInterrupt(UINT32 Interrupt);
 
 }
 
