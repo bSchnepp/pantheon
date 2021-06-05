@@ -113,6 +113,15 @@ void ClearBuffer(CHAR *Location, UINT32 Amount)
 	}
 }
 
+
+void SERIAL_LOG_UNSAFE(const char *Fmt, ...)
+{
+	va_list Args;
+	va_start(Args, Fmt);
+	vprintf(Fmt, Args);
+	va_end(Args);	
+}
+
 /* Note that until some of the issues with static constructors are resolved,
  * this mutex is technically in undefined state. We'll need .init_array to work
  * right first...

@@ -80,20 +80,18 @@ VOID pantheon::arm::GICInitCore()
 	GICWrite(GIC_CLASS_CPU_INTERFACE, GICC_PMR, 0, 0xFF);
 	GICWrite(GIC_CLASS_CPU_INTERFACE, GICC_BPR, 0, 0x07);
 
-	GICEnable();	
+	GICEnable();
 }
 
 VOID pantheon::arm::GICEnable()
 {
 	/* Refer to GIC spec. Enable group 0, 1, and AckCtrl */
 	GICWrite(GIC_CLASS_CPU_INTERFACE, GICC_CTLR, 0, 0x05);
-	GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_CTLR, 0, 0x03);
 }
 
 VOID pantheon::arm::GICDisable()
 {
 	GICWrite(GIC_CLASS_CPU_INTERFACE, GICC_CTLR, 0, 0);
-	GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_CTLR, 0, 0);
 }
 
 UINT32 pantheon::arm::GICRead(GICClassType Type, 
@@ -126,6 +124,15 @@ VOID pantheon::arm::GICDisableInterrupt(UINT32 Interrupt)
 
 	GICWrite(GIC_CLASS_DISTRIBUTOR, 
 		GICD_ICENABLER, Interface, (1 << IRQNumber));
+}
+
+VOID pantheon::arm::GICIgnoreInterrupt(UINT32 Interrupt)
+{
+	UINT32 Interface = Interrupt / 32;
+	UINT32 IRQNumber = Interrupt % 32;
+
+	GICWrite(GIC_CLASS_DISTRIBUTOR, 
+		GICD_ICPENDR, Interface, (1 << IRQNumber));	
 }
 
 VOID pantheon::arm::GICAckInterrupt(UINT32 Value)
@@ -170,7 +177,7 @@ VOID pantheon::arm::GICSetPriority(UINT32 Interrupt, UINT32 Value)
 	pantheon::arm::GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_IPRIORITYR, Interrupt / 16, CurValue);
 }
 
-VOID pantheon::arm::GICSetCore(UINT32 Interrupt, UINT32 Value)
+VOID pantheon::arm::GICSetInterface(UINT32 Interrupt, UINT32 Value)
 {
 	UINT32 Shift = 8 * (Interrupt % 4);
 	UINT32 NANDValue = 0xFF << Shift;

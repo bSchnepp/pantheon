@@ -47,19 +47,17 @@ void BoardInit()
 	pantheon::arm::GICSetMMIOAddr(pantheon::arm::GIC_CLASS_CPU_INTERFACE, DEVICE_TYPE_GIC_CPU);
 
 	pantheon::arm::GICInit();
-
-	pantheon::arm::LoadInterruptTable(&interrupt_table);
 }
 
 VOID PerCoreBoardInit()
 {
+	pantheon::arm::LoadInterruptTable(&interrupt_table);
+
 	/* HACK: this only works on qemu aarch64 virt... */
 	const static UINT32 TimerIRQ = 30;
 	pantheon::arm::GICSetConfig(TimerIRQ, 2);
-	pantheon::arm::GICSetPriority(TimerIRQ, 0);
-	pantheon::arm::GICSetCore(TimerIRQ, 0x01);
-	pantheon::arm::GICAckInterrupt(TimerIRQ);
-	pantheon::arm::GICEnableInterrupt(TimerIRQ);	
+	pantheon::arm::GICIgnoreInterrupt(TimerIRQ);
+	pantheon::arm::GICEnableInterrupt(TimerIRQ);
 }
 
 void _putchar(char c)

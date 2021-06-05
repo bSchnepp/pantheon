@@ -107,7 +107,7 @@ VOID GICDisableInterrupt(UINT32 Interrupt);
 
 VOID GICSetConfig(UINT32 Interrupt, UINT32 Value);
 VOID GICSetPriority(UINT32 Interrupt, UINT32 Value);
-VOID GICSetCore(UINT32 Interrupt, UINT32 Value);
+VOID GICSetInterface(UINT32 Interrupt, UINT32 Value);
 
 UINT8 GICGetNumSockets();
 UINT64 GICGetNumInterrupts();
