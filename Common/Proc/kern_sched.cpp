@@ -182,7 +182,7 @@ void pantheon::Scheduler::Reschedule()
 	 * reasonable, and ensure the system feels low latency.
 	 * (Contrast to say, Linux at 250Mhz which prioritizes throughput.)
 	 */
-	pantheon::RearmSystemTimer(1000);
+	pantheon::RearmSystemTimer();
 	/* NYI */
 }
 
