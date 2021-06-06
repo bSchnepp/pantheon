@@ -49,6 +49,7 @@ typedef struct CpuContext
 	}
 }CpuContext;
 
+VOID RearmSystemTimer();
 VOID RearmSystemTimer(UINT64 Freq);
 
 VOID DisableSystemTimer();

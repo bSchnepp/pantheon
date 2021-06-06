@@ -4,6 +4,7 @@
 #include <kern_runtime.hpp>
 #include <kern_container.hpp>
 #include <kern_integers.hpp>
+#include <kern_string.hpp>
 
 #ifndef COMMON_TESTS_HPP_
 #define COMMON_TESTS_HPP_
@@ -375,6 +376,83 @@ TEST(VolatileMMIO, S64)
 	INT64 Item;
 	WriteMMIOS64((UINT64)(&Item), -4);
 	ASSERT_EQ(ReadMMIOS64((UINT64)(&Item)), -4);
+}
+
+TEST(KernString, Initialization)
+{
+	pantheon::String Str;
+	ASSERT_EQ(Str.Length(), 0);
+}
+
+TEST(KernString, InitializationWithLatin)
+{
+	pantheon::String Str("One thing");
+	ASSERT_EQ(Str.Length(), 9);
+	ASSERT_EQ(Str.DataLength(), Str.CharLength());
+}
+
+TEST(KernString, InitializationWithKanaContent)
+{
+	pantheon::String Str("の");
+	ASSERT_EQ(Str.CharLength(), 1);
+}
+
+TEST(KernString, InitializationWithKanaData)
+{
+	pantheon::String Str("の");
+	ASSERT_EQ(Str.DataLength(), 3);
+}
+
+TEST(KernString, IndexWithLatin)
+{
+	pantheon::String Str("One thing");
+	ASSERT_EQ(Str[2], 'e');
+}
+
+TEST(KernString, IndexWithHiragana)
+{
+	pantheon::String Str("の");
+	ASSERT_EQ(Str[0] & 0xF0, 0xE0);
+}
+
+TEST(KernString, IndexWithHiraganaInvalid)
+{
+	pantheon::String Str("の");
+	ASSERT_NE(Str[1] & 0xF0, 0xE0);
+}
+
+TEST(KernString, IndexOutOfBounds)
+{
+	pantheon::String Str;
+	ASSERT_EQ(Str[1037849], '\0');
+}
+
+TEST(KernString, CompareTwoStringsEqual)
+{
+	pantheon::String Str("One thing");
+	pantheon::String Str2("One thing");
+	ASSERT_TRUE(Str == Str2);
+}
+
+TEST(KernString, CompareTwoStringsNotEqualSameLen)
+{
+	pantheon::String Str("One thing");
+	pantheon::String Str2("Two thing");
+	ASSERT_FALSE(Str == Str2);
+}
+
+TEST(KernString, CompareTwoStringsNotEqual)
+{
+	pantheon::String Str("One thing");
+	pantheon::String Str2("Another thing");
+	ASSERT_FALSE(Str == Str2);
+}
+
+TEST(KernString, CompareTwoStringsNotEqualKana)
+{
+	pantheon::String Str("One thing");
+	pantheon::String Str2("の");
+	ASSERT_FALSE(Str == Str2);
 }
 
 TEST(CPPRT, SwapBytes8Bit)

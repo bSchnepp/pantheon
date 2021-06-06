@@ -4,11 +4,13 @@ LIST(APPEND COMMON_HEADERS kern_status.hpp)
 LIST(APPEND COMMON_HEADERS kern_container.hpp)
 LIST(APPEND COMMON_HEADERS kern_datatypes.hpp)
 LIST(APPEND COMMON_HEADERS kern_runtime.hpp)
+LIST(APPEND COMMON_HEADERS kern_string.hpp)
 LIST(APPEND COMMON_HEADERS Sync/kern_spinlock.hpp)
 
 LIST(APPEND COMMON_SOURCES kern_runtime.cpp)
 LIST(APPEND COMMON_SOURCES kern_basic_malloc.cpp)
 LIST(APPEND COMMON_SOURCES kern_status.cpp)
+LIST(APPEND COMMON_SOURCES kern_string.cpp)
 LIST(APPEND COMMON_SOURCES Sync/kern_spinlock.cpp)
 
 INCLUDE_DIRECTORIES(../externals)
