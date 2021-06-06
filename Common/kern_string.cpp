@@ -69,6 +69,27 @@ pantheon::String::~String()
 }
 
 /**
+ * \~english @brief Copies the handle to the underlying string to this string
+ * \~english @details Assigns the pointer of the underlying string of another
+ * string to this string. It should be noted that the content of the string
+ * itself is not copied, but an additional reference to the underlying string
+ * is made.
+ * \~english @author Brian Schnepp
+ */
+pantheon::String &pantheon::String::operator=(pantheon::String& Other) noexcept
+{
+	if (this == &Other)
+	{
+		return *this;
+	}
+	
+	this->DataLen = Other.DataLen;
+	this->ContentLen = Other.ContentLen;
+	this->Str = Other.Str;
+	return *this;
+}
+
+/**
  * \~english @brief Indexes a byte from a string.
  * \~english @details Obtains the raw byte value at a particular location
  * of the string. The index must be between [0, DataLength()).

@@ -384,6 +384,10 @@ TEST(KernString, Initialization)
 	ASSERT_EQ(Str.Length(), 0);
 }
 
+/* Some more tests should be written with different scripts,
+ * especially to trigger differences in UTF-8 length encoding.
+ */
+
 TEST(KernString, InitializationWithLatin)
 {
 	pantheon::String Str("One thing");
@@ -446,6 +450,33 @@ TEST(KernString, CompareTwoStringsNotEqual)
 	pantheon::String Str("One thing");
 	pantheon::String Str2("Another thing");
 	ASSERT_FALSE(Str == Str2);
+}
+
+TEST(KernString, CompareTwoStringsNotEqualThenEqual)
+{
+	pantheon::String Str("One thing");
+	pantheon::String Str2("Another thing");
+	ASSERT_FALSE(Str == Str2);
+	Str = Str2;
+	ASSERT_TRUE(Str == Str2);
+}
+
+TEST(KernString, CompareTwoStringsSelfAssign)
+{
+	pantheon::String Str("One thing");
+	pantheon::String StrBackup("One thing");
+	ASSERT_TRUE(Str == StrBackup);
+	Str = Str;
+	ASSERT_TRUE(Str == StrBackup);
+}
+
+
+
+TEST(KernString, CompareTwoStringsEqualKana)
+{
+	pantheon::String Str("の");
+	pantheon::String Str2("の");
+	ASSERT_TRUE(Str == Str2);
 }
 
 TEST(KernString, CompareTwoStringsNotEqualKana)

@@ -1,4 +1,6 @@
 #include <arch.hpp>
+
+#include <kern_string.hpp>
 #include <kern_datatypes.hpp>
 #include <kern_container.hpp>
 
@@ -82,9 +84,14 @@ class Process
 {
 public:
 	Process();
+	Process(const char *CommandString);
+	Process(String &CommandString);
 	~Process();
 
+	const String &GetProcessString();
+
 private:
+	String ProcessCommand;
 	ProcessState CurState;
 	ProcessPriority Priority;
 	ArrayList<Thread> Threads;

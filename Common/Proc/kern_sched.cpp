@@ -144,9 +144,29 @@ pantheon::Process::Process()
 	PANTHEON_UNUSED(Priority);
 }
 
+pantheon::Process::Process(const char *CommandString)
+{
+	pantheon::String Str(CommandString);
+	PANTHEON_UNUSED(CurState);
+	PANTHEON_UNUSED(Priority);
+	this->ProcessCommand = Str;	
+}
+
+pantheon::Process::Process(pantheon::String &CommandString)
+{
+	PANTHEON_UNUSED(CurState);
+	PANTHEON_UNUSED(Priority);
+	this->ProcessCommand = CommandString;	
+}
+
 pantheon::Process::~Process()
 {
 
+}
+
+const pantheon::String &pantheon::Process::GetProcessString()
+{
+	return this->ProcessCommand;
 }
 
 pantheon::Scheduler::Scheduler()

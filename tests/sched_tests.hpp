@@ -22,6 +22,23 @@ TEST(Scheduler, CreateThreadWithProc)
 	ASSERT_EQ(T.MyProc(), &Proc);
 }
 
+TEST(Scheduler, CreateThreadWithProcName)
+{
+	pantheon::Process Proc("./someprocess");
+	pantheon::Thread T(&Proc);
+	ASSERT_EQ(T.MyProc(), &Proc);
+	ASSERT_EQ(Proc.GetProcessString(), "./someprocess");
+}
+
+TEST(Scheduler, CreateThreadWithProcNameKernelString)
+{
+	pantheon::String MyStr("./someprocess");
+	pantheon::Process Proc(MyStr);
+	pantheon::Thread T(&Proc);
+	ASSERT_EQ(T.MyProc(), &Proc);
+	ASSERT_EQ(Proc.GetProcessString(), MyStr);
+}
+
 TEST(Scheduler, CreateThreadPriority)
 {
 	pantheon::Process Proc;

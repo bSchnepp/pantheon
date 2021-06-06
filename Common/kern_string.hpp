@@ -15,6 +15,8 @@ public:
 
 	~String();
 
+	String &operator=(String& Other) noexcept;
+
 	[[nodiscard]] char operator[](UINT64 Index) const;
 	[[nodiscard]] bool operator==(const String &Other) const;
 
