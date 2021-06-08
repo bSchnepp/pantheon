@@ -217,3 +217,19 @@ pantheon::Thread *pantheon::Scheduler::MyThread()
 	/* NYI */
 	return nullptr;
 }
+
+pantheon::GlobalScheduler::GlobalScheduler()
+{
+	/* NYI */
+}
+
+pantheon::GlobalScheduler::~GlobalScheduler()
+{
+	/* NYI */
+}
+
+void pantheon::GlobalScheduler::CreateProcess(void *StartAddr)
+{
+	/* NYI */
+	PANTHEON_UNUSED(StartAddr);
+}

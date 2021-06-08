@@ -110,8 +110,24 @@ public:
 	Thread *MyThread();
 
 private:
-	UINT64 CurThread; 
+	UINT64 CurThread;
 	ArrayList<Thread> Threads;
+};
+
+class GlobalScheduler
+{
+
+public:
+	GlobalScheduler();
+	~GlobalScheduler();
+
+	void CreateProcess(void *StartAddr);
+
+private:
+	ArrayList<Thread> InactiveThreads;
+
+	ArrayList<Process> ActiveProcessList;
+	ArrayList<Process> UnscheduledProcessList;
 };
 
 }
