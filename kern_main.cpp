@@ -103,6 +103,7 @@ void kern_init_core()
 	PerCoreInit();
 	SERIAL_LOG("Pantheon booted with core %hhu\n", CpuNo);
 	pantheon::CPU::STI();
+	pantheon::CPU::GetCoreInfo()->CurSched->Reschedule();
 
 	for (;;)
 	{

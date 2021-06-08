@@ -1,6 +1,8 @@
 #include "kern_cpu.hpp"
 #include <kern_datatypes.hpp>
 
+static pantheon::GlobalScheduler GlobalSched;
+
 /* Pantheon can have up to 256 processors in theory.
  * In practice, this should probably be cut down to 8 or 16, which is
  * way more realistic for a SoM I can actually buy. 
@@ -29,4 +31,9 @@ void pantheon::CPU::InitCoreInfo(UINT8 CoreNo)
 	PerCoreInfo[CoreNo].CurThread = nullptr;
 	PerCoreInfo[CoreNo].CurProcess = nullptr;
 	PerCoreInfo[CoreNo].CurSched = (pantheon::Scheduler*)(BasicMalloc(sizeof(pantheon::Scheduler)).GetValue());
+}
+
+pantheon::GlobalScheduler *pantheon::CPU::GetGlobalScheduler()
+{
+	return &(GlobalSched);
 }

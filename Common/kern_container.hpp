@@ -32,6 +32,31 @@ public:
 		}
 	}
 
+	[[nodiscard]]
+	ArrayList<T> &operator=(const ArrayList<T> &Other) noexcept
+	{
+		if (this == &Other)
+		{
+			return *this;
+		}
+
+		this->Free(this->Content);
+		this->Content = nullptr;
+
+		auto MaybeMem = this->Malloc(Other.EntryCount);
+		if (MaybeMem.GetOkay() != FALSE)
+		{
+			this->Content = (T*)MaybeMem.GetValue();
+			this->SpaceCount = Other.SpaceCount;
+			this->EntryCount = Other.EntryCount;
+			for (UINT64 Index = 0; Index < this->SpaceCount; ++Index)
+			{
+				this->Content[Index] = Other.Content[Index];
+			}
+		}
+		return *this;
+	}
+
 	Optional<T> operator[](UINT64 Index)
 	{
 		if (Index < EntryCount)

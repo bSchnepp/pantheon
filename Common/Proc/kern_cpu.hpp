@@ -60,8 +60,9 @@ typedef struct CoreInfo
 void InitCoreInfo(UINT8 CoreNo);
 CoreInfo *GetCoreInfo();
 
-
 UINT8 GetProcessorNumber();
+
+GlobalScheduler *GetGlobalScheduler();
 
 }
 
