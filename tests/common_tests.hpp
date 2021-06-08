@@ -52,6 +52,10 @@ TEST(BasicMalloc, SingleFree)
 {
 	Optional<void*> Alloc1 = BasicMalloc(4);
 	EXPECT_EQ(Alloc1.GetOkay(), TRUE);
+	if (Alloc1.GetOkay() == FALSE)
+	{
+		return;
+	}
 	UINT32 *IntVal1 = (UINT32*)(Alloc1());
 
 	*IntVal1 = 0x01020304;
@@ -65,6 +69,11 @@ TEST(BasicMalloc, ManyAllocManyFree)
 	{
 		Optional<void*> Alloc1 = BasicMalloc(4);
 		EXPECT_EQ(Alloc1.GetOkay(), TRUE);
+		if (Alloc1.GetOkay() == FALSE)
+		{
+			return;
+		}
+
 		UINT32 *IntVal1 = (UINT32*)(Alloc1());
 
 		*IntVal1 = 0x01020304;
@@ -105,8 +114,8 @@ TEST(ArrayList, BasicGet)
 	ArrayList<INT32> Arr;
 	Arr.Add(3);
 	Arr.Add(4);
-	ASSERT_EQ(Arr.Get(0), Arr[0].GetValue());
-	ASSERT_EQ(Arr.Get(1), Arr[1].GetValue());
+	ASSERT_EQ(Arr[0], Arr.Get(0)());
+	ASSERT_EQ(Arr[1], Arr.Get(1)());
 }
 
 TEST(ArrayList, ReallocAdd)
@@ -126,8 +135,8 @@ TEST(ArrayList, ReallocIndex)
 	Arr.Add(4);
 	Arr.Add(5);
 	Arr.Add(6);
-	ASSERT_TRUE(Arr[3].GetOkay());
-	ASSERT_EQ(Arr[3].GetValue(), 6);
+	ASSERT_TRUE(Arr.Get(3).GetOkay());
+	ASSERT_EQ(Arr.Get(3).GetValue(), 6);
 }
 
 TEST(ArrayList, ReallocIndexNotExisting)
@@ -137,7 +146,70 @@ TEST(ArrayList, ReallocIndexNotExisting)
 	Arr.Add(4);
 	Arr.Add(5);
 	Arr.Add(6);
-	ASSERT_FALSE(Arr[100].GetOkay());
+	ASSERT_FALSE(Arr.Get(100).GetOkay());
+}
+
+TEST(ArrayList, AssignOperator)
+{
+	ArrayList<INT32> Arr;
+	Arr.Add(3);
+	Arr.Add(4);
+
+	ArrayList<INT32> Arr2;
+	Arr.Add(5);
+	Arr.Add(6);
+
+	Arr2 = Arr;
+	ASSERT_EQ(Arr.Size(), Arr2.Size());
+	ASSERT_EQ(Arr[0], Arr2[0]);
+	ASSERT_EQ(Arr[1], Arr2[1]);
+}
+
+TEST(ArrayList, AssignOperatorSmaller)
+{
+	ArrayList<INT32> Arr;
+	Arr.Add(3);
+	Arr.Add(4);
+
+	ArrayList<INT32> Arr2;
+	Arr2.Add(5);
+	Arr2.Add(6);
+	Arr2.Add(7);
+
+	Arr2 = Arr;
+	ASSERT_EQ(Arr.Size(), 2);
+	ASSERT_EQ(Arr.Size(), Arr2.Size());
+	ASSERT_EQ(Arr[0], Arr2[0]);
+	ASSERT_EQ(Arr[1], Arr2[1]);
+	
+	ASSERT_FALSE(Arr.Get(2).GetOkay());
+	ASSERT_EQ(Arr.Get(2).GetOkay(), Arr2.Get(2).GetOkay());
+
+}
+
+TEST(ArrayList, AssignOperatorDeepCopy)
+{
+	ArrayList<INT32> Arr;
+	Arr.Add(3);
+	Arr.Add(4);
+
+	ArrayList<INT32> Arr2;
+	Arr2.Add(5);
+	Arr2.Add(6);
+	Arr2.Add(7);
+
+	Arr2 = Arr;
+
+	Arr[0] = 9;
+	ASSERT_EQ(Arr.Size(), Arr2.Size());
+	ASSERT_NE(Arr[0], Arr2[0]);
+	ASSERT_EQ(Arr[1], Arr2[1]);
+	
+	ASSERT_FALSE(Arr.Get(2).GetOkay());
+	ASSERT_FALSE(Arr2.Get(2).GetOkay());
+
+	ASSERT_EQ(Arr[0], 9);
+	ASSERT_EQ(Arr2[0], 3);
 }
 
 TEST(Atoi, U8AtoiBase10)

@@ -32,7 +32,6 @@ public:
 		}
 	}
 
-	[[nodiscard]]
 	ArrayList<T> &operator=(const ArrayList<T> &Other) noexcept
 	{
 		if (this == &Other)
@@ -40,16 +39,22 @@ public:
 			return *this;
 		}
 
-		this->Free(this->Content);
+		if (this->Content)
+		{
+			this->Free(this->Content);
+		}
+
+		this->SpaceCount = 0;
+		this->EntryCount = 0;
 		this->Content = nullptr;
 
 		auto MaybeMem = this->Malloc(Other.EntryCount);
-		if (MaybeMem.GetOkay() != FALSE)
+		if (MaybeMem.GetOkay())
 		{
 			this->Content = (T*)MaybeMem.GetValue();
 			this->SpaceCount = Other.SpaceCount;
 			this->EntryCount = Other.EntryCount;
-			for (UINT64 Index = 0; Index < this->SpaceCount; ++Index)
+			for (UINT64 Index = 0; Index < Other.EntryCount; ++Index)
 			{
 				this->Content[Index] = Other.Content[Index];
 			}
@@ -57,18 +62,18 @@ public:
 		return *this;
 	}
 
-	Optional<T> operator[](UINT64 Index)
+	T &operator[](UINT64 Index)
+	{
+		return this->Content[Index % this->EntryCount];
+	}
+
+	Optional<T> Get(UINT64 Index)
 	{
 		if (Index < EntryCount)
 		{
 			return Optional<T>(Content[Index]);
 		}
 		return Optional<T>();
-	}
-
-	T &Get(UINT64 Index)
-	{
-		return this->Content[Index];
 	}
 
 	UINT64 Size()

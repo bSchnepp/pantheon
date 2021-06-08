@@ -4,9 +4,18 @@
 #include <kern_datatypes.hpp>
 #include <Sync/kern_spinlock.hpp>
 
+typedef struct FreeList
+{
+	struct FreeList *Prev;
+	struct FreeList *Next;
+}FreeList;
+
 typedef UINT64 BlockHeader;
 static constexpr UINT64 HeapSpace = 2 * 1024 * 1024;
-static char BasicMemory[HeapSpace];
+
+static constexpr UINT64 MinBlockSize = sizeof(FreeList) + sizeof(BlockHeader);
+
+alignas(32) static char BasicMemory[HeapSpace];
 
 COMPILER_ASSERT(sizeof(BlockHeader) == sizeof(UINT64));
 
@@ -38,24 +47,25 @@ static void SetSizeAlloc(char *Loc, BOOL Used, UINT64 Size)
 	*Reinterp = Size | (Used != 0);
 }
 
-static char *GetFooter(char *Loc)
-{
-	return Loc + GetSize(GetHeader(Loc)) - sizeof(BlockHeader);
-}
-
 static char *NextBlock(char *Loc)
 {
 	return Loc + GetSize(GetHeader(Loc));
 }
 
-typedef struct FreeList
-{
-	struct FreeList *Prev;
-	struct FreeList *Next;
-}FreeList;
+static FreeList *GlobalFreeList = nullptr;
+static void *CurrentArea = nullptr;
+static UINT64 CurrentSize = 0;
+
+static BOOL InitMemoryOkay = FALSE;
 
 static void UnlinkFreeList(FreeList *Current)
 {
+	if (GlobalFreeList == Current)
+	{
+		GlobalFreeList = GlobalFreeList->Next;
+		return;
+	}
+
 	if (Current->Prev)
 	{
 		Current->Prev->Next = Current->Next;
@@ -67,13 +77,7 @@ static void UnlinkFreeList(FreeList *Current)
 	}
 }
 
-static constexpr UINT64 MinBlockSize = sizeof(FreeList) + sizeof(BlockHeader);
 
-static FreeList *GlobalFreeList = nullptr;
-static void *CurrentArea = nullptr;
-static UINT64 CurrentSize = 0;
-
-static BOOL InitMemoryOkay = FALSE;
 
 void InitBasicMemory()
 {
@@ -95,11 +99,26 @@ void InitBasicMemory()
 
 	GlobalFreeList = reinterpret_cast<FreeList*>(BasicMemory + sizeof(BlockHeader));
 	SetSizeAlloc(GetHeader((char*)GlobalFreeList), FALSE, HeapSpace - MinBlockSize);
-	SetSizeAlloc(GetFooter((char*)GlobalFreeList), FALSE, HeapSpace - MinBlockSize);
 	InitMemoryOkay = TRUE;
 }
 
 static pantheon::Spinlock AllocLock;
+
+
+void CreateExplicitEntry(VOID *Addr)
+{
+	FreeList *List = (FreeList*)(Addr);
+
+	List->Next = nullptr;
+	List->Prev = nullptr;
+
+	if (GlobalFreeList)
+	{
+		GlobalFreeList->Prev = List;
+	}
+	List->Next = GlobalFreeList;
+	GlobalFreeList = List;
+}
 
 /**
  * \~english @brief Tries to allocate a block of memory from a static heap.
@@ -137,7 +156,7 @@ Optional<void*> BasicMalloc(UINT64 Amt)
 
 	/* Look through the explicit free list for any space. */
 	for (FreeList *Indexer = GlobalFreeList; 
-		Indexer != nullptr; 
+		Indexer != nullptr && CurrentSize < HeapSpace - MinBlockSize; 
 		Indexer = Indexer->Next)
 	{
 		UINT64 CurSize = GetSize(GetHeader((char*)Indexer));
@@ -151,18 +170,10 @@ Optional<void*> BasicMalloc(UINT64 Amt)
 
 			char *Next = NextBlock((char*)(Indexer));
 			SetSizeAlloc(GetHeader(Next), FALSE, Diff);
-			FreeList *NewItem = (FreeList*)(Next);
+			CreateExplicitEntry(Next);
 
-			NewItem->Prev = nullptr;
-			NewItem->Next = GlobalFreeList;
-
-			if (GlobalFreeList)
-			{
-				GlobalFreeList->Prev = NewItem;
-			}
-			GlobalFreeList = NewItem;
-
-			AllocLock.Release();			
+			AllocLock.Release();
+			CurrentSize += Amount;	
 			return Optional<void*>(Indexer);
 		}
 	}
@@ -173,7 +184,14 @@ Optional<void*> BasicMalloc(UINT64 Amt)
 void BasicFree(void *Addr)
 {
 	AllocLock.Acquire();
-	/* Do nothing for now... */
-	PANTHEON_UNUSED(Addr);
+	
+	/* Mark the block itself as free */
+	CHAR *Header = GetHeader((CHAR*)Addr);
+	UINT64 Size = GetSize(Header);
+	SetSizeAlloc(Header, FALSE, Size);
+
+	/* Append it to the free list. TODO: Coalescing! */
+	CreateExplicitEntry(Addr);
+
 	AllocLock.Release();
 }
