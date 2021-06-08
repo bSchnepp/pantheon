@@ -4,6 +4,8 @@
 #include <kern_datatypes.hpp>
 #include <kern_container.hpp>
 
+#include <Sync/kern_atomic.hpp>
+
 #ifndef _KERN_SCHED_HPP_
 #define _KERN_SCHED_HPP_
 
@@ -109,7 +111,13 @@ public:
 	Process *MyProc();
 	Thread *MyThread();
 
+	void MaybeReschedule();
+	void SignalReschedule();
+
 private:
+
+	Atomic<BOOL> ShouldReschedule;
+
 	UINT64 CurThread;
 	ArrayList<Thread> Threads;
 };

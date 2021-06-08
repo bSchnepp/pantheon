@@ -50,6 +50,7 @@ extern "C" void irq_handler_el1()
 	pantheon::arm::GICAckInterrupt(IAR);
 	if ((IAR & 0x3FF) == 30)
 	{
+		pantheon::CPU::GetCoreInfo()->CurSched->SignalReschedule();
 		pantheon::arm::RearmSystemTimer(TimerClock);
 	}
 }

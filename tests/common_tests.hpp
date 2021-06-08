@@ -6,6 +6,8 @@
 #include <kern_integers.hpp>
 #include <kern_string.hpp>
 
+#include <Common/Sync/kern_atomic.hpp>
+
 #ifndef COMMON_TESTS_HPP_
 #define COMMON_TESTS_HPP_
 
@@ -518,5 +520,53 @@ TEST(CPPRT, SwapBytes64Bit)
 	ASSERT_NE(SwapBytes(Item2), Item2);
 }
 
+TEST(KernAtomic, DefaultBool)
+{
+	pantheon::Atomic<BOOL> SomeBool;
+	ASSERT_FALSE(SomeBool.Load());
+}
+
+TEST(KernAtomic, DefaultBoolAssignTrue)
+{
+	pantheon::Atomic<BOOL> SomeBool;
+	ASSERT_FALSE(SomeBool.Load());
+	SomeBool.Store(TRUE);
+	ASSERT_TRUE(SomeBool.Load());
+}
+
+TEST(KernAtomic, AtomicInteger)
+{
+	pantheon::Atomic<UINT32> Number;
+	ASSERT_EQ(Number.Load(), 0);
+	Number.Store(37892388);
+	ASSERT_EQ(Number.Load(), 37892388);
+}
+
+TEST(KernAtomic, AtomicStruct)
+{
+	struct SomeData
+	{
+		UINT32 DataA;
+		UINT32 DataB;
+		union
+		{
+			UINT32 DataC[4];
+			UINT32 DataD[2];
+		};
+	};
+
+	SomeData B;
+	B.DataA = 1;
+	B.DataB = 2;
+	B.DataC[0] = 3;
+	B.DataD[1] = 4;
+
+	pantheon::Atomic<SomeData> Number(B);
+	B.DataA = 4;
+	ASSERT_NE(Number.Load().DataA, B.DataA);
+	ASSERT_EQ(Number.Load().DataB, B.DataB);
+	ASSERT_EQ(Number.Load().DataC[0], B.DataC[0]);
+	ASSERT_EQ(Number.Load().DataD[1], B.DataD[1]);
+}
 
 #endif

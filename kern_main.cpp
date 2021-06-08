@@ -81,13 +81,7 @@ void Initialize(fdt_header *dtb)
 	SERIAL_LOG("%s\n", "finished going through dtb");
 }
 
-/* Pantheon can have up to 256 processors in theory.
- * In practice, this should probably be cut down to 8 or 16, which is
- * way more realistic for a SoM I can actually buy. 
- * 256 thread x86 systems barely exist, so it's highly unlikely for any aarch64
- * systems with that many cores or more to exist.
- */
-static pantheon::CPU::CoreInfo CoreInfo[256];
+
 
 /* clang-format: off */
 #ifdef __cplusplus
@@ -99,7 +93,7 @@ void kern_init_core()
 {
 	pantheon::CPU::CLI();
 	UINT8 CpuNo = pantheon::CPU::GetProcessorNumber();
-	pantheon::CPU::InitCoreInfo(&(CoreInfo[CpuNo]));
+	pantheon::CPU::InitCoreInfo(CpuNo);
 
 	while (pantheon::GetKernelStatus() != pantheon::KERNEL_STATUS_OK)
 	{
@@ -112,7 +106,7 @@ void kern_init_core()
 
 	for (;;)
 	{
-		CoreInfo[CpuNo].CurSched->Reschedule();
+		pantheon::CPU::GetCoreInfo()->CurSched->MaybeReschedule();
 	}
 
 }

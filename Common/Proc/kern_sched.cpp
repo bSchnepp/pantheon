@@ -201,8 +201,12 @@ void pantheon::Scheduler::Reschedule()
 	 * to use a 1000Mhz clock. This is to preempt processes as often as
 	 * reasonable, and ensure the system feels low latency.
 	 * (Contrast to say, Linux at 250Mhz which prioritizes throughput.)
+	 * 
+	 * Likewise, since we just rescheduled (forcefully or otherwise),
+	 * note that we shouldn't interrupt again...
 	 */
 	pantheon::RearmSystemTimer();
+	this->ShouldReschedule.Store(FALSE);
 	/* NYI */
 }
 
@@ -216,6 +220,20 @@ pantheon::Thread *pantheon::Scheduler::MyThread()
 {
 	/* NYI */
 	return nullptr;
+}
+
+void pantheon::Scheduler::MaybeReschedule()
+{
+	if (this->ShouldReschedule.Load() == TRUE)
+	{
+		/* TODO: Decrement when tick time isn't up yet. */
+		this->Reschedule();
+	}
+}
+
+void pantheon::Scheduler::SignalReschedule()
+{
+	this->ShouldReschedule.Store(TRUE);
 }
 
 pantheon::GlobalScheduler::GlobalScheduler()

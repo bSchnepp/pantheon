@@ -57,7 +57,8 @@ typedef struct CoreInfo
 	pantheon::Scheduler *CurSched;
 }CoreInfo;
 
-void InitCoreInfo(CoreInfo *Block);
+void InitCoreInfo(UINT8 CoreNo);
+CoreInfo *GetCoreInfo();
 
 
 UINT8 GetProcessorNumber();

@@ -1,6 +1,19 @@
 #include "kern_cpu.hpp"
 #include <kern_datatypes.hpp>
 
+/* Pantheon can have up to 256 processors in theory.
+ * In practice, this should probably be cut down to 8 or 16, which is
+ * way more realistic for a SoM I can actually buy. 
+ * 256 thread x86 systems barely exist, so it's highly unlikely for any aarch64
+ * systems with that many cores or more to exist.
+ */
+static pantheon::CPU::CoreInfo PerCoreInfo[256];
+
+pantheon::CPU::CoreInfo *pantheon::CPU::GetCoreInfo()
+{
+	return &(PerCoreInfo[pantheon::CPU::GetProcessorNumber()]);
+}
+
 /**
  * \~english @brief Initializes a CoreInfo structure.
  * \~english @details Prepares a CoreInfo struct by initializing its
@@ -9,11 +22,11 @@
  * 
  * \~english @author Brian Schnepp
  */
-void pantheon::CPU::InitCoreInfo(CoreInfo *Block)
+void pantheon::CPU::InitCoreInfo(UINT8 CoreNo)
 {
-	Block->CurState = CPU_STATE_IDLE;
+	PerCoreInfo[CoreNo].CurState = pantheon::CPU::CPU_STATE_IDLE;
 	
-	Block->CurThread = nullptr;
-	Block->CurProcess = nullptr;
-	Block->CurSched = (pantheon::Scheduler*)(BasicMalloc(sizeof(pantheon::Scheduler)).GetValue());
+	PerCoreInfo[CoreNo].CurThread = nullptr;
+	PerCoreInfo[CoreNo].CurProcess = nullptr;
+	PerCoreInfo[CoreNo].CurSched = (pantheon::Scheduler*)(BasicMalloc(sizeof(pantheon::Scheduler)).GetValue());
 }
