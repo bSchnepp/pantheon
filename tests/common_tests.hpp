@@ -82,6 +82,52 @@ TEST(BasicMalloc, ManyAllocManyFree)
 	}
 }
 
+TEST(BasicMalloc, AllocFreeOrdering)
+{
+	void *Locations[32];
+	for (auto &Location : Locations)
+	{
+		Optional<void*> Alloc1 = BasicMalloc(4);
+		EXPECT_EQ(Alloc1.GetOkay(), TRUE);
+		if (Alloc1.GetOkay() == FALSE)
+		{
+			return;
+		}
+
+		UINT32 *IntVal1 = (UINT32*)(Alloc1());
+
+		*IntVal1 = 0x01020304;
+		EXPECT_EQ(*IntVal1, 0x01020304);
+		Location = IntVal1;
+	}
+
+	for (auto &Location : Locations)
+	{
+		UINT32 *IntVal1 = (UINT32*)Location;
+		EXPECT_EQ(*IntVal1, 0x01020304);
+		BasicFree(Location);
+		EXPECT_NE(Location, nullptr);
+	}
+}
+
+TEST(BasicMalloc, AllocSomeAllocReverseFree)
+{
+	void *One = BasicMalloc(8)();
+	void *Two = BasicMalloc(8)();
+	void *Three = BasicMalloc(8)();
+	void *Four = BasicMalloc(8)();
+
+	ASSERT_NE(One, nullptr);
+	ASSERT_NE(Two, nullptr);
+	ASSERT_NE(Three, nullptr);
+	ASSERT_NE(Four, nullptr);
+
+	BasicFree(Four);
+	BasicFree(Three);
+	BasicFree(Two);
+	BasicFree(One);
+}
+
 TEST(ArrayList, BasicCreate)
 {
 	ArrayList<INT32> Arr;
@@ -163,6 +209,53 @@ TEST(ArrayList, AssignOperator)
 	ASSERT_EQ(Arr.Size(), Arr2.Size());
 	ASSERT_EQ(Arr[0], Arr2[0]);
 	ASSERT_EQ(Arr[1], Arr2[1]);
+}
+
+TEST(ArrayList, SelfAssign)
+{
+	ArrayList<INT32> Arr;
+	Arr.Add(3);
+	Arr.Add(4);
+	Arr = Arr;
+	ASSERT_EQ(Arr.Size(), 2);
+}
+
+TEST(ArrayList, AssignWithNoOtherContent)
+{
+	ArrayList<INT32> Arr;
+	ArrayList<INT32> Arr2;
+	Arr.Add(3);
+	Arr.Add(4);
+	Arr2 = Arr;
+	ASSERT_EQ(Arr[0], 3);
+	ASSERT_EQ(Arr[1], 4);
+	ASSERT_EQ(Arr2.Size(), 2);
+}
+
+TEST(ArrayList, IndexOutOfBounds)
+{
+	ArrayList<INT32> Arr;
+	ArrayList<INT32> Arr2;
+	Arr.Add(3);
+	Arr.Add(4);
+	Arr2 = Arr;
+	ASSERT_EQ(Arr[2], 3);
+	ASSERT_EQ(Arr2.Size(), 2);
+}
+
+TEST(ArrayList, GetValid)
+{
+	ArrayList<INT32> Arr;
+	Arr.Add(3);
+	Arr.Add(4);
+	ASSERT_TRUE(Arr.Get(0).GetOkay());
+	ASSERT_EQ(Arr.Get(0).GetValue(), 3);
+}
+
+TEST(ArrayList, GetInvalid)
+{
+	ArrayList<INT32> Arr;
+	ASSERT_FALSE(Arr.Get(0).GetOkay());
 }
 
 TEST(ArrayList, AssignOperatorSmaller)
@@ -558,6 +651,44 @@ TEST(KernString, CompareTwoStringsNotEqualKana)
 	pantheon::String Str("One thing");
 	pantheon::String Str2("の");
 	ASSERT_FALSE(Str == Str2);
+}
+
+class Something
+{
+public:
+	Something()
+	{
+
+	}
+
+	virtual void AThing()
+	{
+
+	}
+};
+
+class DerivedThing : public Something
+{
+public:
+	DerivedThing() = default;
+
+	virtual void OtherThing()
+	{
+
+	}
+
+	BOOL TrueThing()
+	{
+		return TRUE;
+	}
+
+};
+
+TEST(CPPRT, PureVirt)
+{
+	DerivedThing A;
+	A.AThing();
+	ASSERT_TRUE(A.TrueThing());
 }
 
 TEST(CPPRT, SwapBytes8Bit)

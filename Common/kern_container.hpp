@@ -32,6 +32,14 @@ public:
 		}
 	}
 
+	~ArrayList()
+	{
+		if (this->Content)
+		{
+			this->Free(this->Content);
+		}
+	}
+
 	ArrayList<T> &operator=(const ArrayList<T> &Other) noexcept
 	{
 		if (this == &Other)
