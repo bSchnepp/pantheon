@@ -305,6 +305,62 @@ TEST(ArrayList, AssignOperatorDeepCopy)
 	ASSERT_EQ(Arr2[0], 3);
 }
 
+TEST(ArrayList, AssignOperatorMove)
+{
+	ArrayList<INT32> Arr;
+	Arr.Add(3);
+	Arr.Add(4);
+
+	ArrayList<INT32> Arr2;
+	Arr2.Add(5);
+	Arr2.Add(6);
+
+	Arr2.Move(Arr);
+	ASSERT_EQ(Arr.Size(), 0);
+	ASSERT_EQ(Arr2.Size(), 2);
+	ASSERT_EQ(Arr2[0], 3);
+	ASSERT_EQ(Arr2[1], 4);
+}
+
+static UINT64 WrapperCalls = 0;
+Optional<void*> MallocWrapperOtherAllocator(UINT64 Sz)
+{
+	WrapperCalls++;
+	return Optional<void*>(malloc(Sz));
+}
+
+TEST(ArrayList, OtherAllocator)
+{
+	ArrayList<INT32> Arr(2, MallocWrapperOtherAllocator, free);
+	ASSERT_EQ(WrapperCalls, 1);
+
+	Arr.Add(0);
+	ASSERT_EQ(WrapperCalls, 1);
+
+	Arr.Add(1);
+	ASSERT_EQ(WrapperCalls, 2);
+
+	Arr.Add(2);
+	ASSERT_EQ(WrapperCalls, 2);
+
+	ArrayList<INT32> Other;
+	Other.Move(Arr);
+	ASSERT_EQ(WrapperCalls, 2);
+
+	Other.Add(3);
+	ASSERT_EQ(WrapperCalls, 3);
+
+	Other.Add(4);
+	ASSERT_EQ(WrapperCalls, 3);
+
+	Other.Add(5);
+	ASSERT_EQ(WrapperCalls, 3);
+
+	ArrayList<INT32> DeepCopy;
+	DeepCopy.Copy(Other);
+	ASSERT_EQ(WrapperCalls, 4);
+}
+
 TEST(Atoi, U8AtoiBase10)
 {
 	UINT8 U8 = CharStarNumberAtoi<UINT8>("8");

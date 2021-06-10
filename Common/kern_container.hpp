@@ -14,10 +14,14 @@ class ArrayList
 public:
 	ArrayList() : ArrayList(2){};
 
-	ArrayList(UINT64 InitCount)
+	ArrayList(UINT64 InitCount) : ArrayList(InitCount, BasicMalloc, BasicFree){};
+
+	ArrayList(AllocatorMallocFn Malloc, AllocatorFreeFn Free) : ArrayList(2, BasicMalloc, BasicFree){};
+
+	ArrayList(UINT64 InitCount, AllocatorMallocFn Malloc, AllocatorFreeFn Free)
 	{
-		this->Malloc = BasicMalloc;
-		this->Free = BasicFree;
+		this->Malloc = Malloc;
+		this->Free = Free;
 
 		this->SpaceCount = 0;
 		this->EntryCount = 0;
@@ -45,6 +49,33 @@ public:
 		if (this == &Other)
 		{
 			return *this;
+		}		
+		this->Copy(Other);
+		return *this;
+	}
+
+	void Move(ArrayList<T> &Other) noexcept
+	{
+		this->SpaceCount = Other.SpaceCount;
+		this->EntryCount = Other.EntryCount;
+		this->Content = Other.Content;
+
+		this->Malloc = Other.Malloc;
+		this->Free = Other.Free;
+
+		if (this != &Other)
+		{
+			Other.SpaceCount = 0;
+			Other.EntryCount = 0;
+			Other.Content = nullptr;
+		}
+	}
+
+	void Copy(const ArrayList<T> &Other) noexcept
+	{
+		if (this == &Other)
+		{
+			return;
 		}
 
 		if (this->Content)
@@ -55,6 +86,9 @@ public:
 		this->SpaceCount = 0;
 		this->EntryCount = 0;
 		this->Content = nullptr;
+
+		this->Malloc = Other.Malloc;
+		this->Free = Other.Free;
 
 		auto MaybeMem = this->Malloc(Other.EntryCount);
 		if (MaybeMem.GetOkay())
@@ -67,7 +101,6 @@ public:
 				this->Content[Index] = Other.Content[Index];
 			}
 		}
-		return *this;
 	}
 
 	T &operator[](UINT64 Index)
