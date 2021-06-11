@@ -22,6 +22,17 @@ TEST(Scheduler, CreateThreadWithProc)
 	ASSERT_EQ(T.MyProc(), &Proc);
 }
 
+TEST(Scheduler, CreateThreadWithProcCopy)
+{
+	pantheon::Process Proc("some name");
+	pantheon::Thread T(&Proc);
+	ASSERT_EQ(T.MyProc(), &Proc);
+
+	pantheon::Process Proc2 = Proc;
+	ASSERT_EQ(Proc2.GetProcessString(), Proc.GetProcessString());
+	ASSERT_EQ(Proc2.NumThreads(), Proc.NumThreads());
+}
+
 TEST(Scheduler, CreateThreadWithProcName)
 {
 	pantheon::Process Proc("./someprocess");
@@ -101,6 +112,38 @@ TEST(Scheduler, CreateThreadAddTicks)
 	UINT64 OrigTicks = T.TicksLeft();
 	T.AddTicks(100);
 	ASSERT_EQ(T.TicksLeft(), OrigTicks + 100);
+}
+
+TEST(Scheduler, CreateThreadAddTicksCopy)
+{
+	pantheon::Process Proc;
+	pantheon::Thread T(&Proc);
+	UINT64 OrigTicks = T.TicksLeft();
+	T.AddTicks(100);
+	pantheon::Thread T2 = T;
+	ASSERT_EQ(T2.MyProc(), T.MyProc());
+	ASSERT_EQ(T2.TicksLeft(), T.TicksLeft());
+	ASSERT_EQ(T2.Preempts(), T.Preempts());
+	ASSERT_EQ(T2.MyPriority(), T.MyPriority());
+	ASSERT_EQ(T2.MyState(), T.MyState());
+	ASSERT_EQ(T2.TicksLeft(), OrigTicks + 100);
+}
+
+TEST(Scheduler, CreateThreadAddTicksDeepCopy)
+{
+	pantheon::Process Proc;
+	pantheon::Thread T(&Proc);
+	UINT64 OrigTicks = T.TicksLeft();
+	T.AddTicks(100);
+	pantheon::Thread T2 = T;
+	T2.AddTicks(100);
+	ASSERT_EQ(T2.MyProc(), T.MyProc());
+	ASSERT_NE(T2.TicksLeft(), T.TicksLeft());
+	ASSERT_EQ(T2.Preempts(), T.Preempts());
+	ASSERT_EQ(T2.MyPriority(), T.MyPriority());
+	ASSERT_EQ(T2.MyState(), T.MyState());
+	ASSERT_EQ(T.TicksLeft(), OrigTicks + 100);
+	ASSERT_NE(T2.TicksLeft(), OrigTicks + 100);
 }
 
 TEST(Scheduler, SchedulerNoThreadsNoSchedule)

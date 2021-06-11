@@ -92,6 +92,8 @@ public:
 
 	const String &GetProcessString();
 
+	[[nodiscard]] UINT64 NumThreads() const;
+
 private:
 	String ProcessCommand;
 	ProcessState CurState;

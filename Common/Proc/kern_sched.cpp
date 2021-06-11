@@ -146,10 +146,9 @@ pantheon::Process::Process()
 
 pantheon::Process::Process(const char *CommandString)
 {
-	pantheon::String Str(CommandString);
 	PANTHEON_UNUSED(CurState);
 	PANTHEON_UNUSED(Priority);
-	this->ProcessCommand = Str;	
+	this->ProcessCommand = pantheon::String(CommandString);
 }
 
 pantheon::Process::Process(pantheon::String &CommandString)
@@ -167,6 +166,12 @@ pantheon::Process::~Process()
 const pantheon::String &pantheon::Process::GetProcessString()
 {
 	return this->ProcessCommand;
+}
+
+[[nodiscard]] 
+UINT64 pantheon::Process::NumThreads() const
+{
+	return this->Threads.Size();
 }
 
 pantheon::Scheduler::Scheduler()

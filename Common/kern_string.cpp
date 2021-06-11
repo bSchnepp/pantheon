@@ -76,7 +76,7 @@ pantheon::String::~String()
  * is made.
  * \~english @author Brian Schnepp
  */
-pantheon::String &pantheon::String::operator=(pantheon::String& Other) noexcept
+pantheon::String &pantheon::String::operator=(const pantheon::String& Other) noexcept
 {
 	if (this == &Other)
 	{

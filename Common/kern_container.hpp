@@ -108,7 +108,7 @@ public:
 		return this->Content[Index % this->EntryCount];
 	}
 
-	Optional<T> Get(UINT64 Index)
+	[[nodiscard]] Optional<T> Get(UINT64 Index) const
 	{
 		if (Index < EntryCount)
 		{
@@ -117,7 +117,7 @@ public:
 		return Optional<T>();
 	}
 
-	UINT64 Size()
+	[[nodiscard]] UINT64 Size() const
 	{
 		return this->EntryCount;
 	}
@@ -152,7 +152,7 @@ public:
 		PANTHEON_UNUSED(Index);
 	}
 
-	BOOL Contains(T Item)
+	[[nodiscard]] BOOL Contains(T Item) const
 	{
 		/* NYI */
 		PANTHEON_UNUSED(Item);

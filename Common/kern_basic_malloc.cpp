@@ -154,12 +154,19 @@ Optional<void*> BasicMalloc(UINT64 Amt)
 	InitBasicMemory();
 	UINT64 Amount = Max(Align(Amt, (sizeof(BlockHeader))), MinBlockSize);
 
+	UINT64 BlockTotal = 0;
+
 	/* Look through the explicit free list for any space. */
 	for (FreeList *Indexer = GlobalFreeList; 
 		Indexer != nullptr && CurrentSize < HeapSpace - MinBlockSize; 
 		Indexer = Indexer->Next)
 	{
 		UINT64 CurSize = GetSize(GetHeader((char*)Indexer));
+		if (BlockTotal + Amount >= HeapSpace)
+		{
+			break;
+		}
+		BlockTotal += CurSize;
 		if (CurSize - MinBlockSize >= Amount)
 		{
 			FreeList *Current = static_cast<FreeList*>(Indexer);

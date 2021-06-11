@@ -11,7 +11,10 @@ class Atomic
 {
 
 public:
-	Atomic() = default;
+	Atomic()
+	{
+		this->Content = T();
+	}
 
 	Atomic(T Item)
 	{
