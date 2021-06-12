@@ -4,6 +4,11 @@
 #include <kern_integers.hpp>
 #include <kern_datatypes.hpp>
 
+/* Necessary since when portions of the kernel are recompiled in userspace
+ * to run on the host (ie, for CI/CD), we don't want to break the libc
+ * implementations.
+ */
+#ifndef ONLY_TESTS
 extern "C"
 {
 
@@ -27,7 +32,19 @@ void __cxa_finalize(void *f)
 	PANTHEON_UNUSED(f);
 }
 
+/* TODO: Find out if we need to properly use these in any way... */
+void __cxa_guard_acquire()
+{
+
 }
+
+void __cxa_guard_release()
+{
+	
+}
+
+}
+#endif
 
 uint8_t SwapBytes(uint8_t Item)
 {

@@ -1,4 +1,5 @@
 #include <kern_datatypes.hpp>
+#include <Sync/kern_spinlock.hpp>
 
 #include "kern_sched.hpp"
 
@@ -43,6 +44,16 @@ pantheon::Thread::Thread(Process *OwningProcess, ThreadPriority Priority)
 
 	/* 45 for NORMAL, 30 for LOW, 15 for VERYLOW, etc. */
 	this->AddTicks((Priority + 1) * 15);
+}
+
+pantheon::Thread::Thread(const pantheon::Thread &Other)
+{
+	this->ParentProcess = Other.ParentProcess;
+	this->PreemptCount = Other.PreemptCount;
+	this->Priority = Other.Priority;
+	this->Registers = Other.Registers;
+	this->RemainingTicks = Other.RemainingTicks;
+	this->State = Other.State;
 }
 
 pantheon::Thread::~Thread()
@@ -138,10 +149,28 @@ VOID pantheon::Thread::SetPriority(ThreadPriority Priority)
 	}
 }
 
-pantheon::Process::Process()
+/**
+ * \~english @brief Obtains a reference to the registers of the thread.
+ * \~english @author Brian Schnepp
+ */
+pantheon::CpuContext &pantheon::Thread::GetRegisters()
 {
-	PANTHEON_UNUSED(CurState);
-	PANTHEON_UNUSED(Priority);
+	/* TODO: Copy the actual registers to the internal representation! */
+	return this->Registers;
+}
+
+pantheon::Thread &pantheon::Thread::operator=(const pantheon::Thread &Other)
+{
+	if (this == &Other)
+	{
+		return *this;
+	}
+	*this = Thread(Other);
+	return *this;
+}
+
+pantheon::Process::Process() : pantheon::Process::Process("kernel")
+{
 }
 
 pantheon::Process::Process(const char *CommandString)
@@ -149,13 +178,15 @@ pantheon::Process::Process(const char *CommandString)
 	PANTHEON_UNUSED(CurState);
 	PANTHEON_UNUSED(Priority);
 	this->ProcessCommand = pantheon::String(CommandString);
+	this->ProcessID = pantheon::AcquireProcessID();
 }
 
 pantheon::Process::Process(pantheon::String &CommandString)
 {
 	PANTHEON_UNUSED(CurState);
 	PANTHEON_UNUSED(Priority);
-	this->ProcessCommand = CommandString;	
+	this->ProcessCommand = CommandString;
+	this->ProcessID = pantheon::AcquireProcessID();
 }
 
 pantheon::Process::~Process()
@@ -163,7 +194,8 @@ pantheon::Process::~Process()
 
 }
 
-const pantheon::String &pantheon::Process::GetProcessString()
+[[nodiscard]]
+const pantheon::String &pantheon::Process::GetProcessString() const
 {
 	return this->ProcessCommand;
 }
@@ -172,6 +204,24 @@ const pantheon::String &pantheon::Process::GetProcessString()
 UINT64 pantheon::Process::NumThreads() const
 {
 	return this->Threads.Size();
+}
+
+BOOL pantheon::Process::CreateThread(void *StartAddr, void *ThreadData)
+{
+	pantheon::Thread T(this);
+	/* Attempt 32KB of stack space for now... */
+	Optional<void*> StackSpace = BasicMalloc(32 * 1024);
+	if (StackSpace.GetOkay() == FALSE)
+	{
+		return FALSE;
+	}
+
+	pantheon::CpuContext &Regs = T.GetRegisters();
+	Regs.SetPC((UINT64)(StartAddr));
+	Regs.SetSP((UINT64)StackSpace.GetValue());
+	Regs.SetArg1((UINT64)ThreadData);
+	this->Threads.Add(T);
+	return TRUE;
 }
 
 pantheon::Scheduler::Scheduler()
@@ -251,8 +301,25 @@ pantheon::GlobalScheduler::~GlobalScheduler()
 	/* NYI */
 }
 
-void pantheon::GlobalScheduler::CreateProcess(void *StartAddr)
+void pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *StartAddr)
 {
-	/* NYI */
-	PANTHEON_UNUSED(StartAddr);
+	pantheon::Process NewProc(ProcStr);
+	NewProc.CreateThread(StartAddr, nullptr);
+	this->ProcessesWithInactiveThreads.Add(NewProc);
+}
+
+
+UINT32 pantheon::AcquireProcessID()
+{
+	/* TODO: When we run out of IDs, go back and ensure we don't
+	 * reuse an ID already in use!
+	 */
+	UINT32 RetVal = 0;
+	static UINT32 ProcessID = 0;
+	static pantheon::Spinlock ProcIDLock;
+	ProcIDLock.Acquire();
+	/* A copy has to be made since we haven't unlocked the spinlock yet. */
+	RetVal = ProcessID++;
+	ProcIDLock.Release();
+	return RetVal;
 }

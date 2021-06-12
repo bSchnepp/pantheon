@@ -11,9 +11,9 @@ typedef struct FreeList
 }FreeList;
 
 typedef UINT64 BlockHeader;
-static constexpr UINT64 HeapSpace = 2 * 1024 * 1024;
-
-static constexpr UINT64 MinBlockSize = sizeof(FreeList) + sizeof(BlockHeader);
+static constexpr UINT64 HeapSpace = 4 * 1024 * 1024;
+static constexpr UINT64 MinBlockSize = sizeof(FreeList) + (2 * sizeof(BlockHeader));
+COMPILER_ASSERT(MinBlockSize == 32);
 
 alignas(32) static char BasicMemory[HeapSpace];
 
@@ -166,6 +166,7 @@ Optional<void*> BasicMalloc(UINT64 Amt)
 		{
 			break;
 		}
+
 		BlockTotal += CurSize;
 		if (CurSize - MinBlockSize >= Amount)
 		{

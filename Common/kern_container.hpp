@@ -16,7 +16,7 @@ public:
 
 	ArrayList(UINT64 InitCount) : ArrayList(InitCount, BasicMalloc, BasicFree){};
 
-	ArrayList(AllocatorMallocFn Malloc, AllocatorFreeFn Free) : ArrayList(2, BasicMalloc, BasicFree){};
+	ArrayList(AllocatorMallocFn Malloc, AllocatorFreeFn Free) : ArrayList(2, Malloc, Free){};
 
 	ArrayList(UINT64 InitCount, AllocatorMallocFn Malloc, AllocatorFreeFn Free)
 	{
@@ -103,8 +103,13 @@ public:
 		}
 	}
 
-	T &operator[](UINT64 Index)
+	T &operator[](UINT64 Index) noexcept
 	{
+		/* This is needed to silence a warning on divide by 0 */
+		if (this->EntryCount == 0)
+		{
+			return *(this->Content);
+		}
 		return this->Content[Index % this->EntryCount];
 	}
 

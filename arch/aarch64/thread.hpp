@@ -18,6 +18,8 @@ typedef struct CpuContext
 	 */
 	UINT64 FRegs[2 * NumFRegs];
 
+	UINT64 PC = 0;
+
 	VOID Wipe()
 	{
 		for (UINT64 &Item : this->Regs)
@@ -45,6 +47,40 @@ typedef struct CpuContext
 	UINT64 FRegCount() const
 	{
 		return NumFRegs;
+	}
+
+	VOID SetPC(UINT64 Val)
+	{
+		this->PC = Val;
+	}
+
+	VOID SetSP(UINT64 Val)
+	{
+		this->Regs[31] = Val;
+	}
+
+	VOID SetArg1(UINT64 Val)
+	{
+		this->Regs[0] = Val;
+	}
+
+	CpuContext &operator=(const CpuContext &Other)
+	{
+		if (this == &Other)
+		{
+			return *this;
+		}
+
+		for (UINT64 Index = 0; Index < NumRegs; ++Index)
+		{
+			this->Regs[Index] = Other.Regs[Index];
+		}
+		for (UINT64 Index = 0; Index < NumFRegs; ++Index)
+		{
+			this->FRegs[Index] = Other.FRegs[Index];
+		}
+		this->PC = Other.PC;
+		return *this;
 	}
 
 }CpuContext;

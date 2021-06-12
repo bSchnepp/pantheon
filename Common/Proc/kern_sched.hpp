@@ -38,6 +38,7 @@ class Thread
 public:
 	Thread(Process *ParentProcess);
 	Thread(Process *ParentProcess, ThreadPriority Priority);
+	Thread(const Thread &Other);
 	~Thread();
 
 	Process *MyProc();
@@ -52,6 +53,12 @@ public:
 
 	VOID SetState(ThreadState State);
 	VOID SetPriority(ThreadPriority Priority);
+
+	VOID SetEntryLocation(UINT64 IP, UINT64 SP, VOID* ThreadData);
+
+	CpuContext &GetRegisters();
+
+	Thread &operator=(const Thread &Other);
 
 private:
 	CpuContext Registers;
@@ -90,12 +97,16 @@ public:
 	Process(String &CommandString);
 	~Process();
 
-	const String &GetProcessString();
+	[[nodiscard]] const String &GetProcessString() const;
+	[[nodiscard]] const UINT32 &GetProcessID() const;
 
 	[[nodiscard]] UINT64 NumThreads() const;
+	BOOL CreateThread(void *StartAddr, void *ThreadData);
 
 private:
+	UINT32 ProcessID;
 	String ProcessCommand;
+	
 	ProcessState CurState;
 	ProcessPriority Priority;
 	ArrayList<Thread> Threads;
@@ -131,14 +142,16 @@ public:
 	GlobalScheduler();
 	~GlobalScheduler();
 
-	void CreateProcess(void *StartAddr);
+	void CreateProcess(pantheon::String ProcStr, void *StartAddr);
+
+	Process &AcquireProcess();
 
 private:
 	ArrayList<Thread> InactiveThreads;
-
-	ArrayList<Process> ActiveProcessList;
-	ArrayList<Process> UnscheduledProcessList;
+	ArrayList<Process> ProcessesWithInactiveThreads;
 };
+
+UINT32 AcquireProcessID();
 
 }
 
