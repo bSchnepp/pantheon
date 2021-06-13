@@ -206,7 +206,15 @@ TEST(Scheduler, ManyProcessIDs)
 	pantheon::Process OneProc;
 	pantheon::Process TwoProc;
 	pantheon::Process OtherProc;
-	ASSERT_TRUE(OneProc.GetProcessID() < OtherProc.GetProcessID());
+	ASSERT_TRUE(OneProc.ProcessID() < OtherProc.ProcessID());
+}
+
+TEST(Scheduler, ManyThreadIDs)
+{
+	pantheon::Thread OneProc(nullptr);
+	pantheon::Thread TwoProc(nullptr);
+	pantheon::Thread OtherProc(nullptr);
+	ASSERT_TRUE(OneProc.ThreadID() < OtherProc.ThreadID());
 }
 
 TEST(CPUCore, CoreInfoInit)
@@ -232,6 +240,11 @@ TEST(Scheduler, AcquireProcessWhileNoneReady)
 	pantheon::GlobalScheduler Sched;
 	Optional<pantheon::Process> NotProc = Sched.AcquireProcess();
 	ASSERT_FALSE(NotProc.GetOkay());
+}
+
+TEST(Scheduler, GlobalSchedulerExists)
+{
+	ASSERT_NE(pantheon::GetGlobalScheduler(), nullptr);
 }
 
 #endif

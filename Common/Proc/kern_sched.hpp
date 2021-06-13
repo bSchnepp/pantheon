@@ -48,6 +48,7 @@ public:
 
 	[[nodiscard]] UINT64 Preempts() const;
 	[[nodiscard]] UINT64 TicksLeft() const;
+	[[nodiscard]] UINT64 ThreadID() const;
 
 	VOID AddTicks(UINT64 TickCount);
 
@@ -61,6 +62,8 @@ public:
 	Thread &operator=(const Thread &Other);
 
 private:
+	UINT64 TID;
+
 	CpuContext Registers;
 	Process *ParentProcess;
 
@@ -98,13 +101,13 @@ public:
 	~Process();
 
 	[[nodiscard]] const String &GetProcessString() const;
-	[[nodiscard]] UINT32 GetProcessID() const;
+	[[nodiscard]] UINT32 ProcessID() const;
 
 	[[nodiscard]] UINT64 NumThreads() const;
 	BOOL CreateThread(void *StartAddr, void *ThreadData);
 
 private:
-	UINT32 ProcessID;
+	UINT32 PID;
 	String ProcessCommand;
 	
 	ProcessState CurState;
@@ -129,10 +132,9 @@ public:
 
 private:
 
-	Atomic<BOOL> ShouldReschedule;
-
 	UINT64 CurThread;
 	ArrayList<Thread> Threads;
+	Atomic<BOOL> ShouldReschedule;
 };
 
 class GlobalScheduler
@@ -143,15 +145,17 @@ public:
 	~GlobalScheduler();
 
 	void CreateProcess(pantheon::String ProcStr, void *StartAddr);
+	void LoadProcess(pantheon::Process &Proc);
 
 	Optional<Process> AcquireProcess();
 
 private:
-	ArrayList<Thread> InactiveThreads;
-	ArrayList<Process> ProcessesWithInactiveThreads;
+	ArrayList<Process> ProcessList;
 };
 
 UINT32 AcquireProcessID();
+UINT64 AcquireThreadID();
+GlobalScheduler *GetGlobalScheduler();
 
 }
 

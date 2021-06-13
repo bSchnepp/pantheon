@@ -44,6 +44,8 @@ pantheon::Thread::Thread(Process *OwningProcess, ThreadPriority Priority)
 
 	/* 45 for NORMAL, 30 for LOW, 15 for VERYLOW, etc. */
 	this->AddTicks((Priority + 1) * 15);
+
+	this->TID = AcquireThreadID();
 }
 
 pantheon::Thread::Thread(const pantheon::Thread &Other)
@@ -54,6 +56,7 @@ pantheon::Thread::Thread(const pantheon::Thread &Other)
 	this->Registers = Other.Registers;
 	this->RemainingTicks = Other.RemainingTicks;
 	this->State = Other.State;
+	this->TID = Other.TID;
 }
 
 pantheon::Thread::~Thread()
@@ -114,6 +117,12 @@ UINT64 pantheon::Thread::Preempts() const
 UINT64 pantheon::Thread::TicksLeft() const
 {
 	return this->RemainingTicks;
+}
+
+[[nodiscard]]
+UINT64 pantheon::Thread::ThreadID() const
+{
+	return this->TID;
 }
 
 /**
@@ -189,7 +198,7 @@ pantheon::Process::Process(pantheon::String &CommandString)
 	PANTHEON_UNUSED(CurState);
 	PANTHEON_UNUSED(Priority);
 	this->ProcessCommand = CommandString;
-	this->ProcessID = pantheon::AcquireProcessID();
+	this->PID = pantheon::AcquireProcessID();
 }
 
 pantheon::Process::~Process()
@@ -225,6 +234,12 @@ BOOL pantheon::Process::CreateThread(void *StartAddr, void *ThreadData)
 	Regs.SetArg1((UINT64)ThreadData);
 	this->Threads.Add(T);
 	return TRUE;
+}
+
+[[nodiscard]]
+UINT32 pantheon::Process::ProcessID() const
+{
+	return this->PID;
 }
 
 pantheon::Scheduler::Scheduler()
@@ -308,20 +323,27 @@ void pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *St
 {
 	pantheon::Process NewProc(ProcStr);
 	NewProc.CreateThread(StartAddr, nullptr);
-	this->ProcessesWithInactiveThreads.Add(NewProc);
+	this->ProcessList.Add(NewProc);
 }
 
 Optional<pantheon::Process> pantheon::GlobalScheduler::AcquireProcess()
 {
-	if (this->ProcessesWithInactiveThreads.Size() == 0)
+	if (this->ProcessList.Size() == 0)
 	{
 		return Optional<pantheon::Process>();
 	}
-	return Optional<Process>(this->ProcessesWithInactiveThreads[0]);
+	return Optional<Process>(this->ProcessList[0]);
+}
+
+void pantheon::GlobalScheduler::LoadProcess(pantheon::Process &Proc)
+{
+	this->ProcessList.Add(Proc);
 }
 
 
+static pantheon::Spinlock ThreadIDLock;
 static pantheon::Spinlock ProcIDLock;
+static pantheon::GlobalScheduler GlobalSched;
 
 UINT32 pantheon::AcquireProcessID()
 {
@@ -337,8 +359,21 @@ UINT32 pantheon::AcquireProcessID()
 	return RetVal;
 }
 
-[[nodiscard]]
-UINT32 pantheon::Process::GetProcessID() const
+UINT64 pantheon::AcquireThreadID()
 {
-	return this->ProcessID;
+	/* TODO: When we run out of IDs, go back and ensure we don't
+	 * reuse an ID already in use!
+	 */
+	UINT32 RetVal = 0;
+	static UINT64 ThreadID = 0;
+	ThreadIDLock.Acquire();
+	/* A copy has to be made since we haven't unlocked the spinlock yet. */
+	RetVal = ThreadID++;
+	ThreadIDLock.Release();
+	return RetVal;
+}
+
+pantheon::GlobalScheduler *pantheon::GetGlobalScheduler()
+{
+	return &GlobalSched;
 }
