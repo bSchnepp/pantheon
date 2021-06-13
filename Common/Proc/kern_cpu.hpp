@@ -1,5 +1,8 @@
 #include <kern_datatypes.hpp>
+
+#include <Proc/kern_proc.hpp>
 #include <Proc/kern_sched.hpp>
+#include <Proc/kern_thread.hpp>
 
 #ifndef _KERN_CPU_HPP_
 #define _KERN_CPU_HPP_
