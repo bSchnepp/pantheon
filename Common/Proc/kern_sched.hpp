@@ -98,7 +98,7 @@ public:
 	~Process();
 
 	[[nodiscard]] const String &GetProcessString() const;
-	[[nodiscard]] const UINT32 &GetProcessID() const;
+	[[nodiscard]] UINT32 GetProcessID() const;
 
 	[[nodiscard]] UINT64 NumThreads() const;
 	BOOL CreateThread(void *StartAddr, void *ThreadData);
@@ -144,7 +144,7 @@ public:
 
 	void CreateProcess(pantheon::String ProcStr, void *StartAddr);
 
-	Process &AcquireProcess();
+	Optional<Process> AcquireProcess();
 
 private:
 	ArrayList<Thread> InactiveThreads;

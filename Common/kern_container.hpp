@@ -12,11 +12,11 @@ template<typename T>
 class ArrayList
 {
 public:
-	ArrayList() : ArrayList(2){};
+	ArrayList() : ArrayList(10){};
 
 	ArrayList(UINT64 InitCount) : ArrayList(InitCount, BasicMalloc, BasicFree){};
 
-	ArrayList(AllocatorMallocFn Malloc, AllocatorFreeFn Free) : ArrayList(2, Malloc, Free){};
+	ArrayList(AllocatorMallocFn Malloc, AllocatorFreeFn Free) : ArrayList(10, Malloc, Free){};
 
 	ArrayList(UINT64 InitCount, AllocatorMallocFn Malloc, AllocatorFreeFn Free)
 	{
@@ -40,6 +40,7 @@ public:
 	{
 		if (this->Content)
 		{
+			this->Clear();
 			this->Free(this->Content);
 		}
 	}
@@ -65,9 +66,18 @@ public:
 
 		if (this != &Other)
 		{
+			Other.Clear();
 			Other.SpaceCount = 0;
 			Other.EntryCount = 0;
 			Other.Content = nullptr;
+		}
+	}
+
+	void Clear()
+	{
+		for (UINT64 Index = 0; Index < this->EntryCount; ++Index)
+		{
+			this->Content[Index].~T();
 		}
 	}
 
@@ -80,6 +90,7 @@ public:
 
 		if (this->Content)
 		{
+			this->Clear();
 			this->Free(this->Content);
 		}
 
@@ -127,6 +138,11 @@ public:
 		return this->EntryCount;
 	}
 
+	[[nodiscard]] UINT64 AllocSpace() const
+	{
+		return this->SpaceCount;
+	}
+
 	void Add(T NewItem)
 	{
 		if (EntryCount + 1 < SpaceCount)
@@ -136,25 +152,46 @@ public:
 			return;
 		}
 		
-		this->SpaceCount *= 2;
+		this->SpaceCount *= 4;
 		auto MaybeMem = this->Malloc(sizeof(T) * this->SpaceCount);
 		if (MaybeMem.GetOkay())
 		{
 			T* NewContent = (T*)MaybeMem.GetValue();
 			for (UINT64 Index = 0; Index < this->EntryCount; ++Index)
 			{
-				NewContent[Index] = this->Content[Index];
+				T &Current = this->Content[Index];
+				NewContent[Index] = Current;
 			}
+			this->Clear();
 			this->Free(this->Content);
 			this->Content = NewContent;
 			this->Add(NewItem);
-		}			
+		}		
 	}
 
 	void Delete(UINT64 Index)
 	{
-		/* NYI */
-		PANTHEON_UNUSED(Index);
+		if (Index >= this->EntryCount)
+		{
+			return;
+		}
+
+		auto MaybeMem = this->Malloc(sizeof(T) * this->SpaceCount);
+		if (MaybeMem.GetOkay())
+		{
+			T* NewContent = (T*)MaybeMem.GetValue();
+			for (UINT64 SIndex = 0; SIndex < Index; ++SIndex)
+			{
+				NewContent[SIndex] = this->Content[SIndex];
+			}
+			for (UINT64 SIndex = Index + 1; SIndex < this->EntryCount; ++SIndex)
+			{
+				NewContent[SIndex-1] = this->Content[SIndex];
+			}
+			this->Clear();
+			this->Free(this->Content);
+			this->Content = NewContent;
+		}
 	}
 
 	[[nodiscard]] BOOL Contains(T Item) const

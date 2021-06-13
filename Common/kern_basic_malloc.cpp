@@ -10,8 +10,9 @@ typedef struct FreeList
 	struct FreeList *Next;
 }FreeList;
 
+/* Try to align to 32-bytes, so that allocations can be bitpacked nicely. */
 typedef UINT64 BlockHeader;
-static constexpr UINT64 HeapSpace = 4 * 1024 * 1024;
+static constexpr UINT64 HeapSpace = 6 * 1024 * 1024;
 static constexpr UINT64 MinBlockSize = sizeof(FreeList) + (2 * sizeof(BlockHeader));
 COMPILER_ASSERT(MinBlockSize == 32);
 
@@ -150,6 +151,12 @@ void CreateExplicitEntry(VOID *Addr)
  */
 Optional<void*> BasicMalloc(UINT64 Amt)
 {
+	/* If there's no space to allocate, don't even try. */
+	if (Amt == 0)
+	{
+		return Optional<void*>();
+	}
+	
 	AllocLock.Acquire();
 	InitBasicMemory();
 	UINT64 Amount = Max(Align(Amt, (sizeof(BlockHeader))), MinBlockSize);
@@ -180,9 +187,9 @@ Optional<void*> BasicMalloc(UINT64 Amt)
 			SetSizeAlloc(GetHeader(Next), FALSE, Diff);
 			CreateExplicitEntry(Next);
 
+			CurrentSize += Amount;
 			AllocLock.Release();
-			CurrentSize += Amount;	
-			return Optional<void*>(Indexer);
+			return Optional<void*>(Current);
 		}
 	}
 	AllocLock.Release();

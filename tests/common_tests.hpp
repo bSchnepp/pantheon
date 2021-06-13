@@ -128,10 +128,68 @@ TEST(BasicMalloc, AllocSomeAllocReverseFree)
 	BasicFree(One);
 }
 
+TEST(BasicMalloc, AllocSomeAllocSameFree)
+{
+	void *One = BasicMalloc(8)();
+	void *Two = BasicMalloc(8)();
+	void *Three = BasicMalloc(8)();
+	void *Four = BasicMalloc(8)();
+
+	ASSERT_NE(One, nullptr);
+	ASSERT_NE(Two, nullptr);
+	ASSERT_NE(Three, nullptr);
+	ASSERT_NE(Four, nullptr);
+
+	BasicFree(One);
+	BasicFree(Two);
+	BasicFree(Three);
+	BasicFree(Four);
+}
+
 TEST(ArrayList, BasicCreate)
 {
 	ArrayList<INT32> Arr;
 	ASSERT_EQ(Arr.Size(), 0);
+	ASSERT_EQ(Arr.AllocSpace(), 10);
+}
+
+TEST(ArrayList, BasicMove)
+{
+	ArrayList<INT32> Arr;
+	ArrayList<INT32> Arr2;
+	Arr2.Add(1);
+	Arr2.Add(2);
+
+	Arr.Move(Arr2);
+
+	ASSERT_EQ(Arr2.Size(), 0);
+	ASSERT_EQ(Arr2.AllocSpace(), 0);
+
+	ASSERT_EQ(Arr.Size(), 2);
+	ASSERT_EQ(Arr.AllocSpace(), 10);
+	ASSERT_EQ(Arr[0], 1);
+	ASSERT_EQ(Arr[1], 2);
+}
+
+TEST(ArrayList, CopySelf)
+{
+	ArrayList<INT32> Arr;
+	Arr.Add(1);
+	Arr.Add(2);
+	Arr.Copy(Arr);
+	ASSERT_EQ(Arr[0], 1);
+	ASSERT_EQ(Arr[1], 2);
+	ASSERT_EQ(Arr.Size(), 2);
+	ASSERT_EQ(Arr.AllocSpace(), 10);
+}
+
+TEST(ArrayList, SegfaultOnNullptr)
+{
+	ArrayList<INT32> Arr;
+	Arr.Add(1);
+	Arr.Add(2);
+	Arr.Clear();
+	ASSERT_EXIT((Arr[0], exit(0)), ::testing::ExitedWithCode(0), ".*");
 }
 
 TEST(ArrayList, BasicDelete)
@@ -139,6 +197,39 @@ TEST(ArrayList, BasicDelete)
 	ArrayList<INT32> Arr;
 	Arr.Delete(1);
 	ASSERT_EQ(Arr.Size(), 0);
+}
+
+TEST(ArrayList, BasicDeleteContent)
+{
+	ArrayList<INT32> Arr;
+	Arr.Add(3);
+	Arr.Add(4);
+	Arr.Delete(0);
+	ASSERT_EQ(Arr[0], 4);
+}
+
+TEST(ArrayList, BasicDeleteMidContent)
+{
+	ArrayList<INT32> Arr;
+	Arr.Add(0);
+	Arr.Add(1);
+	Arr.Add(2);
+	Arr.Add(3);
+	Arr.Delete(2);
+	ASSERT_EQ(Arr[0], 0);
+	ASSERT_EQ(Arr[1], 1);
+	ASSERT_EQ(Arr[2], 3);
+}
+
+TEST(ArrayList, DeleteOutOfBounds)
+{
+	ArrayList<INT32> Arr;
+	Arr.Add(3);
+	Arr.Add(4);
+	Arr.Delete(4);
+	ASSERT_EQ(Arr[0], 3);
+	ASSERT_EQ(Arr[1], 4);
+	ASSERT_EQ(Arr.Size(), 2);
 }
 
 TEST(ArrayList, BasicContains)
@@ -162,6 +253,24 @@ TEST(ArrayList, BasicGet)
 	Arr.Add(4);
 	ASSERT_EQ(Arr[0], Arr.Get(0)());
 	ASSERT_EQ(Arr[1], Arr.Get(1)());
+}
+
+TEST(ArrayList, GetInvalidIndex)
+{
+	ArrayList<INT32> Arr;
+	Arr.Add(3);
+	Arr.Add(4);
+	ASSERT_FALSE(Arr.Get(10000).GetOkay());
+}
+
+TEST(ArrayList, GetValidIndex)
+{
+	ArrayList<INT32> Arr;
+	Arr.Add(3);
+	Arr.Add(4);
+	ASSERT_EQ(Arr.Get(0).GetValue(), 3);
+	ASSERT_EQ(Arr.Get(1).GetValue(), 4);
+	ASSERT_EQ(Arr.Size(), 2);
 }
 
 TEST(ArrayList, ReallocAdd)
@@ -348,17 +457,17 @@ TEST(ArrayList, OtherAllocator)
 	ASSERT_EQ(WrapperCalls, 2);
 
 	Other.Add(3);
-	ASSERT_EQ(WrapperCalls, 3);
+	ASSERT_EQ(WrapperCalls, 2);
 
 	Other.Add(4);
-	ASSERT_EQ(WrapperCalls, 3);
+	ASSERT_EQ(WrapperCalls, 2);
 
 	Other.Add(5);
-	ASSERT_EQ(WrapperCalls, 3);
+	ASSERT_EQ(WrapperCalls, 2);
 
 	ArrayList<INT32> DeepCopy;
 	DeepCopy.Copy(Other);
-	ASSERT_EQ(WrapperCalls, 4);
+	ASSERT_EQ(WrapperCalls, 3);
 }
 
 TEST(Atoi, U8AtoiBase10)

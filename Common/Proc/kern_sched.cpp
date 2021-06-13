@@ -165,7 +165,12 @@ pantheon::Thread &pantheon::Thread::operator=(const pantheon::Thread &Other)
 	{
 		return *this;
 	}
-	*this = Thread(Other);
+	this->ParentProcess = Other.ParentProcess;
+	this->PreemptCount = Other.PreemptCount;
+	this->Priority = Other.Priority;
+	this->Registers = Other.Registers;
+	this->RemainingTicks = Other.RemainingTicks;
+	this->State = Other.State;
 	return *this;
 }
 
@@ -175,10 +180,8 @@ pantheon::Process::Process() : pantheon::Process::Process("kernel")
 
 pantheon::Process::Process(const char *CommandString)
 {
-	PANTHEON_UNUSED(CurState);
-	PANTHEON_UNUSED(Priority);
 	this->ProcessCommand = pantheon::String(CommandString);
-	this->ProcessID = pantheon::AcquireProcessID();
+	*this = Process(this->ProcessCommand);
 }
 
 pantheon::Process::Process(pantheon::String &CommandString)
@@ -209,8 +212,8 @@ UINT64 pantheon::Process::NumThreads() const
 BOOL pantheon::Process::CreateThread(void *StartAddr, void *ThreadData)
 {
 	pantheon::Thread T(this);
-	/* Attempt 32KB of stack space for now... */
-	Optional<void*> StackSpace = BasicMalloc(32 * 1024);
+	/* Attempt 4KB of stack space for now... */
+	Optional<void*> StackSpace = BasicMalloc(4 * 1024);
 	if (StackSpace.GetOkay() == FALSE)
 	{
 		return FALSE;
@@ -308,6 +311,17 @@ void pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *St
 	this->ProcessesWithInactiveThreads.Add(NewProc);
 }
 
+Optional<pantheon::Process> pantheon::GlobalScheduler::AcquireProcess()
+{
+	if (this->ProcessesWithInactiveThreads.Size() == 0)
+	{
+		return Optional<pantheon::Process>();
+	}
+	return Optional<Process>(this->ProcessesWithInactiveThreads[0]);
+}
+
+
+static pantheon::Spinlock ProcIDLock;
 
 UINT32 pantheon::AcquireProcessID()
 {
@@ -316,10 +330,15 @@ UINT32 pantheon::AcquireProcessID()
 	 */
 	UINT32 RetVal = 0;
 	static UINT32 ProcessID = 0;
-	static pantheon::Spinlock ProcIDLock;
 	ProcIDLock.Acquire();
 	/* A copy has to be made since we haven't unlocked the spinlock yet. */
 	RetVal = ProcessID++;
 	ProcIDLock.Release();
 	return RetVal;
+}
+
+[[nodiscard]]
+UINT32 pantheon::Process::GetProcessID() const
+{
+	return this->ProcessID;
 }

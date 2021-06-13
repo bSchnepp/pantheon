@@ -114,6 +114,17 @@ TEST(Scheduler, CreateThreadAddTicks)
 	ASSERT_EQ(T.TicksLeft(), OrigTicks + 100);
 }
 
+TEST(Scheduler, CreateThreadSelfAssign)
+{
+	pantheon::Process Proc;
+	pantheon::Thread T(&Proc);
+	UINT64 OrigTicks = T.TicksLeft();
+	T.AddTicks(100);
+	pantheon::Thread T2 = T;
+	ASSERT_EQ(T.TicksLeft(), OrigTicks + 100);
+	ASSERT_EQ(T2.TicksLeft(), T.TicksLeft());
+}
+
 TEST(Scheduler, CreateThreadAddTicksCopy)
 {
 	pantheon::Process Proc;
@@ -127,6 +138,36 @@ TEST(Scheduler, CreateThreadAddTicksCopy)
 	ASSERT_EQ(T2.MyPriority(), T.MyPriority());
 	ASSERT_EQ(T2.MyState(), T.MyState());
 	ASSERT_EQ(T2.TicksLeft(), OrigTicks + 100);
+}
+
+TEST(Scheduler, CreateThreadWithDeepCopy)
+{
+	pantheon::Process Proc;
+	pantheon::Thread T(&Proc);
+	UINT64 OrigTicks = T.TicksLeft();
+	T.AddTicks(100);
+	pantheon::Thread T2(T);
+	T2.AddTicks(100);
+	ASSERT_EQ(T2.MyProc(), T.MyProc());
+	ASSERT_EQ(T2.TicksLeft(), OrigTicks + 200);
+	ASSERT_EQ(T2.Preempts(), T.Preempts());
+	ASSERT_EQ(T2.MyPriority(), T.MyPriority());
+	ASSERT_EQ(T2.MyState(), T.MyState());
+	ASSERT_EQ(T2.TicksLeft(), T.TicksLeft() + 100);
+	T.AddTicks(100);
+	T.GetRegisters()[3] = 100;
+	ASSERT_NE(T2.GetRegisters()[3], T.GetRegisters()[3]);
+	ASSERT_EQ(T2.TicksLeft(), T.TicksLeft());
+}
+
+TEST(Scheduler, CreateThreadWithConstCopy)
+{
+	pantheon::Process Proc;
+	const pantheon::Thread T(&Proc);
+	pantheon::Thread T2 = T;
+	T2.AddTicks(100);
+	ASSERT_NE(T.TicksLeft(), T2.TicksLeft());
+	ASSERT_EQ(T.TicksLeft() + 100, T2.TicksLeft());
 }
 
 TEST(Scheduler, CreateThreadAddTicksDeepCopy)
@@ -154,6 +195,20 @@ TEST(Scheduler, SchedulerNoThreadsNoSchedule)
 	ASSERT_EQ(Sched.MyProc(), nullptr);
 }
 
+TEST(Scheduler, DefaultProcessName)
+{
+	pantheon::Process Proc;
+	ASSERT_EQ(Proc.GetProcessString(), pantheon::String("kernel"));
+}
+
+TEST(Scheduler, ManyProcessIDs)
+{
+	pantheon::Process OneProc;
+	pantheon::Process TwoProc;
+	pantheon::Process OtherProc;
+	ASSERT_TRUE(OneProc.GetProcessID() < OtherProc.GetProcessID());
+}
+
 TEST(CPUCore, CoreInfoInit)
 {
 	pantheon::CPU::InitCoreInfo(0);
@@ -161,6 +216,22 @@ TEST(CPUCore, CoreInfoInit)
 	ASSERT_EQ(pantheon::CPU::GetCoreInfo()->CurProcess, nullptr);
 	ASSERT_EQ(pantheon::CPU::GetCoreInfo()->CurThread, nullptr);
 	ASSERT_NE(pantheon::CPU::GetCoreInfo()->CurSched, nullptr);
+}
+
+TEST(Scheduler, GlobalSchedulerCreateProcess)
+{
+	pantheon::GlobalScheduler Sched;
+	Sched.CreateProcess("some proc", nullptr);
+	Optional<pantheon::Process> Proc = Sched.AcquireProcess();
+	ASSERT_TRUE(Proc.GetOkay());
+	ASSERT_EQ(Proc().NumThreads(), 1);
+}
+
+TEST(Scheduler, AcquireProcessWhileNoneReady)
+{
+	pantheon::GlobalScheduler Sched;
+	Optional<pantheon::Process> NotProc = Sched.AcquireProcess();
+	ASSERT_FALSE(NotProc.GetOkay());
 }
 
 #endif
