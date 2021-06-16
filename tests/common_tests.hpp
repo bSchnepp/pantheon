@@ -16,6 +16,7 @@ TEST(BasicMalloc, AllocOkay)
 	Optional<void*> Alloc = BasicMalloc(1024);
 	EXPECT_NE(Alloc.GetOkay(), FALSE);
 	EXPECT_NE(Alloc.GetValue(), nullptr);
+	BasicFree(Alloc.GetValue());
 }
 
 TEST(BasicMalloc, TwoAllocNotEqual)
@@ -26,6 +27,8 @@ TEST(BasicMalloc, TwoAllocNotEqual)
 	EXPECT_EQ(Alloc2.GetOkay(), TRUE);
 	EXPECT_EQ(Alloc1.GetOkay(), Alloc2.GetOkay());
 	EXPECT_NE(Alloc1(), Alloc2());
+	BasicFree(Alloc1.GetValue());
+	BasicFree(Alloc2.GetValue());
 }
 
 TEST(BasicMalloc, FreeAddrEq)
@@ -44,8 +47,8 @@ TEST(BasicMalloc, FreeAddrEq)
 	EXPECT_EQ(*IntVal1, 0x01020304);
 	EXPECT_EQ(*IntVal2, 0x05060708);
 	BasicFree(Alloc1.GetValue());
-
 	EXPECT_EQ(*IntVal2, 0x05060708);
+	BasicFree(Alloc2.GetValue());
 }
 
 TEST(BasicMalloc, SingleFree)
@@ -181,15 +184,6 @@ TEST(ArrayList, CopySelf)
 	ASSERT_EQ(Arr[1], 2);
 	ASSERT_EQ(Arr.Size(), 2);
 	ASSERT_EQ(Arr.AllocSpace(), 10);
-}
-
-TEST(ArrayList, SegfaultOnNullptr)
-{
-	ArrayList<INT32> Arr;
-	Arr.Add(1);
-	Arr.Add(2);
-	Arr.Clear();
-	ASSERT_EXIT((Arr[0], exit(0)), ::testing::ExitedWithCode(0), ".*");
 }
 
 TEST(ArrayList, BasicDelete)

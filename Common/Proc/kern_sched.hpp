@@ -42,10 +42,10 @@ public:
 	GlobalScheduler();
 	~GlobalScheduler();
 
-	void CreateProcess(pantheon::String ProcStr, void *StartAddr);
+	BOOL CreateProcess(pantheon::String ProcStr, void *StartAddr);
 	void LoadProcess(pantheon::Process &Proc);
 
-	Optional<Process> AcquireProcess();
+	Process AcquireProcess();
 
 private:
 	ArrayList<Process> ProcessList;

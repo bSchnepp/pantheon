@@ -16,7 +16,7 @@ typedef enum ThreadState
 {
 	THREAD_STATE_INIT,
 	THREAD_STATE_RUNNING,
-	THREAD_STATE_BLOCKED,
+	THREAD_STATE_WAITING,
 	THREAD_STATE_TERMINATED,
 }ThreadState;
 
@@ -57,6 +57,7 @@ public:
 	VOID SetEntryLocation(UINT64 IP, UINT64 SP, VOID* ThreadData);
 
 	CpuContext &GetRegisters();
+	void SetStackAddr(UINT64 Addr);
 
 	Thread &operator=(const Thread &Other);
 
@@ -71,6 +72,8 @@ private:
 
 	UINT64 PreemptCount;
 	UINT64 RemainingTicks;
+
+	void *StackSpace;
 };
 
 }

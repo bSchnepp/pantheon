@@ -42,6 +42,12 @@ static UINT64 GetSize(char *Loc)
 	return ((*Reinterp) & ~0x01);
 }
 
+static UINT64 GetAlloc(char *Loc)
+{
+	BlockHeader *Reinterp = reinterpret_cast<BlockHeader*>(Loc);
+	return ((*Reinterp) & 0x01);
+}
+
 static void SetSizeAlloc(char *Loc, BOOL Used, UINT64 Size)
 {
 	BlockHeader *Reinterp = reinterpret_cast<BlockHeader*>(Loc);
@@ -54,8 +60,6 @@ static char *NextBlock(char *Loc)
 }
 
 static FreeList *GlobalFreeList = nullptr;
-static void *CurrentArea = nullptr;
-static UINT64 CurrentSize = 0;
 
 static BOOL InitMemoryOkay = FALSE;
 
@@ -90,23 +94,27 @@ void InitBasicMemory()
 
 	/* Double check this, just to be sure. */
 	GlobalFreeList = nullptr;
-	CurrentArea = nullptr;
-	CurrentSize = 0;
 
 	for (char &Item : BasicMemory)
 	{
 		Item = '\0';
 	}
 
-	GlobalFreeList = reinterpret_cast<FreeList*>(BasicMemory + sizeof(BlockHeader));
-	SetSizeAlloc(GetHeader((char*)GlobalFreeList), FALSE, HeapSpace - MinBlockSize);
+	/* Mark the ends as in use, so coalescing doesn't become a problem. */
+	SetSizeAlloc(((char*)(BasicMemory)), TRUE, sizeof(BlockHeader));
+	SetSizeAlloc(((char*)(BasicMemory)) + sizeof(BlockHeader), FALSE, HeapSpace - 2 * sizeof(BlockHeader));
+	SetSizeAlloc(((char*)(BasicMemory)) + HeapSpace - sizeof(BlockHeader), TRUE, sizeof(BlockHeader));
+
+	GlobalFreeList = reinterpret_cast<FreeList*>(NextBlock(BasicMemory));
+	GlobalFreeList->Next = nullptr;
+	GlobalFreeList->Prev = nullptr;
 	InitMemoryOkay = TRUE;
 }
 
 static pantheon::Spinlock AllocLock;
 
 
-void CreateExplicitEntry(VOID *Addr)
+void LinkFreeList(VOID *Addr)
 {
 	FreeList *List = (FreeList*)(Addr);
 
@@ -140,7 +148,8 @@ void CreateExplicitEntry(VOID *Addr)
  * The specific details of how this is done may change in the future, such as
  * changing to a more dynamic buddy allocation system, or to a slab allocator,
  * or to some blended variant thereof. Thus, the content of a claimed chunk
- * should not be relied upon in any way.
+ * should not be relied upon in any way, after deallocation or before filling
+ * with user-supplied data.
  * 
  * \~english @param[in] Amt The amount of memory, in bytes, to claim from the heap
  * \~english @return An Optional type containing a void* to the address to use, or
@@ -152,7 +161,7 @@ void CreateExplicitEntry(VOID *Addr)
 Optional<void*> BasicMalloc(UINT64 Amt)
 {
 	/* If there's no space to allocate, don't even try. */
-	if (Amt == 0)
+	if (Amt == 0 || Amt > HeapSpace)
 	{
 		return Optional<void*>();
 	}
@@ -161,20 +170,12 @@ Optional<void*> BasicMalloc(UINT64 Amt)
 	InitBasicMemory();
 	UINT64 Amount = Max(Align(Amt, (sizeof(BlockHeader))), MinBlockSize);
 
-	UINT64 BlockTotal = 0;
-
 	/* Look through the explicit free list for any space. */
 	for (FreeList *Indexer = GlobalFreeList; 
-		Indexer != nullptr && CurrentSize < HeapSpace - MinBlockSize; 
+		Indexer != nullptr; 
 		Indexer = Indexer->Next)
 	{
 		UINT64 CurSize = GetSize(GetHeader((char*)Indexer));
-		if (BlockTotal + Amount >= HeapSpace)
-		{
-			break;
-		}
-
-		BlockTotal += CurSize;
 		if (CurSize - MinBlockSize >= Amount)
 		{
 			FreeList *Current = static_cast<FreeList*>(Indexer);
@@ -185,9 +186,8 @@ Optional<void*> BasicMalloc(UINT64 Amt)
 
 			char *Next = NextBlock((char*)(Indexer));
 			SetSizeAlloc(GetHeader(Next), FALSE, Diff);
-			CreateExplicitEntry(Next);
+			LinkFreeList(Next);
 
-			CurrentSize += Amount;
 			AllocLock.Release();
 			return Optional<void*>(Current);
 		}
@@ -198,15 +198,50 @@ Optional<void*> BasicMalloc(UINT64 Amt)
 
 void BasicFree(void *Addr)
 {
+	if (Addr == nullptr)
+	{
+		return;
+	}
+
 	AllocLock.Acquire();
 	
-	/* Mark the block itself as free */
-	CHAR *Header = GetHeader((CHAR*)Addr);
-	UINT64 Size = GetSize(Header);
-	SetSizeAlloc(Header, FALSE, Size);
+	/* Ensure the current block is consistent, ie, no double frees */
+	CHAR *ActualAddr = (CHAR*)Addr;
+	if (GetAlloc(GetHeader((CHAR*)Addr)) == FALSE)
+	{
+		AllocLock.Release();
+		return;
+	}
 
-	/* Append it to the free list. TODO: Coalescing! */
-	CreateExplicitEntry(Addr);
+	UINT64 Size = 0;
+	/* TODO: Handle merging with other adjacent blocks as needed, ie,
+	 * if malloc-related tests start failing. 
+	 * 
+	 * In the future, the allocator should be blended with some additional 
+	 * layers, so that small allocations of 128 bytes or less can be cached 
+	 * until theres no more cache space, helping improve performance and 
+	 * maximizing throughput.
+	 */
 
+	/* Mark the current block as free. */
+	UINT64 CurrentSize = GetSize(GetHeader((CHAR*)Addr));
+	SetSizeAlloc(GetHeader((CHAR*)Addr), FALSE, CurrentSize);
+	Size += CurrentSize;
+	
+	/* Merge with next block if possible... */
+	CHAR *Next = NextBlock((CHAR*)Addr);
+	if (GetAlloc(GetHeader(Next)) == FALSE)
+	{
+		UINT64 NextSize = GetSize(GetHeader(Next));
+		SetSizeAlloc(GetHeader((CHAR*)Next), FALSE, NextSize);
+		UnlinkFreeList((FreeList*)Next);
+		Size += NextSize;
+	}
+
+	/* Final data */
+	SetSizeAlloc(GetHeader(ActualAddr), FALSE, Size);
+
+	/* Append it to the free list. */
+	LinkFreeList(ActualAddr);
 	AllocLock.Release();
 }

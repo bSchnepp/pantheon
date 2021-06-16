@@ -73,16 +73,22 @@ int8_t SwapBytes(int8_t Item)
 
 int16_t SwapBytes(int16_t Item)
 {
-	return __builtin_bswap16(Item);
+	uint16_t UnsignedItem = Item;
+	uint16_t Swap = __builtin_bswap16(UnsignedItem);
+	return (int16_t)(Swap);
 }
 
 int32_t SwapBytes(int32_t Item)
 {
-	return __builtin_bswap32(Item);
+	uint32_t UnsignedItem = Item;
+	uint32_t Swap = __builtin_bswap32(UnsignedItem);
+	return (int32_t)(Swap);
 }
 
 int64_t SwapBytes(int64_t Item)
 {
-	return __builtin_bswap64(Item);
+	uint64_t UnsignedItem = Item;
+	uint64_t Swap = __builtin_bswap64(UnsignedItem);
+	return (int64_t)(Swap);
 }
 

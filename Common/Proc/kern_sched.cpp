@@ -90,20 +90,28 @@ pantheon::GlobalScheduler::~GlobalScheduler()
 	/* NYI */
 }
 
-void pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *StartAddr)
+BOOL pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *StartAddr)
 {
 	pantheon::Process NewProc(ProcStr);
-	NewProc.CreateThread(StartAddr, nullptr);
+	BOOL Val = NewProc.CreateThread(StartAddr, nullptr);
+	if (!Val)
+	{
+		return FALSE;
+	}
 	this->ProcessList.Add(NewProc);
+	return TRUE;
 }
 
-Optional<pantheon::Process> pantheon::GlobalScheduler::AcquireProcess()
+pantheon::Process pantheon::GlobalScheduler::AcquireProcess()
 {
-	if (this->ProcessList.Size() == 0)
+	for (UINT64 Index = 0; Index < this->ProcessList.Size(); ++Index)
 	{
-		return Optional<pantheon::Process>();
+		if (this->ProcessList[Index].NumInactiveThreads())
+		{
+			return this->ProcessList[Index];
+		}
 	}
-	return Optional<Process>(this->ProcessList[0]);
+	return pantheon::Process("idle");
 }
 
 void pantheon::GlobalScheduler::LoadProcess(pantheon::Process &Proc)

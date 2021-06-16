@@ -231,22 +231,37 @@ TEST(CPUCore, CoreInfoInit)
 TEST(Scheduler, GlobalSchedulerCreateProcess)
 {
 	pantheon::GlobalScheduler Sched;
-	Sched.CreateProcess("some proc", nullptr);
-	Optional<pantheon::Process> Proc = Sched.AcquireProcess();
-	ASSERT_TRUE(Proc.GetOkay());
-	ASSERT_EQ(Proc().NumThreads(), 1);
+	ASSERT_TRUE(Sched.CreateProcess("some proc", nullptr));
+	pantheon::Process Proc = Sched.AcquireProcess();
+	ASSERT_EQ(Proc.NumThreads(), 1);
 }
 
 TEST(Scheduler, AcquireProcessWhileNoneReady)
 {
 	pantheon::GlobalScheduler Sched;
-	Optional<pantheon::Process> NotProc = Sched.AcquireProcess();
-	ASSERT_FALSE(NotProc.GetOkay());
+	pantheon::Process IdleProc = Sched.AcquireProcess();
+	ASSERT_EQ(IdleProc.GetProcessString(), "idle");
 }
 
 TEST(Scheduler, GlobalSchedulerExists)
 {
 	ASSERT_NE(pantheon::GetGlobalScheduler(), nullptr);
+}
+
+TEST(Scheduler, ProcessFromRawString)
+{
+	const char *SomeRawString = "some raw string";
+	pantheon::Process Proc(SomeRawString);
+	pantheon::Process Proc2(SomeRawString);
+	ASSERT_EQ(Proc.GetProcessString(), pantheon::String(SomeRawString));
+	ASSERT_NE(Proc.ProcessID(), Proc2.ProcessID());
+}
+
+TEST(Scheduler, CreateThreadHasInactive)
+{
+	pantheon::Process Proc;
+	ASSERT_TRUE(Proc.CreateThread(nullptr, nullptr));
+	ASSERT_EQ(Proc.NumInactiveThreads(), 1);
 }
 
 #endif

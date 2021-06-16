@@ -40,6 +40,7 @@ pantheon::Thread::Thread(Process *OwningProcess, ThreadPriority Priority)
 	this->AddTicks((Priority + 1) * 15);
 
 	this->TID = AcquireThreadID();
+	this->StackSpace = nullptr;
 }
 
 pantheon::Thread::Thread(const pantheon::Thread &Other)
@@ -51,11 +52,15 @@ pantheon::Thread::Thread(const pantheon::Thread &Other)
 	this->RemainingTicks = Other.RemainingTicks;
 	this->State = Other.State;
 	this->TID = Other.TID;
+	this->StackSpace = Other.StackSpace;
 }
 
 pantheon::Thread::~Thread()
 {
-
+	if (this->StackSpace)
+	{
+		BasicFree(this->StackSpace);
+	}
 }
 
 /**
@@ -174,5 +179,15 @@ pantheon::Thread &pantheon::Thread::operator=(const pantheon::Thread &Other)
 	this->Registers = Other.Registers;
 	this->RemainingTicks = Other.RemainingTicks;
 	this->State = Other.State;
+	this->TID = Other.TID;
+
+	/* Is this right? */
+	this->StackSpace = Other.StackSpace;
 	return *this;
+}
+
+void pantheon::Thread::SetStackAddr(UINT64 Addr)
+{
+	this->Registers.SetSP(Addr);
+	this->StackSpace = reinterpret_cast<void*>((CHAR*)Addr);
 }

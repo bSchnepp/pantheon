@@ -105,7 +105,7 @@ public:
 	Optional(T v)
 	{
 		this->Okay = TRUE;
-		this->Value = v;
+		this->Value = T(v);
 	}
 
 	~Optional()
