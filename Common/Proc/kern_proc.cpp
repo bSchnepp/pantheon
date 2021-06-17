@@ -6,8 +6,12 @@
 #include "kern_thread.hpp"
 
 
-pantheon::Process::Process() : pantheon::Process::Process("kernel")
+pantheon::Process::Process()
 {
+	this->CurState = pantheon::PROCESS_STATE_INIT;
+	this->Priority = pantheon::PROCESS_PRIORITY_VERYLOW;
+	this->ProcessCommand = "idle";
+	this->PID = 0;
 }
 
 pantheon::Process::Process(const char *CommandString)
@@ -18,8 +22,8 @@ pantheon::Process::Process(const char *CommandString)
 
 pantheon::Process::Process(pantheon::String &CommandString)
 {
-	PANTHEON_UNUSED(CurState);
-	PANTHEON_UNUSED(Priority);
+	this->CurState = pantheon::PROCESS_STATE_INIT;
+	this->Priority = pantheon::PROCESS_PRIORITY_NORMAL;
 	this->ProcessCommand = CommandString;
 	this->PID = pantheon::AcquireProcessID();
 }
@@ -27,10 +31,10 @@ pantheon::Process::Process(pantheon::String &CommandString)
 pantheon::Process::Process(const Process &Other) noexcept
 {
 	this->CurState = Other.CurState;
-	this->InactiveTIDs.Copy(Other.InactiveTIDs);
 	this->PID = Other.PID;
 	this->Priority = Other.Priority;
 	this->ProcessCommand = Other.ProcessCommand;
+	this->InactiveTIDs.Copy(Other.InactiveTIDs);
 	this->Threads.Copy(Other.Threads);
 }
 
@@ -147,6 +151,7 @@ pantheon::Thread pantheon::Process::ActivateThread()
 			T.SetState(pantheon::THREAD_STATE_RUNNING);
 		}
 	}
+	pantheon::GetGlobalScheduler()->UpdateProcess(*this);
 	ActivateThreadLock.Release();
 	return T;
 }
@@ -156,5 +161,6 @@ void pantheon::Process::DeactivateThread(pantheon::Thread &T)
 	ActivateThreadLock.Acquire();
 	T.SetState(pantheon::THREAD_STATE_WAITING);
 	this->InactiveTIDs.Add(T.ThreadID());
+	pantheon::GetGlobalScheduler()->UpdateProcess(*this);
 	ActivateThreadLock.Release();
 }

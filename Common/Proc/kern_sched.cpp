@@ -13,9 +13,14 @@
  * \~english @author Brian Schnepp
  */
 
+/**
+ * \~english @brief Initalizes an instance of a per-core scheduler.
+ * \~english @author Brian Schnepp
+ */
 pantheon::Scheduler::Scheduler()
 {
 	this->CurThread = 0;
+	this->ShouldReschedule.Store(FALSE);
 }
 
 pantheon::Scheduler::~Scheduler()
@@ -66,6 +71,10 @@ pantheon::Thread *pantheon::Scheduler::MyThread()
 	return nullptr;
 }
 
+/**
+ * \~english @brief Attempts to reschedule if the appropriate flag is fired
+ * \~english @author Brian Schnepp
+ */
 void pantheon::Scheduler::MaybeReschedule()
 {
 	if (this->ShouldReschedule.Load() == TRUE)
@@ -75,6 +84,10 @@ void pantheon::Scheduler::MaybeReschedule()
 	}
 }
 
+/**
+ * \~english @brief Signals that this scheduler should run a different thread
+ * \~english @author Brian Schnepp
+ */
 void pantheon::Scheduler::SignalReschedule()
 {
 	this->ShouldReschedule.Store(TRUE);
@@ -90,6 +103,18 @@ pantheon::GlobalScheduler::~GlobalScheduler()
 	/* NYI */
 }
 
+/**
+ * \~english @brief Creates a process, visible globally, from a name and address.
+ * \~english @details A process is created, such that it can be run on any
+ * available processor on the system. The given process name identifies the
+ * process for debugging purposes and as a user-readable way to identify a
+ * process, and the start address is a pointer to the first instruction the
+ * initial threaq should execute when scheduled.
+ * \~english @param[in] ProcStr A human-readable name for the process
+ * \~english @param[in] StartAddr The initial value of the program counter
+ * \~english @return TRUE is the process was sucessfully created, false otherwise.
+ * \~english @author Brian Schnepp
+ */
 BOOL pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *StartAddr)
 {
 	pantheon::Process NewProc(ProcStr);
@@ -102,6 +127,12 @@ BOOL pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *St
 	return TRUE;
 }
 
+
+/**
+ * \~english @brief Obtains a Process which has an inactive thread, or the idle process if none available.
+ * \~english @return An instance of a Process to execute
+ * \~english @author Brian Schnepp
+ */
 pantheon::Process pantheon::GlobalScheduler::AcquireProcess()
 {
 	for (UINT64 Index = 0; Index < this->ProcessList.Size(); ++Index)
@@ -111,12 +142,29 @@ pantheon::Process pantheon::GlobalScheduler::AcquireProcess()
 			return this->ProcessList[Index];
 		}
 	}
-	return pantheon::Process("idle");
+	return pantheon::Process();
 }
 
 void pantheon::GlobalScheduler::LoadProcess(pantheon::Process &Proc)
 {
 	this->ProcessList.Add(Proc);
+}
+
+void pantheon::GlobalScheduler::UpdateProcess(pantheon::Process &Proc)
+{
+	/* TODO: Implement a hashmap structure to make lookup O(1).
+	 * This is necessary (for now) because we have to do a lot of
+	 * functional-style copying to avoid smashing process state.
+	 */
+	for (UINT64 Index = 0; Index < this->ProcessList.Size(); ++Index)
+	{
+		if (this->ProcessList[Index].ProcessID() == Proc.ProcessID())
+		{
+			this->ProcessList[Index] = Proc;
+			return;
+		}
+	}
+	this->LoadProcess(Proc);
 }
 
 
@@ -128,9 +176,11 @@ UINT32 pantheon::AcquireProcessID()
 {
 	/* TODO: When we run out of IDs, go back and ensure we don't
 	 * reuse an ID already in use!
+	 * 
+	 * 0 should be reserved for the generic idle process.
 	 */
 	UINT32 RetVal = 0;
-	static UINT32 ProcessID = 0;
+	static UINT32 ProcessID = 1;
 	ProcIDLock.Acquire();
 	/* A copy has to be made since we haven't unlocked the spinlock yet. */
 	RetVal = ProcessID++;

@@ -44,6 +44,7 @@ public:
 
 	BOOL CreateProcess(pantheon::String ProcStr, void *StartAddr);
 	void LoadProcess(pantheon::Process &Proc);
+	void UpdateProcess(pantheon::Process &Proc);
 
 	Process AcquireProcess();
 
