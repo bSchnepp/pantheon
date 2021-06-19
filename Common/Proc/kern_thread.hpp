@@ -35,6 +35,7 @@ class Process;
 class Thread
 {
 public:
+	Thread();
 	Thread(Process *ParentProcess);
 	Thread(Process *ParentProcess, ThreadPriority Priority);
 	Thread(const Thread &Other);

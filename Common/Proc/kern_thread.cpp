@@ -5,6 +5,21 @@
 #include "kern_sched.hpp"
 #include "kern_thread.hpp"
 
+/**
+ * \~english @brief Prepares a thread ready to have contents moved to it.
+ * \~english @author Brian Schnepp
+ */
+pantheon::Thread::Thread()
+{
+	this->ParentProcess = nullptr;
+	this->PreemptCount = 0;
+	this->Priority = pantheon::THREAD_PRIORITY_NORMAL;
+	this->State = pantheon::THREAD_STATE_TERMINATED;
+	this->RemainingTicks = 0;
+	this->Registers.Wipe();
+	this->StackSpace = nullptr;
+	this->TID = 0;
+}
 
 /**
  * \~english @brief Initializes a new thread belonging to a process.

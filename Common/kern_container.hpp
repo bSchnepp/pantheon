@@ -147,9 +147,11 @@ public:
 	T &operator[](UINT64 Index) noexcept
 	{
 		/* This is needed to silence a warning on divide by 0 */
-		if (this->EntryCount == 0)
+		if (this->EntryCount == 0 || this->Content == nullptr)
 		{
-			return *(this->Content);
+			static T DefaultValue;
+			DefaultValue = T();
+			return DefaultValue;
 		}
 		return this->Content[Index % this->EntryCount];
 	}
