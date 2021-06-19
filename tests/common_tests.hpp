@@ -494,6 +494,22 @@ TEST(ArrayList, OtherAllocator)
 	ASSERT_EQ(WrapperCalls, 3);
 }
 
+TEST(ArrayList, SelfMove)
+{
+	ArrayList<UINT32> Arr;
+	Arr.Add(2);
+	Arr.Add(3);
+	Arr.Add(4);
+	Arr.Move(Arr);
+	ASSERT_EQ(Arr.Size(), 3);
+}
+
+TEST(ArrayList, IndexEmptyList)
+{
+	ArrayList<UINT32> Arr;
+	ASSERT_EQ(Arr[100], 0);
+}
+
 TEST(Atoi, U8AtoiBase10)
 {
 	UINT8 U8 = CharStarNumberAtoi<UINT8>("8");
