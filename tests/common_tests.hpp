@@ -425,6 +425,36 @@ TEST(ArrayList, AssignOperatorMove)
 	ASSERT_EQ(Arr2[1], 4);
 }
 
+TEST(ArrayList, ArrayListBasicIterator)
+{
+	ArrayList<INT32> Arr;
+	Arr.Add(3);
+	Arr.Add(4);
+	Arr.Add(5);
+
+	UINT64 Sum = 0;
+	for (INT32 &Item : Arr)
+	{
+		Sum += Item;
+	}
+	ASSERT_EQ(Sum, 12);
+}
+
+TEST(ArrayList, IteratorDifferentItems)
+{
+	ArrayList<INT32> Arr;
+	Arr.Add(3);
+	Arr.Add(4);
+	Arr.Add(5);
+
+	UINT64 NumOf3 = 0;
+	for (INT32 &Item : Arr)
+	{
+		NumOf3 += (Item == 3);
+	}
+	ASSERT_EQ(NumOf3, 1);
+}
+
 static UINT64 WrapperCalls = 0;
 Optional<void*> MallocWrapperOtherAllocator(UINT64 Sz)
 {

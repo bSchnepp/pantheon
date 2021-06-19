@@ -9,6 +9,36 @@ typedef Optional<void*> (*AllocatorMallocFn)(UINT64);
 typedef void (*AllocatorFreeFn)(void*);
 
 template<typename T>
+struct ArrayListIterator
+{
+	ArrayListIterator(T *Ptr) : Loc(Ptr){};
+
+	T &operator*() 
+	{ 
+		return *this->Loc; 
+	}
+
+	ArrayListIterator<T> &operator++()
+	{
+		this->Loc++;
+		return *this;
+	}
+
+	friend bool operator==(const ArrayListIterator<T> &L, const ArrayListIterator<T> &R)
+	{
+		return L.Loc == R.Loc;
+	}
+
+	friend bool operator!=(const ArrayListIterator<T> &L, const ArrayListIterator<T> &R)
+	{
+		return !(L == R);
+	}
+
+	private:
+		T *Loc;
+};
+
+template<typename T>
 class ArrayList
 {
 public:
@@ -192,6 +222,16 @@ public:
 			this->Free(this->Content);
 			this->Content = NewContent;
 		}
+	}
+
+	ArrayListIterator<T> begin()
+	{
+		return ArrayListIterator<T>(this->Content);
+	}
+
+	ArrayListIterator<T> end()
+	{
+		return ArrayListIterator<T>(&(this->Content[this->EntryCount]));
 	}
 
 	[[nodiscard]] BOOL Contains(T Item) const
