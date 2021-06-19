@@ -29,9 +29,7 @@ public:
 	void SignalReschedule();
 
 private:
-
-	UINT64 CurThread;
-	ArrayList<Thread> Threads;
+	Thread *CurThread;
 	Atomic<BOOL> ShouldReschedule;
 };
 
@@ -43,12 +41,12 @@ public:
 	~GlobalScheduler();
 
 	BOOL CreateProcess(pantheon::String ProcStr, void *StartAddr);
-	void LoadProcess(pantheon::Process &Proc);
-	void UpdateProcess(pantheon::Process &Proc);
 
-	Process AcquireProcess();
+	Thread* AcquireThread();
+	void ReleaseThread(Thread *T);
 
 private:
+	ArrayList<Thread> ThreadList;
 	ArrayList<Process> ProcessList;
 };
 

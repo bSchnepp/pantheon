@@ -200,15 +200,23 @@ TEST(Scheduler, SchedulerNoThreadsNoSchedule)
 TEST(Scheduler, DefaultProcessName)
 {
 	pantheon::Process Proc;
-	ASSERT_EQ(Proc.GetProcessString(), pantheon::String("kernel"));
+	ASSERT_EQ(Proc.GetProcessString(), pantheon::String("idle"));
 }
 
 TEST(Scheduler, ManyProcessIDs)
 {
-	pantheon::Process OneProc;
-	pantheon::Process TwoProc;
-	pantheon::Process OtherProc;
-	ASSERT_TRUE(OneProc.ProcessID() < OtherProc.ProcessID());
+	pantheon::Process OneProc("one");
+	pantheon::Process TwoProc("two");
+	pantheon::Process ThreeProc("three");
+
+	ASSERT_NE(OneProc.ProcessID(), 0);
+	ASSERT_NE(OneProc.ProcessID(), TwoProc.ProcessID());
+	ASSERT_NE(OneProc.ProcessID(), ThreeProc.ProcessID());
+
+	ASSERT_NE(TwoProc.ProcessID(), 0);
+	ASSERT_NE(TwoProc.ProcessID(), ThreeProc.ProcessID());
+
+	ASSERT_NE(ThreeProc.ProcessID(), 0);
 }
 
 TEST(Scheduler, ManyThreadIDs)
@@ -232,15 +240,15 @@ TEST(Scheduler, GlobalSchedulerCreateProcess)
 {
 	pantheon::GlobalScheduler Sched;
 	ASSERT_TRUE(Sched.CreateProcess("some proc", nullptr));
-	pantheon::Process Proc = Sched.AcquireProcess();
-	ASSERT_EQ(Proc.NumThreads(), 1);
+	pantheon::Thread *T = Sched.AcquireThread();
+	ASSERT_NE(T, nullptr);
 }
 
 TEST(Scheduler, AcquireProcessWhileNoneReady)
 {
 	pantheon::GlobalScheduler Sched;
-	pantheon::Process IdleProc = Sched.AcquireProcess();
-	ASSERT_EQ(IdleProc.GetProcessString(), "idle");
+	pantheon::Thread *IdleProc = Sched.AcquireThread();
+	ASSERT_EQ(IdleProc, nullptr);
 }
 
 TEST(Scheduler, GlobalSchedulerExists)

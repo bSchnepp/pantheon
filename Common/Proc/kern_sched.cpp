@@ -19,7 +19,7 @@
  */
 pantheon::Scheduler::Scheduler()
 {
-	this->CurThread = 0;
+	this->CurThread = nullptr;
 	this->ShouldReschedule.Store(FALSE);
 }
 
@@ -44,6 +44,9 @@ void pantheon::Scheduler::Reschedule()
 	 * might need to be scheduled. 
 	 */
 	pantheon::DisableSystemTimer();
+
+	/* TODO: Save old registers */
+	this->CurThread = pantheon::GetGlobalScheduler()->AcquireThread();
 
 
 	/* Just before a process is restarted, make sure it's set 
@@ -133,38 +136,28 @@ BOOL pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *St
  * \~english @return An instance of a Process to execute
  * \~english @author Brian Schnepp
  */
-pantheon::Process pantheon::GlobalScheduler::AcquireProcess()
+pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 {
+	static pantheon::Spinlock AcqProcSpinlock;
+	AcqProcSpinlock.Acquire();
 	for (UINT64 Index = 0; Index < this->ProcessList.Size(); ++Index)
 	{
 		if (this->ProcessList[Index].NumInactiveThreads())
 		{
-			return this->ProcessList[Index];
+			pantheon::Process *SelectedProc = &this->ProcessList[Index];
+			pantheon::Thread *SelectedThread = SelectedProc->ActivateThread();
+			AcqProcSpinlock.Release();
+			return SelectedThread;
+			
 		}
 	}
-	return pantheon::Process();
+	AcqProcSpinlock.Release();
+	return nullptr;
 }
 
-void pantheon::GlobalScheduler::LoadProcess(pantheon::Process &Proc)
+void pantheon::GlobalScheduler::ReleaseThread(Thread *T)
 {
-	this->ProcessList.Add(Proc);
-}
-
-void pantheon::GlobalScheduler::UpdateProcess(pantheon::Process &Proc)
-{
-	/* TODO: Implement a hashmap structure to make lookup O(1).
-	 * This is necessary (for now) because we have to do a lot of
-	 * functional-style copying to avoid smashing process state.
-	 */
-	for (UINT64 Index = 0; Index < this->ProcessList.Size(); ++Index)
-	{
-		if (this->ProcessList[Index].ProcessID() == Proc.ProcessID())
-		{
-			this->ProcessList[Index] = Proc;
-			return;
-		}
-	}
-	this->LoadProcess(Proc);
+	T->MyProc()->DeactivateThread(T);
 }
 
 

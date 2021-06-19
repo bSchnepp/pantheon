@@ -52,8 +52,8 @@ public:
 	BOOL CreateThread(void *StartAddr, void *ThreadData);
 
 	[[nodiscard]] UINT64 NumInactiveThreads() const;
-	Thread ActivateThread();
-	void DeactivateThread(Thread &T);
+	Thread* ActivateThread();
+	void DeactivateThread(Thread *T);
 
 private:
 	UINT32 PID;
@@ -61,8 +61,8 @@ private:
 	
 	ProcessState CurState;
 	ProcessPriority Priority;
-	ArrayList<Thread> Threads;
 
+	ArrayList<Thread> Threads;
 	ArrayList<UINT64> InactiveTIDs;
 };
 

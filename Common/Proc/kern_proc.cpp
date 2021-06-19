@@ -130,37 +130,37 @@ UINT64 pantheon::Process::NumInactiveThreads() const
 
 
 static pantheon::Spinlock ActivateThreadLock;
-pantheon::Thread pantheon::Process::ActivateThread()
+pantheon::Thread* pantheon::Process::ActivateThread()
 {
 	ActivateThreadLock.Acquire();
 	if (this->NumInactiveThreads() == 0)
 	{
 		ActivateThreadLock.Release();
-		return pantheon::Thread(this);
+		return nullptr;
 	}
 
 	UINT64 TID = this->InactiveTIDs[0];
 	this->InactiveTIDs.Delete(0);
 	
-	pantheon::Thread T(this);
 	for (UINT64 Index = 0; Index < this->Threads.Size(); ++Index)
 	{
 		if (this->Threads[Index].ThreadID() == TID)
 		{
-			T = this->Threads[Index];
-			T.SetState(pantheon::THREAD_STATE_RUNNING);
+			this->Threads[Index].SetState(pantheon::THREAD_STATE_RUNNING);
+			pantheon::Thread *Selected = &(this->Threads[Index]);
+			ActivateThreadLock.Release();
+			return Selected;
 		}
 	}
-	pantheon::GetGlobalScheduler()->UpdateProcess(*this);
+	
 	ActivateThreadLock.Release();
-	return T;
+	return nullptr;
 }
 
-void pantheon::Process::DeactivateThread(pantheon::Thread &T)
+void pantheon::Process::DeactivateThread(pantheon::Thread *T)
 {
 	ActivateThreadLock.Acquire();
-	T.SetState(pantheon::THREAD_STATE_WAITING);
-	this->InactiveTIDs.Add(T.ThreadID());
-	pantheon::GetGlobalScheduler()->UpdateProcess(*this);
+	T->SetState(pantheon::THREAD_STATE_WAITING);
+	this->InactiveTIDs.Add(T->ThreadID());
 	ActivateThreadLock.Release();
 }
