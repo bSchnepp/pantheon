@@ -68,17 +68,18 @@ static void UnlinkFreeList(FreeList *Current)
 	if (GlobalFreeList == Current)
 	{
 		GlobalFreeList = GlobalFreeList->Next;
-		return;
 	}
-
-	if (Current->Prev)
+	else
 	{
-		Current->Prev->Next = Current->Next;
-	}
+		if (Current->Prev)
+		{
+			Current->Prev->Next = Current->Next;
+		}
 
-	if (Current->Next)
-	{
-		Current->Next->Prev = Current->Prev;
+		if (Current->Next)
+		{
+			Current->Next->Prev = Current->Prev;
+		}
 	}
 }
 
