@@ -7,6 +7,10 @@ extern "C"
 {
 #endif
 
+#ifndef ONLY_TESTS
+void *memcpy(void *dest, const void * src, unsigned long int n);
+#endif
+
 #define PANTHEON_UNUSED(x) ((void)(x))
 
 #define PANTHEON_VERSION_MAJOR @PANTHEON_VERSION_MAJOR@

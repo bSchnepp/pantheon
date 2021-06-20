@@ -43,6 +43,17 @@ void __cxa_guard_release()
 	
 }
 
+extern "C" void *memcpy(void *dest, const void * src, unsigned long int n)
+{
+	char *AsCharDst = (char*)(dest);
+	const char *AsCharSrc = (const char*)(src);
+	for (unsigned int Index = 0; Index < n; ++Index)
+	{
+		AsCharDst[Index] = AsCharSrc[Index];
+	}
+	return AsCharDst;
+}
+
 }
 #endif
 
