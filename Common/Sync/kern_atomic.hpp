@@ -24,13 +24,21 @@ public:
 	T Load()
 	{
 		T RetVal;
+		#ifndef ONLY_TESTS
 		__atomic_load(&(this->Content), &RetVal, __ATOMIC_SEQ_CST);
+		#else
+		RetVal = this->Content;
+		#endif
 		return RetVal;
 	}
 
 	void Store(T Item)
 	{
-		__atomic_store(&(this->Content), &Item, __ATOMIC_SEQ_CST);		
+		#ifndef ONLY_TESTS
+		__atomic_store(&(this->Content), &Item, __ATOMIC_SEQ_CST);
+		#else
+		this->Content = Item;
+		#endif
 	}
 
 private:
