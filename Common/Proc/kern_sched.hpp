@@ -41,6 +41,7 @@ public:
 	~GlobalScheduler();
 
 	BOOL CreateProcess(pantheon::String ProcStr, void *StartAddr);
+	VOID CreateIdleProc(void *StartAddr);
 
 	Thread* AcquireThread();
 	void ReleaseThread(Thread *T);

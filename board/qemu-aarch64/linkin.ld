@@ -40,7 +40,7 @@ SECTIONS
 	kern_stack_begin = .;
 	.kern_stack :
 	{
-		. += 16384;
+		. += 2 * 1024 * 1024;
 	}
 	kern_stack_end = .;
 	kern_stack_size = kern_stack_end - kern_stack_begin;

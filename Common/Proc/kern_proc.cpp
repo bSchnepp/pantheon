@@ -17,7 +17,9 @@ pantheon::Process::Process()
 pantheon::Process::Process(const char *CommandString)
 {
 	this->ProcessCommand = pantheon::String(CommandString);
-	*this = Process(this->ProcessCommand);
+	this->CurState = pantheon::PROCESS_STATE_INIT;
+	this->Priority = pantheon::PROCESS_PRIORITY_NORMAL;
+	this->PID = pantheon::AcquireProcessID();
 }
 
 pantheon::Process::Process(pantheon::String &CommandString)
@@ -98,8 +100,8 @@ UINT64 pantheon::Process::NumThreads() const
 BOOL pantheon::Process::CreateThread(void *StartAddr, void *ThreadData)
 {
 	pantheon::Thread T(this);
-	/* Attempt 4KB of stack space for now... */
-	Optional<void*> StackSpace = BasicMalloc(4 * 1024);
+	/* Attempt 128KB of stack space for now... */
+	Optional<void*> StackSpace = BasicMalloc(128 * 1024);
 	if (StackSpace.GetOkay() == FALSE)
 	{
 		return FALSE;

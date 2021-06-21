@@ -61,7 +61,7 @@ typedef struct CpuContext
 
 	VOID SetArg1(UINT64 Val)
 	{
-		this->Regs[0] = Val;
+		this->Regs[19] = Val;
 	}
 
 	CpuContext &operator=(const CpuContext &Other)

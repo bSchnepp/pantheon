@@ -89,6 +89,16 @@ extern "C"
 {
 #endif
 
+void kern_idle(void *unused)
+{
+	PANTHEON_UNUSED(unused);
+	UINT64 Count = 0;
+	for (;;)
+	{
+		SERIAL_LOG("%s: %u\n", "idle: ", Count++);
+	}
+}
+
 void kern_init_core()
 {
 	pantheon::CPU::CLI();
@@ -102,9 +112,12 @@ void kern_init_core()
 	
 	PerCoreInit();
 	SERIAL_LOG("Pantheon booted with core %hhu\n", CpuNo);
+	
+	/* Ensure there is always at least the idle proc. */
+	pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle);
+
 	pantheon::CPU::STI();
 	pantheon::CPU::GetCoreInfo()->CurSched->Reschedule();
-
 	for (;;)
 	{
 		pantheon::CPU::GetCoreInfo()->CurSched->MaybeReschedule();

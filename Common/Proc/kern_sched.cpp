@@ -130,6 +130,29 @@ BOOL pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *St
 	return TRUE;
 }
 
+VOID pantheon::GlobalScheduler::CreateIdleProc(void *StartAddr)
+{
+	for (pantheon::Process &Proc : this->ProcessList)
+	{
+		if (Proc.ProcessID() == 0)
+		{
+			Proc.CreateThread(StartAddr, nullptr);
+			return;
+		}
+	}
+
+	/* HACK: Until we get .init_array working, this needs to be done. */
+	this->ProcessList = ArrayList<Process>(20);
+	this->ThreadList = ArrayList<Thread>(50);
+
+	pantheon::Process IdleProc;
+	if (IdleProc.CreateThread(StartAddr, nullptr))
+	{
+		this->ProcessList.Add(IdleProc);
+	}
+}
+
+static pantheon::Spinlock AcqProcSpinlock;
 
 /**
  * \~english @brief Obtains a Process which has an inactive thread, or the idle process if none available.
@@ -138,8 +161,11 @@ BOOL pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *St
  */
 pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 {
-	static pantheon::Spinlock AcqProcSpinlock;
 	AcqProcSpinlock.Acquire();
+
+	/* This should be replaced with a skiplist (or linked list), 
+	 * so finding an inactive thread becomes an O(1) process.
+	 */
 	for (UINT64 Index = 0; Index < this->ProcessList.Size(); ++Index)
 	{
 		if (this->ProcessList[Index].NumInactiveThreads())
@@ -148,7 +174,6 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 			pantheon::Thread *SelectedThread = SelectedProc->ActivateThread();
 			AcqProcSpinlock.Release();
 			return SelectedThread;
-			
 		}
 	}
 	AcqProcSpinlock.Release();
@@ -157,7 +182,9 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 
 void pantheon::GlobalScheduler::ReleaseThread(Thread *T)
 {
+	AcqProcSpinlock.Acquire();
 	T->MyProc()->DeactivateThread(T);
+	AcqProcSpinlock.Release();
 }
 
 
