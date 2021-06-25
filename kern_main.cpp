@@ -81,7 +81,15 @@ void Initialize(fdt_header *dtb)
 	SERIAL_LOG("%s\n", "finished going through dtb");
 }
 
-
+void kern_idle(void *unused)
+{
+	PANTHEON_UNUSED(unused);
+	UINT64 Count = 0;
+	for (;;)
+	{
+		SERIAL_LOG_UNSAFE("%s: %u\n", "idle: ", Count++);
+	}
+}
 
 /* clang-format: off */
 #ifdef __cplusplus
@@ -89,19 +97,10 @@ extern "C"
 {
 #endif
 
-void kern_idle(void *unused)
-{
-	PANTHEON_UNUSED(unused);
-	UINT64 Count = 0;
-	for (;;)
-	{
-		SERIAL_LOG("%s: %u\n", "idle: ", Count++);
-	}
-}
-
 void kern_init_core()
 {
 	pantheon::CPU::CLI();
+
 	UINT8 CpuNo = pantheon::CPU::GetProcessorNumber();
 	pantheon::CPU::InitCoreInfo(CpuNo);
 
@@ -109,20 +108,18 @@ void kern_init_core()
 	{
 		/* Loop until core 0 finished initializing the kernel */
 	}
-	
+
 	PerCoreInit();
 	SERIAL_LOG("Pantheon booted with core %hhu\n", CpuNo);
-	
-	/* Ensure there is always at least the idle proc. */
+
+	/* Ensure there is always at least the idle proc for this core. */
 	pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle);
 
 	pantheon::CPU::STI();
-	pantheon::CPU::GetCoreInfo()->CurSched->Reschedule();
 	for (;;)
 	{
 		pantheon::CPU::GetCoreInfo()->CurSched->MaybeReschedule();
 	}
-
 }
 
 void kern_init(fdt_header *dtb)
@@ -135,7 +132,11 @@ void kern_init(fdt_header *dtb)
 		SERIAL_LOG("%s\n", "booting based on device tree pointer!");
 		Initialize(dtb);
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_SECOND_STAGE);
+		pantheon::GetGlobalScheduler()->Init();
 		pantheon::RearmSystemTimer(1000);
+
+		/* Create an extra idle thread to ensure rescheduling happens */
+		pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle);
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_OK);
 	}
 	kern_init_core();

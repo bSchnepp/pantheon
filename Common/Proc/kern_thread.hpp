@@ -39,6 +39,7 @@ public:
 	Thread(Process *ParentProcess);
 	Thread(Process *ParentProcess, ThreadPriority Priority);
 	Thread(const Thread &Other);
+	Thread(Thread &&Other) noexcept;
 	~Thread();
 
 	Process *MyProc();
@@ -51,6 +52,8 @@ public:
 	[[nodiscard]] UINT64 ThreadID() const;
 
 	VOID AddTicks(UINT64 TickCount);
+	VOID CountTick();
+	VOID RefreshTicks();
 
 	VOID SetState(ThreadState State);
 	VOID SetPriority(ThreadPriority Priority);
@@ -61,6 +64,7 @@ public:
 	void SetStackAddr(UINT64 Addr);
 
 	Thread &operator=(const Thread &Other);
+	Thread &operator=(Thread &&Other) noexcept;
 
 private:
 	UINT64 TID;

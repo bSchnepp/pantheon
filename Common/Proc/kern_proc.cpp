@@ -12,6 +12,7 @@ pantheon::Process::Process()
 	this->Priority = pantheon::PROCESS_PRIORITY_VERYLOW;
 	this->ProcessCommand = "idle";
 	this->PID = 0;
+	this->InactiveTIDCount = 0;
 }
 
 pantheon::Process::Process(const char *CommandString)
@@ -20,6 +21,7 @@ pantheon::Process::Process(const char *CommandString)
 	this->CurState = pantheon::PROCESS_STATE_INIT;
 	this->Priority = pantheon::PROCESS_PRIORITY_NORMAL;
 	this->PID = pantheon::AcquireProcessID();
+	this->InactiveTIDCount = 0;
 }
 
 pantheon::Process::Process(pantheon::String &CommandString)
@@ -28,6 +30,7 @@ pantheon::Process::Process(pantheon::String &CommandString)
 	this->Priority = pantheon::PROCESS_PRIORITY_NORMAL;
 	this->ProcessCommand = CommandString;
 	this->PID = pantheon::AcquireProcessID();
+	this->InactiveTIDCount = 0;
 }
 
 pantheon::Process::Process(const Process &Other) noexcept
@@ -36,18 +39,18 @@ pantheon::Process::Process(const Process &Other) noexcept
 	this->PID = Other.PID;
 	this->Priority = Other.Priority;
 	this->ProcessCommand = Other.ProcessCommand;
-	this->InactiveTIDs.Copy(Other.InactiveTIDs);
 	this->Threads.Copy(Other.Threads);
+	this->InactiveTIDCount = Other.InactiveTIDCount;
 }
 
 pantheon::Process::Process(Process &&Other) noexcept
 {
 	this->CurState = Other.CurState;
-	this->InactiveTIDs.Move(Other.InactiveTIDs);
 	this->PID = Other.PID;
 	this->Priority = Other.Priority;
 	this->ProcessCommand = Other.ProcessCommand;
 	this->Threads.Move(Other.Threads);
+	this->InactiveTIDCount = Other.InactiveTIDCount;
 }
 
 pantheon::Process::~Process()
@@ -62,11 +65,11 @@ pantheon::Process &pantheon::Process::operator=(const pantheon::Process &Other)
 		return *this;
 	}
 	this->CurState = Other.CurState;
-	this->InactiveTIDs = Other.InactiveTIDs;
 	this->PID = Other.PID;
 	this->Priority = Other.Priority;
 	this->ProcessCommand = Other.ProcessCommand;
 	this->Threads = Other.Threads;
+	this->InactiveTIDCount = Other.InactiveTIDCount;
 	return *this;
 }
 
@@ -81,7 +84,7 @@ pantheon::Process &pantheon::Process::operator=(pantheon::Process &&Other) noexc
 	this->Priority = Other.Priority;
 	this->ProcessCommand = Other.ProcessCommand;
 	this->Threads.Move(Other.Threads);
-	this->InactiveTIDs.Move(Other.InactiveTIDs);
+	this->InactiveTIDCount = Other.InactiveTIDCount;
 	return *this;
 }
 
@@ -99,22 +102,22 @@ UINT64 pantheon::Process::NumThreads() const
 
 BOOL pantheon::Process::CreateThread(void *StartAddr, void *ThreadData)
 {
+	this->CreateThreadLock.Acquire();
 	pantheon::Thread T(this);
 	/* Attempt 128KB of stack space for now... */
 	Optional<void*> StackSpace = BasicMalloc(128 * 1024);
-	if (StackSpace.GetOkay() == FALSE)
+	if (StackSpace.GetOkay())
 	{
-		return FALSE;
+		UINT64 IStartAddr = (UINT64)StartAddr;
+		UINT64 IThreadData = (UINT64)ThreadData;
+		UINT64 IStackSpace = (UINT64)StackSpace();
+		pantheon::CpuContext &Regs = T.GetRegisters();
+		Regs.SetInitContext(IStartAddr, IThreadData, IStackSpace);
+		this->InactiveTIDCount++;
+		this->Threads.Add(T);
 	}
-
-	T.SetStackAddr((UINT64)StackSpace());
-
-	pantheon::CpuContext &Regs = T.GetRegisters();
-	Regs.SetPC((UINT64)(StartAddr));
-	Regs.SetArg1((UINT64)ThreadData);
-	this->InactiveTIDs.Add(T.ThreadID());
-	this->Threads.Add(T);
-	return TRUE;
+	this->CreateThreadLock.Release();
+	return StackSpace.GetOkay();
 }
 
 [[nodiscard]]
@@ -127,7 +130,7 @@ UINT32 pantheon::Process::ProcessID() const
 [[nodiscard]] 
 UINT64 pantheon::Process::NumInactiveThreads() const
 {
-	return this->InactiveTIDs.Size();
+	return this->InactiveTIDCount;
 }
 
 
@@ -141,18 +144,20 @@ pantheon::Thread* pantheon::Process::ActivateThread()
 		return nullptr;
 	}
 
-	UINT64 TID = this->InactiveTIDs[0];
-	this->InactiveTIDs.Delete(0);
-	
-	for (UINT64 Index = 0; Index < this->Threads.Size(); ++Index)
+	/* TODO: Gracefully handle BLOCKED state. */
+	for (pantheon::Thread &T : this->Threads)
 	{
-		if (this->Threads[Index].ThreadID() == TID)
+		pantheon::ThreadState TState = T.MyState();
+		if (TState == pantheon::THREAD_STATE_RUNNING 
+			|| TState == pantheon::THREAD_STATE_TERMINATED)
 		{
-			this->Threads[Index].SetState(pantheon::THREAD_STATE_RUNNING);
-			pantheon::Thread *Selected = &(this->Threads[Index]);
-			ActivateThreadLock.Release();
-			return Selected;
+			continue;
 		}
+
+		T.SetState(pantheon::THREAD_STATE_RUNNING);
+		this->InactiveTIDCount--;
+		ActivateThreadLock.Release();
+		return &T;
 	}
 	
 	ActivateThreadLock.Release();
@@ -163,6 +168,6 @@ void pantheon::Process::DeactivateThread(pantheon::Thread *T)
 {
 	ActivateThreadLock.Acquire();
 	T->SetState(pantheon::THREAD_STATE_WAITING);
-	this->InactiveTIDs.Add(T->ThreadID());
+	this->InactiveTIDCount++;
 	ActivateThreadLock.Release();
 }

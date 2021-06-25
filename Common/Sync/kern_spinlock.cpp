@@ -24,6 +24,10 @@ void pantheon::Spinlock::Acquire()
 void pantheon::Spinlock::Release()
 {
 	asm volatile ("" ::: "memory");
+	if (this->Locked == FALSE)
+	{
+		return;
+	}
 	while (__sync_val_compare_and_swap(&(this->Locked), TRUE, FALSE) == FALSE)
 	{
 

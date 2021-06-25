@@ -5,6 +5,7 @@
 #include <kern_container.hpp>
 
 #include <Sync/kern_atomic.hpp>
+#include <Sync/kern_spinlock.hpp>
 
 #ifndef _KERN_PROC_HPP_
 #define _KERN_PROC_HPP_
@@ -31,7 +32,6 @@ typedef enum ProcessPriority
 	PROCESS_PRIORITY_VERYHIGH = 4,
 }ProcessPriority;
 
-/* NOT YET IMPLEMENTED! Placeholder for CPUInfo!!!! */
 class Process
 {
 public:
@@ -63,7 +63,9 @@ private:
 	ProcessPriority Priority;
 
 	ArrayList<Thread> Threads;
-	ArrayList<UINT64> InactiveTIDs;
+	UINT64 InactiveTIDCount;
+
+	pantheon::Spinlock CreateThreadLock;
 };
 
 }

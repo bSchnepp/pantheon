@@ -2,6 +2,15 @@
 #include <arch/aarch64/ints.hpp>
 #include <arch/aarch64/thread.hpp>
 
+void createprocess_tail()
+{
+
+}
+
+void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New, UINT32 RegOffset)
+{
+	
+}
 
 UINT8 pantheon::CPU::GetProcessorNumber()
 {

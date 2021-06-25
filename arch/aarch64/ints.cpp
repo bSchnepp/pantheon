@@ -50,8 +50,22 @@ extern "C" void irq_handler_el1()
 	pantheon::arm::GICAckInterrupt(IAR);
 	if ((IAR & 0x3FF) == 30)
 	{
-		pantheon::CPU::GetCoreInfo()->CurSched->SignalReschedule();
-		pantheon::arm::RearmSystemTimer(TimerClock);
+		pantheon::CPU::CoreInfo *CoreData = pantheon::CPU::GetCoreInfo();
+		pantheon::Scheduler *CurSched = CoreData->CurSched;
+		pantheon::Thread *CurThread = CurSched->MyThread();
+
+		UINT64 RemainingTicks = 0;
+		if (CurThread)
+		{
+			CurThread->CountTick();
+			RemainingTicks = CurThread->TicksLeft();
+		}
+
+		if (RemainingTicks == 0)
+		{
+			CurSched->SignalReschedule();
+		}
+		pantheon::arm::RearmSystemTimer();
 	}
 }
 
@@ -140,10 +154,10 @@ VOID pantheon::arm::DisableSystemTimer()
 
 VOID pantheon::arm::CLI()
 {
-	pantheon::arm::GICDisable();
+	asm volatile("msr daifset, #3\n");
 }
 
 VOID pantheon::arm::STI()
 {
-	pantheon::arm::GICEnable();
+	asm volatile("msr daifclr, #3\n");
 }

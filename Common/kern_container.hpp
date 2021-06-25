@@ -66,6 +66,20 @@ public:
 		}
 	}
 
+	ArrayList(ArrayList &&Other) noexcept
+	{
+		this->SpaceCount = Other.SpaceCount;
+		this->EntryCount = Other.EntryCount;
+		this->Content = Other.Content;
+
+		this->Malloc = Other.Malloc;
+		this->Free = Other.Free;
+
+		Other.Content = nullptr;
+		Other.SpaceCount = 0;
+		Other.EntryCount = 0;		
+	}
+
 	~ArrayList()
 	{
 		if (this->Content)
@@ -83,6 +97,25 @@ public:
 		}		
 		this->Copy(Other);
 		return *this;
+	}
+
+	ArrayList<T> &operator=(ArrayList<T> &&Other) noexcept
+	{
+		this->SpaceCount = Other.SpaceCount;
+		this->EntryCount = Other.EntryCount;
+		this->Content = Other.Content;
+
+		this->Malloc = Other.Malloc;
+		this->Free = Other.Free;
+
+		if (this != &Other)
+		{
+			Other.Content = nullptr;
+			Other.SpaceCount = 0;
+			Other.EntryCount = 0;
+		}
+		return *this;
+
 	}
 
 	void Move(ArrayList<T> &Other) noexcept
@@ -184,7 +217,9 @@ public:
 			return;
 		}
 		
-		this->SpaceCount *= 4;
+		/* If it couldn't fit, expand the storage */
+		this->SpaceCount *= 2;
+		this->SpaceCount++;
 		auto MaybeMem = this->Malloc(sizeof(T) * this->SpaceCount);
 		if (MaybeMem.GetOkay())
 		{
@@ -198,7 +233,7 @@ public:
 			this->Free(this->Content);
 			this->Content = NewContent;
 			this->Add(NewItem);
-		}		
+		}
 	}
 
 	void Delete(UINT64 Index)

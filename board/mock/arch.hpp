@@ -6,6 +6,16 @@
 
 namespace pantheon
 {
+	struct CpuContext;
+}
+
+extern "C" void createprocess_tail();
+extern "C" void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New, UINT32 RegOffset);
+
+namespace pantheon
+{
+
+static constexpr UINT64 CpuIRegOffset = 0;
 
 typedef struct CpuContext
 {
@@ -82,6 +92,15 @@ typedef struct CpuContext
 		}
 		this->PC = Other.PC;
 		return *this;
+	}
+
+	VOID SetInitContext(UINT64 Fn, UINT64 ArgAddr, UINT64 SP)
+	{
+		UINT64 TailAddr = (UINT64)(createprocess_tail);
+		this->Regs[19] = Fn;
+		this->Regs[20] = ArgAddr;
+		this->SetSP(SP);
+		this->SetPC(TailAddr);
 	}
 
 }CpuContext;

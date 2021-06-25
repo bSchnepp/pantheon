@@ -112,8 +112,8 @@ void FiniDriver(const CHAR *DriverName, UINT64 Address)
 	{
 		for (UINT8 Index = 0; Index < 255; ++Index)
 		{
-			/* 16k stack is a huge amount of space... */
-			Optional<void*> MaybeStack = BasicMalloc(16 * 1024);
+			/* Allocate 256K of stack */
+			Optional<void*> MaybeStack = BasicMalloc(256 * 1024);
 			if (!MaybeStack.GetOkay())
 			{
 				break;

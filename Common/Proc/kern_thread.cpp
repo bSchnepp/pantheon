@@ -70,6 +70,18 @@ pantheon::Thread::Thread(const pantheon::Thread &Other)
 	this->StackSpace = Other.StackSpace;
 }
 
+pantheon::Thread::Thread(pantheon::Thread &&Other) noexcept
+{
+	this->ParentProcess = Other.ParentProcess;
+	this->PreemptCount = Other.PreemptCount;
+	this->Priority = Other.Priority;
+	this->Registers = Other.Registers;
+	this->RemainingTicks = Other.RemainingTicks;
+	this->State = Other.State;
+	this->TID = Other.TID;
+	this->StackSpace = Other.StackSpace;
+}
+
 pantheon::Thread::~Thread()
 {
 	if (this->StackSpace)
@@ -133,6 +145,15 @@ UINT64 pantheon::Thread::TicksLeft() const
 	return this->RemainingTicks;
 }
 
+/**
+ * \~english @brief Counts down the number of timer interrupts for this thread
+ * \~english @author Brian Schnepp
+ */
+VOID pantheon::Thread::CountTick()
+{
+	this->RemainingTicks--;
+}
+
 [[nodiscard]]
 UINT64 pantheon::Thread::ThreadID() const
 {
@@ -146,6 +167,11 @@ UINT64 pantheon::Thread::ThreadID() const
 VOID pantheon::Thread::AddTicks(UINT64 TickCount)
 {
 	this->RemainingTicks += TickCount;
+}
+
+VOID pantheon::Thread::RefreshTicks()
+{
+	this->RemainingTicks = (this->Priority + 1) * 15;
 }
 
 /**
@@ -197,6 +223,23 @@ pantheon::Thread &pantheon::Thread::operator=(const pantheon::Thread &Other)
 	this->TID = Other.TID;
 
 	/* Is this right? */
+	this->StackSpace = Other.StackSpace;
+	return *this;
+}
+
+pantheon::Thread &pantheon::Thread::operator=(pantheon::Thread &&Other) noexcept
+{
+	if (this == &Other)
+	{
+		return *this;
+	}
+	this->ParentProcess = Other.ParentProcess;
+	this->PreemptCount = Other.PreemptCount;
+	this->Priority = Other.Priority;
+	this->Registers = Other.Registers;
+	this->RemainingTicks = Other.RemainingTicks;
+	this->State = Other.State;
+	this->TID = Other.TID;
 	this->StackSpace = Other.StackSpace;
 	return *this;
 }

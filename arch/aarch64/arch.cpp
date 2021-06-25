@@ -19,3 +19,9 @@ VOID pantheon::CPU::STI()
 {
 	pantheon::arm::STI();
 }
+
+extern "C" 
+void enable_interrupts()
+{
+	pantheon::CPU::STI();
+}

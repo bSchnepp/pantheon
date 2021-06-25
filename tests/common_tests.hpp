@@ -484,14 +484,14 @@ TEST(ArrayList, OtherAllocator)
 	ASSERT_EQ(WrapperCalls, 2);
 
 	Other.Add(4);
-	ASSERT_EQ(WrapperCalls, 2);
+	ASSERT_EQ(WrapperCalls, 3);
 
 	Other.Add(5);
-	ASSERT_EQ(WrapperCalls, 2);
+	ASSERT_EQ(WrapperCalls, 3);
 
 	ArrayList<INT32> DeepCopy;
 	DeepCopy.Copy(Other);
-	ASSERT_EQ(WrapperCalls, 3);
+	ASSERT_EQ(WrapperCalls, 4);
 }
 
 TEST(ArrayList, SelfMove)

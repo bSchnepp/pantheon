@@ -37,6 +37,9 @@ VOID CLI();
 VOID STI();
 
 }
+
 }
+
+extern "C" void enable_interrupts();
 
 #endif

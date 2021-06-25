@@ -1,3 +1,5 @@
+#include <stddef.h>
+
 #include <kern_datatypes.hpp>
 #include <Sync/kern_spinlock.hpp>
 
@@ -28,6 +30,8 @@ pantheon::Scheduler::~Scheduler()
 
 }
 
+extern "C" void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New, UINT32 RegOffset);
+
 /**
  * \~english @brief Changes the current thread of this core.
  * \~english @details Forcefully changes the current thread by iterating to
@@ -40,38 +44,47 @@ pantheon::Scheduler::~Scheduler()
  */
 void pantheon::Scheduler::Reschedule()
 {
-	/* Disable the system timer while a process 
-	 * might need to be scheduled. 
-	 */
-	pantheon::DisableSystemTimer();
+	/* Don't allow interrupts while a process is getting scheduled */
+	pantheon::CPU::CLI();
 
-	/* TODO: Save old registers */
-	this->CurThread = pantheon::GetGlobalScheduler()->AcquireThread();
+	pantheon::Thread *Old = this->CurThread;
+	pantheon::Thread *New = pantheon::GetGlobalScheduler()->AcquireThread();
 
+	if (New)
+	{
+		New->RefreshTicks();
+	}
 
-	/* Just before a process is restarted, make sure it's set 
-	 * to use a 1000Mhz clock. This is to preempt processes as often as
-	 * reasonable, and ensure the system feels low latency.
-	 * (Contrast to say, Linux at 250Mhz which prioritizes throughput.)
-	 * 
-	 * Likewise, since we just rescheduled (forcefully or otherwise),
-	 * note that we shouldn't interrupt again...
-	 */
-	pantheon::RearmSystemTimer();
-	this->ShouldReschedule.Store(FALSE);
-	/* NYI */
+	if (Old)
+	{
+		pantheon::GetGlobalScheduler()->ReleaseThread(Old);
+	}
+
+	this->CurThread = New;
+	if (Old && New && Old != this->CurThread)
+	{
+		this->ShouldReschedule.Store(FALSE);
+
+		pantheon::CpuContext *Prev = &(Old->GetRegisters());
+		pantheon::CpuContext *Next = &(New->GetRegisters());
+
+		cpu_switch(Prev, Next, CpuIRegOffset);
+	}
+	pantheon::CPU::STI();
 }
 
 pantheon::Process *pantheon::Scheduler::MyProc()
 {
-	/* NYI */
+	if (this->CurThread)
+	{
+		return this->CurThread->MyProc();
+	}
 	return nullptr;
 }
 
 pantheon::Thread *pantheon::Scheduler::MyThread()
 {
-	/* NYI */
-	return nullptr;
+	return this->CurThread;
 }
 
 /**
@@ -82,7 +95,6 @@ void pantheon::Scheduler::MaybeReschedule()
 {
 	if (this->ShouldReschedule.Load() == TRUE)
 	{
-		/* TODO: Decrement when tick time isn't up yet. */
 		this->Reschedule();
 	}
 }
@@ -106,6 +118,8 @@ pantheon::GlobalScheduler::~GlobalScheduler()
 	/* NYI */
 }
 
+static pantheon::Spinlock AllocProcSpinlock;
+
 /**
  * \~english @brief Creates a process, visible globally, from a name and address.
  * \~english @details A process is created, such that it can be run on any
@@ -120,36 +134,46 @@ pantheon::GlobalScheduler::~GlobalScheduler()
  */
 BOOL pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *StartAddr)
 {
+	AllocProcSpinlock.Acquire();
+
+	pantheon::CPU::CLI();
 	pantheon::Process NewProc(ProcStr);
 	BOOL Val = NewProc.CreateThread(StartAddr, nullptr);
-	if (!Val)
+
+	if (Val)
 	{
-		return FALSE;
+		this->ProcessList.Add(NewProc);
+		pantheon::CPU::STI();
+		AllocProcSpinlock.Release();
+		return TRUE;
 	}
-	this->ProcessList.Add(NewProc);
-	return TRUE;
+
+	pantheon::CPU::STI();
+	AllocProcSpinlock.Release();
+	return FALSE;
+}
+
+
+VOID pantheon::GlobalScheduler::Init()
+{
+	this->ProcessList = ArrayList<Process>();
+	this->ProcessList.Add(pantheon::Process());
+
 }
 
 VOID pantheon::GlobalScheduler::CreateIdleProc(void *StartAddr)
 {
+	AllocProcSpinlock.Acquire();
 	for (pantheon::Process &Proc : this->ProcessList)
 	{
 		if (Proc.ProcessID() == 0)
 		{
 			Proc.CreateThread(StartAddr, nullptr);
-			return;
+			AllocProcSpinlock.Release();
+			break;
 		}
 	}
-
-	/* HACK: Until we get .init_array working, this needs to be done. */
-	this->ProcessList = ArrayList<Process>(20);
-	this->ThreadList = ArrayList<Thread>(50);
-
-	pantheon::Process IdleProc;
-	if (IdleProc.CreateThread(StartAddr, nullptr))
-	{
-		this->ProcessList.Add(IdleProc);
-	}
+	AllocProcSpinlock.Release();
 }
 
 static pantheon::Spinlock AcqProcSpinlock;
@@ -172,6 +196,10 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 		{
 			pantheon::Process *SelectedProc = &this->ProcessList[Index];
 			pantheon::Thread *SelectedThread = SelectedProc->ActivateThread();
+			if (SelectedThread == nullptr)
+			{
+				continue;
+			}
 			AcqProcSpinlock.Release();
 			return SelectedThread;
 		}

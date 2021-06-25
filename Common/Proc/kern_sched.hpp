@@ -40,6 +40,8 @@ public:
 	GlobalScheduler();
 	~GlobalScheduler();
 
+	void Init();
+
 	BOOL CreateProcess(pantheon::String ProcStr, void *StartAddr);
 	VOID CreateIdleProc(void *StartAddr);
 
@@ -47,7 +49,6 @@ public:
 	void ReleaseThread(Thread *T);
 
 private:
-	ArrayList<Thread> ThreadList;
 	ArrayList<Process> ProcessList;
 };
 
