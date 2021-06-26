@@ -1,16 +1,16 @@
 #include "kern_status.hpp"
 #include "kern_datatypes.hpp"
 
-static pantheon::KernelStatus CurStatus;
+#include <Common/Sync/kern_atomic.hpp>
+
+static pantheon::Atomic<pantheon::KernelStatus> CurStatus;
 
 void pantheon::SetKernelStatus(pantheon::KernelStatus Status)
 {
-	/* FIXME: Make atomic! */
-	CurStatus = Status;
+	CurStatus.Store(Status);
 }
 
 pantheon::KernelStatus pantheon::GetKernelStatus()
 {
-	/* FIXME: Make atomic! */
-	return CurStatus;
+	return CurStatus.Load();
 }
