@@ -25,6 +25,11 @@ VOID pantheon::CPU::STI()
 {
 }
 
+VOID pantheon::CPU::PAUSE()
+{
+
+}
+
 VOID pantheon::RearmSystemTimer()
 {
 

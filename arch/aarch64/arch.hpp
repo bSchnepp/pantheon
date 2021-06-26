@@ -36,6 +36,8 @@ UINT8 GetProcessorNumber();
 VOID CLI();
 VOID STI();
 
+VOID PAUSE();
+
 }
 
 }

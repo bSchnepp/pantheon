@@ -1,3 +1,5 @@
+#include <arch.hpp>
+
 #include "kern_spinlock.hpp"
 #include "kern_datatypes.hpp"
 
@@ -13,24 +15,20 @@ pantheon::Spinlock::~Spinlock()
 
 void pantheon::Spinlock::Acquire()
 {
-	asm volatile ("" ::: "memory");
-	while (__sync_val_compare_and_swap(&(this->Locked), FALSE, TRUE) == TRUE)
+	for (;;)
 	{
-
+		if (__atomic_exchange_n(&this->Locked, TRUE, __ATOMIC_ACQUIRE) == FALSE)
+		{
+			break;
+		}
+		while (__atomic_load_n(&this->Locked, __ATOMIC_RELAXED))
+		{
+			pantheon::CPU::PAUSE();
+		}
 	}
-	asm volatile ("" ::: "memory");
 }
 
 void pantheon::Spinlock::Release()
 {
-	asm volatile ("" ::: "memory");
-	if (this->Locked == FALSE)
-	{
-		return;
-	}
-	while (__sync_val_compare_and_swap(&(this->Locked), TRUE, FALSE) == FALSE)
-	{
-
-	}
-	asm volatile ("" ::: "memory");
+	__atomic_exchange_n(&this->Locked, FALSE, __ATOMIC_RELEASE);
 }

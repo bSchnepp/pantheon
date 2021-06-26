@@ -43,74 +43,13 @@ typedef struct CpuContext
 
 	UINT64 &operator[](UINT64 Index)
 	{
-		switch (Index)
+		if (Index < 19 || Index > 31)
 		{
-			case 19:
-			default:
-			{
-				return x19;
-			}
-
-			case 20:
-			{
-				return x20;
-			}
-
-			case 21:
-			{
-				return x21;
-			}
-
-			case 22:
-			{
-				return x22;
-			}
-
-			case 23:
-			{
-				return x23;
-			}
-
-			case 24:
-			{
-				return x24;
-			}
-
-			case 25:
-			{
-				return x25;
-			}
-
-			case 26:
-			{
-				return x26;
-			}
-
-			case 27:
-			{
-				return x27;
-			}
-
-			case 28:
-			{
-				return x28;
-			}
-
-			case 29:
-			{
-				return FP;
-			}
-
-			case 30:
-			{
-				return SP;
-			}
-
-			case 31:
-			{
-				return PC;
-			}
+			return x19;
 		}
+
+		/* Use some pointer arithmetic to index x19-x31. */
+		return *((&x19) + Index);
 	}
 
 	[[nodiscard]] 
