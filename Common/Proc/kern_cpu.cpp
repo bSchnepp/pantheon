@@ -33,8 +33,9 @@ void pantheon::CPU::InitCoreInfo(UINT8 CoreNo)
 	{
 		SERIAL_LOG("%s\n", "unable to malloc scheduler!!!!");
 	}
+
 	PerCoreInfo[CoreNo].CurSched = reinterpret_cast<Scheduler*>(MaybeAddr);
-	
+	(*PerCoreInfo[CoreNo].CurSched) = pantheon::Scheduler();
 }
 
 pantheon::GlobalScheduler *pantheon::CPU::GetGlobalScheduler()

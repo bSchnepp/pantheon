@@ -87,7 +87,7 @@ void kern_idle(void *unused)
 	UINT64 Count = 0;
 	for (;;)
 	{
-		SERIAL_LOG_UNSAFE("%s: %u\n", "idle: ", Count++);
+		SERIAL_LOG("(%hhu) %s: %u\n", pantheon::CPU::GetProcessorNumber(), "idle: ", Count++);
 	}
 }
 

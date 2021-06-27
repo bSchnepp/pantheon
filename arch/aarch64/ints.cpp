@@ -66,6 +66,7 @@ extern "C" void irq_handler_el1()
 			CurSched->SignalReschedule();
 		}
 		pantheon::arm::RearmSystemTimer();
+		CurSched->MaybeReschedule();
 	}
 }
 

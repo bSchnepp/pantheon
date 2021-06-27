@@ -10,7 +10,6 @@ createprocess_tail:
 	bl enable_interrupts
 	mov x0, x20
 	blr x19
-	b _hang	/* Should never reach */
 
 
 /* void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New, UINT32 RegOffset); */

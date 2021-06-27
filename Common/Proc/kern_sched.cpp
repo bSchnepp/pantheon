@@ -50,24 +50,16 @@ void pantheon::Scheduler::Reschedule()
 	pantheon::Thread *Old = this->CurThread;
 	pantheon::Thread *New = pantheon::GetGlobalScheduler()->AcquireThread();
 
-	if (New)
+	this->CurThread = New;
+	if (Old && New && Old != New)
 	{
 		New->RefreshTicks();
-	}
-
-	if (Old)
-	{
 		pantheon::GetGlobalScheduler()->ReleaseThread(Old);
-	}
-
-	this->CurThread = New;
-	if (Old && New && Old != this->CurThread)
-	{
-		this->ShouldReschedule.Store(FALSE);
 
 		pantheon::CpuContext *Prev = &(Old->GetRegisters());
 		pantheon::CpuContext *Next = &(New->GetRegisters());
 
+		this->ShouldReschedule.Store(FALSE);
 		cpu_switch(Prev, Next, CpuIRegOffset);
 	}
 	pantheon::CPU::STI();
