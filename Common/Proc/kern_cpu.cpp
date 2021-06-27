@@ -26,10 +26,7 @@ pantheon::CPU::CoreInfo *pantheon::CPU::GetCoreInfo()
  */
 void pantheon::CPU::InitCoreInfo(UINT8 CoreNo)
 {
-	PerCoreInfo[CoreNo].CurState = pantheon::CPU::CPU_STATE_IDLE;
-	
 	PerCoreInfo[CoreNo].CurThread = nullptr;
-	PerCoreInfo[CoreNo].CurProcess = nullptr;
 
 	void *MaybeAddr = BasicMalloc(sizeof(pantheon::Scheduler))();
 	if (!MaybeAddr)

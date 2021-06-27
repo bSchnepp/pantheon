@@ -60,7 +60,7 @@ extern "C" void irq_handler_el1()
 			CurThread->CountTick();
 			RemainingTicks = CurThread->TicksLeft();
 		}
-
+		
 		if (RemainingTicks == 0)
 		{
 			CurSched->SignalReschedule();

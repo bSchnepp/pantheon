@@ -118,7 +118,7 @@ pantheon::GlobalScheduler::~GlobalScheduler()
 	/* NYI */
 }
 
-static pantheon::Spinlock AllocProcSpinlock;
+static pantheon::Spinlock ProcAccessSpinlock;
 
 /**
  * \~english @brief Creates a process, visible globally, from a name and address.
@@ -134,23 +134,19 @@ static pantheon::Spinlock AllocProcSpinlock;
  */
 BOOL pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *StartAddr)
 {
-	AllocProcSpinlock.Acquire();
-
 	pantheon::CPU::CLI();
 	pantheon::Process NewProc(ProcStr);
 	BOOL Val = NewProc.CreateThread(StartAddr, nullptr);
 
 	if (Val)
 	{
+		ProcAccessSpinlock.Acquire();
 		this->ProcessList.Add(NewProc);
-		pantheon::CPU::STI();
-		AllocProcSpinlock.Release();
-		return TRUE;
+		ProcAccessSpinlock.Release();
 	}
 
 	pantheon::CPU::STI();
-	AllocProcSpinlock.Release();
-	return FALSE;
+	return Val;
 }
 
 
@@ -158,25 +154,25 @@ VOID pantheon::GlobalScheduler::Init()
 {
 	this->ProcessList = ArrayList<Process>();
 	this->ProcessList.Add(pantheon::Process());
+	pantheon::RearmSystemTimer(1000);
 
 }
 
 VOID pantheon::GlobalScheduler::CreateIdleProc(void *StartAddr)
 {
-	AllocProcSpinlock.Acquire();
+	pantheon::CPU::CLI();
+	ProcAccessSpinlock.Acquire();
 	for (pantheon::Process &Proc : this->ProcessList)
 	{
 		if (Proc.ProcessID() == 0)
 		{
 			Proc.CreateThread(StartAddr, nullptr);
-			AllocProcSpinlock.Release();
 			break;
 		}
 	}
-	AllocProcSpinlock.Release();
+	ProcAccessSpinlock.Release();
+	pantheon::CPU::STI();
 }
-
-static pantheon::Spinlock AcqProcSpinlock;
 
 /**
  * \~english @brief Obtains a Process which has an inactive thread, or the idle process if none available.
@@ -185,34 +181,33 @@ static pantheon::Spinlock AcqProcSpinlock;
  */
 pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 {
-	AcqProcSpinlock.Acquire();
+	pantheon::Thread *SelectedThread = nullptr;
 
 	/* This should be replaced with a skiplist (or linked list), 
 	 * so finding an inactive thread becomes an O(1) process.
 	 */
-	for (UINT64 Index = 0; Index < this->ProcessList.Size(); ++Index)
+	ProcAccessSpinlock.Acquire();
+	for (pantheon::Process &SelectedProc : this->ProcessList)
 	{
-		if (this->ProcessList[Index].NumInactiveThreads())
+		if (SelectedProc.NumInactiveThreads())
 		{
-			pantheon::Process *SelectedProc = &this->ProcessList[Index];
-			pantheon::Thread *SelectedThread = SelectedProc->ActivateThread();
+			SelectedThread = SelectedProc.ActivateThread();
 			if (SelectedThread == nullptr)
 			{
 				continue;
 			}
-			AcqProcSpinlock.Release();
-			return SelectedThread;
+			break;
 		}
 	}
-	AcqProcSpinlock.Release();
-	return nullptr;
+	ProcAccessSpinlock.Release();
+	return SelectedThread;
 }
 
 void pantheon::GlobalScheduler::ReleaseThread(Thread *T)
 {
-	AcqProcSpinlock.Acquire();
+	ProcAccessSpinlock.Acquire();
 	T->MyProc()->DeactivateThread(T);
-	AcqProcSpinlock.Release();
+	ProcAccessSpinlock.Release();
 }
 
 

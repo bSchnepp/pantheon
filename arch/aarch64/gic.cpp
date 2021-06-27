@@ -57,6 +57,7 @@ VOID pantheon::arm::GICInit()
 		}
 		GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_IPRIORITYR, Index, 0x00000000);
 	}
+	GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_ISENABLER, 0, 0xFFFFFFFF);
 }
 
 UINT8 pantheon::arm::GICGetNumSockets()
@@ -66,8 +67,6 @@ UINT8 pantheon::arm::GICGetNumSockets()
 
 VOID pantheon::arm::GICInitCore()
 {
-	GICWrite(GIC_CLASS_DISTRIBUTOR, GICD_ISENABLER, 0, 0xFFFFFFFF);
-
 	for (UINT8 Index = 0; Index < 8; ++Index)
 	{
 		/* Everything's priority needs to be 0. */

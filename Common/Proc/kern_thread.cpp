@@ -43,19 +43,19 @@ pantheon::Thread::Thread(Process *OwningProcess)
 pantheon::Thread::Thread(Process *OwningProcess, ThreadPriority Priority)
 {
 	this->ParentProcess = OwningProcess;
-	this->Registers.Wipe();
-
-	this->State = pantheon::THREAD_STATE_INIT;
 	this->Priority = Priority;
+	this->StackSpace = nullptr;
 
 	this->PreemptCount = 0;
 	this->RemainingTicks = 0;
 
-	/* 45 for NORMAL, 30 for LOW, 15 for VERYLOW, etc. */
-	this->AddTicks((Priority + 1) * 15);
+	this->Registers.Wipe();
+	this->State = pantheon::THREAD_STATE_INIT;
 
 	this->TID = AcquireThreadID();
-	this->StackSpace = nullptr;
+
+	/* 45 for NORMAL, 30 for LOW, 15 for VERYLOW, etc. */
+	this->RefreshTicks();
 }
 
 pantheon::Thread::Thread(const pantheon::Thread &Other)

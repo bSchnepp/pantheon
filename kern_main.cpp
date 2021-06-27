@@ -99,23 +99,20 @@ extern "C"
 
 void kern_init_core()
 {
-	pantheon::CPU::CLI();
-
 	UINT8 CpuNo = pantheon::CPU::GetProcessorNumber();
 	pantheon::CPU::InitCoreInfo(CpuNo);
+	PerCoreInit();
 
-	while (pantheon::GetKernelStatus() != pantheon::KERNEL_STATUS_OK)
+	while (pantheon::GetKernelStatus() < pantheon::KERNEL_STATUS_SECOND_STAGE)
 	{
-		/* Loop until core 0 finished initializing the kernel */
+		/* Loop until core 0 finished essential kernel setup */
 	}
 
-	PerCoreInit();
 	SERIAL_LOG("Pantheon booted with core %hhu\n", CpuNo);
 
 	/* Ensure there is always at least the idle proc for this core. */
 	pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle);
-
-	pantheon::CPU::STI();
+	
 	for (;;)
 	{
 		pantheon::CPU::GetCoreInfo()->CurSched->MaybeReschedule();
@@ -124,16 +121,16 @@ void kern_init_core()
 
 void kern_init(fdt_header *dtb)
 {
-	UINT8 CpuNo = pantheon::CPU::GetProcessorNumber();
-	if (CpuNo == 0)
+	if (pantheon::CPU::GetProcessorNumber() == 0)
 	{
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);
+
+		/* The most basic kernel initialization should be done here. */
 		BoardInit();
-		SERIAL_LOG("%s\n", "booting based on device tree pointer!");
 		Initialize(dtb);
-		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_SECOND_STAGE);
 		pantheon::GetGlobalScheduler()->Init();
-		pantheon::RearmSystemTimer(1000);
+
+		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_SECOND_STAGE);
 
 		/* Create an extra idle thread to ensure rescheduling happens */
 		pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle);

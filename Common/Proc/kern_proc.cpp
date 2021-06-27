@@ -102,8 +102,8 @@ UINT64 pantheon::Process::NumThreads() const
 
 BOOL pantheon::Process::CreateThread(void *StartAddr, void *ThreadData)
 {
-	this->CreateThreadLock.Acquire();
 	pantheon::Thread T(this);
+
 	/* Attempt 128KB of stack space for now... */
 	Optional<void*> StackSpace = BasicMalloc(128 * 1024);
 	if (StackSpace.GetOkay())
@@ -111,12 +111,15 @@ BOOL pantheon::Process::CreateThread(void *StartAddr, void *ThreadData)
 		UINT64 IStartAddr = (UINT64)StartAddr;
 		UINT64 IThreadData = (UINT64)ThreadData;
 		UINT64 IStackSpace = (UINT64)StackSpace();
+
 		pantheon::CpuContext &Regs = T.GetRegisters();
 		Regs.SetInitContext(IStartAddr, IThreadData, IStackSpace);
+
+		this->CreateThreadLock.Acquire();
 		this->InactiveTIDCount++;
 		this->Threads.Add(T);
+		this->CreateThreadLock.Release();
 	}
-	this->CreateThreadLock.Release();
 	return StackSpace.GetOkay();
 }
 
@@ -137,12 +140,14 @@ UINT64 pantheon::Process::NumInactiveThreads() const
 static pantheon::Spinlock ActivateThreadLock;
 pantheon::Thread* pantheon::Process::ActivateThread()
 {
-	ActivateThreadLock.Acquire();
 	if (this->NumInactiveThreads() == 0)
 	{
-		ActivateThreadLock.Release();
 		return nullptr;
 	}
+
+	ActivateThreadLock.Acquire();
+
+	pantheon::Thread *SelectedThread = nullptr;
 
 	/* TODO: Gracefully handle BLOCKED state. */
 	for (pantheon::Thread &T : this->Threads)
@@ -156,12 +161,12 @@ pantheon::Thread* pantheon::Process::ActivateThread()
 
 		T.SetState(pantheon::THREAD_STATE_RUNNING);
 		this->InactiveTIDCount--;
-		ActivateThreadLock.Release();
-		return &T;
+		SelectedThread = &T;
+		break;
 	}
 	
 	ActivateThreadLock.Release();
-	return nullptr;
+	return SelectedThread;
 }
 
 void pantheon::Process::DeactivateThread(pantheon::Thread *T)

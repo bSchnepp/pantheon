@@ -53,6 +53,8 @@ VOID PerCoreBoardInit()
 {
 	pantheon::arm::LoadInterruptTable(&interrupt_table);
 
+	pantheon::arm::GICInitCore();
+
 	/* HACK: this only works on qemu aarch64 virt... */
 	const static UINT32 TimerIRQ = 30;
 	pantheon::arm::GICSetConfig(TimerIRQ, 2);

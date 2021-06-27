@@ -135,11 +135,5 @@ extern VOID PerCoreBoardInit();
 
 void PerCoreInit()
 {
-#if defined(__aarch64__)
-	if (UseGIC)
-	{
-		pantheon::arm::GICInitCore();
-	}
-#endif
 	PerCoreBoardInit();
 }
