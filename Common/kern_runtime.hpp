@@ -1,4 +1,5 @@
-#include <kern_datatypes.hpp>
+#include <Common/kern_datatypes.hpp>
+#include <Structures/kern_optional.hpp>
 
 #ifndef _KERN_RUNTIME_HPP_
 #define _KERN_RUNTIME_HPP_
@@ -92,55 +93,24 @@ T CharStarNumberAtoiB16(const CHAR *Input)
 	return Result;
 }
 
-template <typename T>
-class Optional
+
+template<typename T>
+T Max(T L, T R)
 {
-public:
-	Optional()
-	{
-		this->Okay = FALSE;
-		this->Value = T();
-	}
+	return (L > R) ? L : R;
+}
 
-	Optional(T v)
-	{
-		this->Okay = TRUE;
-		this->Value = T(v);
-	}
+template<typename T>
+T Min(T L, T R)
+{
+	return (L > R) ? R : L;
+}
 
-	~Optional()
-	{
-
-	}
-
-	BOOL operator*()
-	{
-		return this->Okay;
-	}
-
-	T operator()()
-	{
-		if (this->Okay)
-		{
-			return this->Value;
-		}
-		return T();
-	}
-
-	BOOL GetOkay()
-	{
-		return this->Okay;
-	}
-
-	T &GetValue()
-	{
-		return this->Value;
-	}
-
-private:
-	BOOL Okay;
-	T Value;
-};
+template<typename T>
+constexpr T Align(T Amt, T Align)
+{
+	return ~(Align - 1) & (((Amt) + (Align - 1)));
+}
 
 Optional<void*> BasicMalloc(UINT64 Amt);
 void BasicFree(void *Addr);

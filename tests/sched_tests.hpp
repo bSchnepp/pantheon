@@ -230,8 +230,6 @@ TEST(Scheduler, ManyThreadIDs)
 TEST(CPUCore, CoreInfoInit)
 {
 	pantheon::CPU::InitCoreInfo(0);
-	ASSERT_EQ(pantheon::CPU::GetCoreInfo()->CurState, pantheon::CPU::CPU_STATE_IDLE);
-	ASSERT_EQ(pantheon::CPU::GetCoreInfo()->CurProcess, nullptr);
 	ASSERT_EQ(pantheon::CPU::GetCoreInfo()->CurThread, nullptr);
 	ASSERT_NE(pantheon::CPU::GetCoreInfo()->CurSched, nullptr);
 }

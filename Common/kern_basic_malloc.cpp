@@ -20,17 +20,6 @@ alignas(32) static char BasicMemory[HeapSpace];
 
 COMPILER_ASSERT(sizeof(BlockHeader) == sizeof(UINT64));
 
-template<typename T>
-static T Max(T L, T R)
-{
-	return (L > R) ? L : R;
-}
-
-static constexpr UINT64 Align(UINT64 Amt, UINT8 Align)
-{
-	return ~(Align - 1) & (((Amt) + (Align - 1)));
-}
-
 static char *GetHeader(char *Loc)
 {
 	return (Loc - sizeof(BlockHeader));
