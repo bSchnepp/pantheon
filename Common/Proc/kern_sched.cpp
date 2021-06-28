@@ -146,8 +146,6 @@ VOID pantheon::GlobalScheduler::Init()
 {
 	this->ProcessList = ArrayList<Process>();
 	this->ProcessList.Add(pantheon::Process());
-	pantheon::RearmSystemTimer(1000);
-
 }
 
 VOID pantheon::GlobalScheduler::CreateIdleProc(void *StartAddr)

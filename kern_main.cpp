@@ -109,10 +109,18 @@ void kern_init_core()
 	}
 
 	SERIAL_LOG("Pantheon booted with core %hhu\n", CpuNo);
+	pantheon::CPU::STI();
 
 	/* Ensure there is always at least the idle proc for this core. */
 	pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle);
-	
+
+	while (pantheon::GetKernelStatus() < pantheon::KERNEL_STATUS_OK)
+	{
+		/* Loop until core 0 finished kernel setup */
+	}
+
+	pantheon::RearmSystemTimer(1000);
+	pantheon::CPU::GetCoreInfo()->CurSched->SignalReschedule();
 	for (;;)
 	{
 		pantheon::CPU::GetCoreInfo()->CurSched->MaybeReschedule();
@@ -121,6 +129,7 @@ void kern_init_core()
 
 void kern_init(fdt_header *dtb)
 {
+	pantheon::CPU::CLI();
 	if (pantheon::CPU::GetProcessorNumber() == 0)
 	{
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);
