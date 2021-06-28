@@ -81,13 +81,33 @@ void Initialize(fdt_header *dtb)
 	SERIAL_LOG("%s\n", "finished going through dtb");
 }
 
+
+static pantheon::Spinlock PrintLock;
+
+/* Since we don't use the MMU at all, we need thread-unique storage. */
+static UINT64 Count[2000];
 void kern_idle(void *unused)
 {
 	PANTHEON_UNUSED(unused);
-	UINT64 Count = 0;
+	volatile UINT64 TID = pantheon::CPU::GetCoreInfo()->CurThread->ThreadID();
+	Count[TID] = 0;
 	for (;;)
 	{
-		SERIAL_LOG("(%hhu) %s: %u\n", pantheon::CPU::GetProcessorNumber(), "idle: ", Count++);
+		PrintLock.Acquire();
+		SERIAL_LOG_UNSAFE("(%hhu) %s: %u [%ld]\n", pantheon::CPU::GetProcessorNumber(), "idle: ", Count[TID]++, TID);
+		PrintLock.Release();
+
+		/* stall for time as a good enough demo to show task switching */
+		for (UINT64 Wait = 0; Wait < 600000; ++Wait)
+		{
+			/* ensure clang doesn't optimize away */
+			char c = 10;
+			c += 10;
+			if (c + Wait == 600000)
+			{
+				break;
+			}
+		}
 	}
 }
 
@@ -112,6 +132,7 @@ void kern_init_core()
 	pantheon::CPU::STI();
 
 	/* Ensure there is always at least the idle proc for this core. */
+	pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle);
 	pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle);
 
 	while (pantheon::GetKernelStatus() < pantheon::KERNEL_STATUS_OK)

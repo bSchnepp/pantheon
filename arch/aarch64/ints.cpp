@@ -53,6 +53,7 @@ extern "C" void irq_handler_el1()
 		pantheon::CPU::CoreInfo *CoreData = pantheon::CPU::GetCoreInfo();
 		pantheon::Scheduler *CurSched = CoreData->CurSched;
 		pantheon::Thread *CurThread = CurSched->MyThread();
+		pantheon::arm::RearmSystemTimer();
 
 		UINT64 RemainingTicks = 0;
 		if (CurThread)
@@ -65,7 +66,6 @@ extern "C" void irq_handler_el1()
 		{
 			CurSched->SignalReschedule();
 		}
-		pantheon::arm::RearmSystemTimer();
 		CurSched->MaybeReschedule();
 	}
 }

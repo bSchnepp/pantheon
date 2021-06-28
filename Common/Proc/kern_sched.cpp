@@ -3,6 +3,7 @@
 #include <kern_datatypes.hpp>
 #include <Sync/kern_spinlock.hpp>
 
+#include "kern_cpu.hpp"
 #include "kern_proc.hpp"
 #include "kern_sched.hpp"
 #include "kern_thread.hpp"
@@ -51,16 +52,17 @@ void pantheon::Scheduler::Reschedule()
 	pantheon::Thread *New = pantheon::GetGlobalScheduler()->AcquireThread();
 
 	this->CurThread = New;
+	pantheon::CPU::GetCoreInfo()->CurThread = this->CurThread;
 	if (Old && New && Old != New)
 	{
-		New->RefreshTicks();
-		pantheon::GetGlobalScheduler()->ReleaseThread(Old);
-
 		pantheon::CpuContext *Prev = &(Old->GetRegisters());
 		pantheon::CpuContext *Next = &(New->GetRegisters());
 
 		this->ShouldReschedule.Store(FALSE);
+
+		New->RefreshTicks();
 		cpu_switch(Prev, Next, CpuIRegOffset);
+		pantheon::GetGlobalScheduler()->ReleaseThread(Old);
 	}
 	pantheon::CPU::STI();
 }
