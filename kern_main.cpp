@@ -93,9 +93,16 @@ void kern_idle(void *unused)
 	Count[TID] = 0;
 	for (;;)
 	{
+		Count[TID]++;
+		/* preemption has to be disabled when contending for this lock.
+		 * Otherwise the thread may get preempted before releasing the
+		 * lock, preventing anything else from printing.
+		 */
+		pantheon::CPU::CLI();
 		PrintLock.Acquire();
-		SERIAL_LOG_UNSAFE("(%hhu) %s: %u [%ld]\n", pantheon::CPU::GetProcessorNumber(), "idle: ", Count[TID]++, TID);
+		SERIAL_LOG_UNSAFE("(%hhu) %s: %u [%ld]\n", pantheon::CPU::GetProcessorNumber(), "idle: ", Count[TID], TID);
 		PrintLock.Release();
+		pantheon::CPU::STI();
 
 		/* stall for time as a good enough demo to show task switching */
 		for (UINT64 Wait = 0; Wait < 600000; ++Wait)
