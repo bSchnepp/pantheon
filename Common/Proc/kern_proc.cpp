@@ -176,3 +176,14 @@ void pantheon::Process::DeactivateThread(pantheon::Thread *T)
 	this->InactiveTIDCount++;
 	ActivateThreadLock.Release();
 }
+
+[[nodiscard]] 
+pantheon::ProcessState pantheon::Process::MyState() const
+{
+	return this->CurState;
+}
+
+void pantheon::Process::SetState(pantheon::ProcessState State)
+{
+	this->CurState = State;
+}

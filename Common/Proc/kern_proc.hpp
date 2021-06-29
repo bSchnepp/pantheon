@@ -20,6 +20,7 @@ typedef enum ProcessState
 	PROCESS_STATE_INIT,
 	PROCESS_STATE_RUNNING,
 	PROCESS_STATE_BLOCKED,
+	PROCESS_STATE_ZOMBIE,
 	PROCESS_STATE_TERMINATED,
 }ProcessState;
 
@@ -54,6 +55,11 @@ public:
 	[[nodiscard]] UINT64 NumInactiveThreads() const;
 	Thread* ActivateThread();
 	void DeactivateThread(Thread *T);
+
+	[[nodiscard]] ProcessState MyState() const;
+	void SetState(ProcessState State);
+
+
 
 private:
 	UINT32 PID;

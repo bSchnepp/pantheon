@@ -181,6 +181,13 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 	ProcAccessSpinlock.Acquire();
 	for (pantheon::Process &SelectedProc : this->ProcessList)
 	{
+		pantheon::ProcessState PState = SelectedProc.MyState();
+		if (PState == pantheon::PROCESS_STATE_TERMINATED
+			|| PState == pantheon::PROCESS_STATE_ZOMBIE)
+		{
+			continue;
+		}
+		
 		if (SelectedProc.NumInactiveThreads())
 		{
 			SelectedThread = SelectedProc.ActivateThread();
