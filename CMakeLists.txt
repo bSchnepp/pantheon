@@ -27,6 +27,7 @@ CONFIGURE_FILE(
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})
 INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR})
 INCLUDE_DIRECTORIES(Common)
+INCLUDE_DIRECTORIES(System)
 
 
 # Get definitions specific to this board, or the mock board for tests

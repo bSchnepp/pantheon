@@ -1,5 +1,5 @@
 #include <kern_datatypes.hpp>
-#include <Common/Proc/kern_cpu.hpp>
+#include <Proc/kern_cpu.hpp>
 
 #include "Syscalls.hpp"
 

@@ -3,10 +3,10 @@
 #include <kern_runtime.hpp>
 #include <kern_container.hpp>
 
-#include <Common/Proc/kern_cpu.hpp>
-#include <Common/Proc/kern_proc.hpp>
-#include <Common/Proc/kern_sched.hpp>
-#include <Common/Proc/kern_thread.hpp>
+#include <Proc/kern_cpu.hpp>
+#include <Proc/kern_proc.hpp>
+#include <Proc/kern_sched.hpp>
+#include <Proc/kern_thread.hpp>
 
 #ifndef SCHED_TESTS_HPP_
 #define SCHED_TESTS_HPP_

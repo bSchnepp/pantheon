@@ -4,7 +4,7 @@
 #include <kern.h>
 #include <kern_runtime.hpp>
 #include <kern_datatypes.hpp>
-#include <Common/Proc/kern_cpu.hpp>
+#include <Proc/kern_cpu.hpp>
 
 static UINT64 TimerClock = 1000;
 
