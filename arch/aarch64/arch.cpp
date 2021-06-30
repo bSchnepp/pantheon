@@ -40,9 +40,3 @@ VOID pantheon::CPU::PAUSE()
 {
 	asm volatile("yield\n");
 }
-
-extern "C" 
-void enable_interrupts()
-{
-	pantheon::CPU::STI();
-}

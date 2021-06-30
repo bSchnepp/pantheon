@@ -3,6 +3,18 @@
 
 #include "Syscalls.hpp"
 
+extern "C" 
+void enable_interrupts()
+{
+	pantheon::CPU::STI();
+}
+
+extern "C" 
+void disable_interrupts()
+{
+	pantheon::CPU::CLI();
+}
+
 VOID pantheon::SVCExitProcess()
 {
 	pantheon::Thread *CurThread = pantheon::CPU::GetCoreInfo()->CurThread;

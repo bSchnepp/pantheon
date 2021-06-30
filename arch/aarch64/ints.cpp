@@ -10,38 +10,38 @@ static UINT64 TimerClock = 1000;
 
 extern "C" void sync_handler_el1_sp0()
 {
-	SERIAL_LOG("%s\n", "ERR: SYNC HANDLER EL1 SP0");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: SYNC HANDLER EL1 SP0");
 }
 
 extern "C" void err_handler_el1_sp0()
 {
-	SERIAL_LOG("%s\n", "ERR: ERR HANDLER EL1 SP0");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: ERR HANDLER EL1 SP0");
 }
 
 extern "C" void fiq_handler_el1_sp0()
 {
-	SERIAL_LOG("%s\n", "ERR: FIQ HANDLER EL1 SP0");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: FIQ HANDLER EL1 SP0");
 }
 
 extern "C" void irq_handler_el1_sp0()
 {
-	SERIAL_LOG("%s\n", "ERR: IRQ HANDLER EL1 SP0");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: IRQ HANDLER EL1 SP0");
 }
 
 
 extern "C" void sync_handler_el1()
 {
-	SERIAL_LOG("%s\n", "ERR: SYNC HANDLER EL1");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: SYNC HANDLER EL1");
 }
 
 extern "C" void err_handler_el1()
 {
-	SERIAL_LOG("%s\n", "ERR: ERR HANDLER EL1");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: ERR HANDLER EL1");
 }
 
 extern "C" void fiq_handler_el1()
 {
-	SERIAL_LOG("%s\n", "ERR: FIQ HANDLER EL1");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: FIQ HANDLER EL1");
 }
 
 extern "C" void irq_handler_el1()
@@ -71,45 +71,42 @@ extern "C" void irq_handler_el1()
 }
 
 
-extern "C" void sync_handler_el0()
-{
-	SERIAL_LOG("%s\n", "ERR: SYNC HANDLER EL0");
-}
+/* sync_handler_el0 is entirely in asm */
 
 extern "C" void err_handler_el0()
 {
-	SERIAL_LOG("%s\n", "ERR: ERR HANDLER EL0");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: ERR HANDLER EL0");
 }
 
 extern "C" void fiq_handler_el0()
 {
-	SERIAL_LOG("%s\n", "ERR: FIQ HANDLER EL0");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: FIQ HANDLER EL0");
 }
 
 extern "C" void irq_handler_el0()
 {
-	SERIAL_LOG("%s\n", "ERR: IRQ HANDLER EL0");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: IRQ HANDLER EL0");
 }
 
 
 extern "C" void sync_handler_el0_32()
 {
-	SERIAL_LOG("%s\n", "ERR: SYNC HANDLER EL0_32");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: SYNC HANDLER EL0_32");
 }
 
 extern "C" void err_handler_el0_32()
 {
-	SERIAL_LOG("%s\n", "ERR: ERR HANDLER EL0_32");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: ERR HANDLER EL0_32");
 }
 
 extern "C" void fiq_handler_el0_32()
 {
-	SERIAL_LOG("%s\n", "ERR: FIQ HANDLER EL0_32");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: FIQ HANDLER EL0_32");
 }
 
 extern "C" void irq_handler_el0_32()
 {
-	SERIAL_LOG("%s\n", "ERR: IRQ HANDLER EL0_32");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: IRQ HANDLER EL0_32");
 }
 
 VOID pantheon::arm::LoadInterruptTable(VOID *Table)
