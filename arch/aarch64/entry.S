@@ -7,6 +7,9 @@
 .globl CallSMC
 
 _cpu_start:
+	/* TODO: Handle spinloop initialization (ala rpi) */
+	/* x0 must be preserved and passed to the kernel proper. */
+
 	/* Set up the stack */
 	ldr x1, =kern_stack_end
 	mov sp, x1

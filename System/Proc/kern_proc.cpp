@@ -100,17 +100,24 @@ UINT64 pantheon::Process::NumThreads() const
 	return this->Threads.Size();
 }
 
+[[nodiscard]] UINT64 pantheon::Process::DefaultThreadStackSize()
+{
+	return 128 * 1024;
+}
+
 BOOL pantheon::Process::CreateThread(void *StartAddr, void *ThreadData)
 {
 	pantheon::Thread T(this);
 
 	/* Attempt 128KB of stack space for now... */
-	Optional<void*> StackSpace = BasicMalloc(128 * 1024);
+	UINT64 StackSz = pantheon::Process::DefaultThreadStackSize();
+	Optional<void*> StackSpace = BasicMalloc(StackSz);
 	if (StackSpace.GetOkay())
 	{
 		UINT64 IStartAddr = (UINT64)StartAddr;
 		UINT64 IThreadData = (UINT64)ThreadData;
 		UINT64 IStackSpace = (UINT64)StackSpace();
+		IStackSpace += StackSz;
 
 		pantheon::CpuContext &Regs = T.GetRegisters();
 		Regs.SetInitContext(IStartAddr, IThreadData, IStackSpace);

@@ -113,6 +113,33 @@ typedef struct CpuContext
 
 }CpuContext;
 
+typedef enum PSTATEMode : UINT64
+{
+	PSTATE_MODE_USER = 0x00,
+	PSTATE_MODE_KERN = 0x04,
+	PSTATE_MODE_HYPER = 0x08,
+	PSTATE_MODE_FIRM = 0x0C,
+}PSTATEMode;
+
+typedef struct TrapFrame
+{
+	UINT64 Regs[31];
+	UINT64 PC;
+	PSTATEMode PSTATE;
+	UINT64 SP;
+
+	VOID Wipe()
+	{
+		for (UINT64 &Reg : Regs)
+		{
+			Reg = 0;
+		}
+		PC = 0;
+		PSTATE = PSTATE_MODE_USER;
+		SP = 0;
+	}
+}TrapFrame;
+
 }
 
 #define CpuIRegOffset offsetof(pantheon::CpuContext, x19)

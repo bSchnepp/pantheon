@@ -8,44 +8,52 @@
 
 static UINT64 TimerClock = 1000;
 
-extern "C" void sync_handler_el1_sp0()
+extern "C" void sync_handler_el1_sp0(pantheon::TrapFrame *Frame)
 {
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: SYNC HANDLER EL1 SP0");
 }
 
-extern "C" void err_handler_el1_sp0()
+extern "C" void err_handler_el1_sp0(pantheon::TrapFrame *Frame)
 {
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: ERR HANDLER EL1 SP0");
 }
 
-extern "C" void fiq_handler_el1_sp0()
+extern "C" void fiq_handler_el1_sp0(pantheon::TrapFrame *Frame)
 {
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: FIQ HANDLER EL1 SP0");
 }
 
-extern "C" void irq_handler_el1_sp0()
+extern "C" void irq_handler_el1_sp0(pantheon::TrapFrame *Frame)
 {
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: IRQ HANDLER EL1 SP0");
 }
 
 
-extern "C" void sync_handler_el1()
+extern "C" void sync_handler_el1(pantheon::TrapFrame *Frame)
 {
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: SYNC HANDLER EL1");
 }
 
-extern "C" void err_handler_el1()
+extern "C" void err_handler_el1(pantheon::TrapFrame *Frame)
 {
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: ERR HANDLER EL1");
 }
 
-extern "C" void fiq_handler_el1()
+extern "C" void fiq_handler_el1(pantheon::TrapFrame *Frame)
 {
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: FIQ HANDLER EL1");
 }
 
-extern "C" void irq_handler_el1()
+extern "C" void irq_handler_el1(pantheon::TrapFrame *Frame)
 {
+	PANTHEON_UNUSED(Frame);
 	UINT32 IAR = pantheon::arm::GICRecvInterrupt();
 	pantheon::arm::GICAckInterrupt(IAR);
 	if ((IAR & 0x3FF) == 30)
@@ -73,39 +81,46 @@ extern "C" void irq_handler_el1()
 
 /* sync_handler_el0 is entirely in asm */
 
-extern "C" void err_handler_el0()
+extern "C" void err_handler_el0(pantheon::TrapFrame *Frame)
 {
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: ERR HANDLER EL0");
 }
 
-extern "C" void fiq_handler_el0()
+extern "C" void fiq_handler_el0(pantheon::TrapFrame *Frame)
 {
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: FIQ HANDLER EL0");
 }
 
-extern "C" void irq_handler_el0()
+extern "C" void irq_handler_el0(pantheon::TrapFrame *Frame)
 {
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: IRQ HANDLER EL0");
 }
 
 
-extern "C" void sync_handler_el0_32()
+extern "C" void sync_handler_el0_32(pantheon::TrapFrame *Frame)
 {
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: SYNC HANDLER EL0_32");
 }
 
-extern "C" void err_handler_el0_32()
+extern "C" void err_handler_el0_32(pantheon::TrapFrame *Frame)
 {
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: ERR HANDLER EL0_32");
 }
 
-extern "C" void fiq_handler_el0_32()
+extern "C" void fiq_handler_el0_32(pantheon::TrapFrame *Frame)
 {
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: FIQ HANDLER EL0_32");
 }
 
-extern "C" void irq_handler_el0_32()
+extern "C" void irq_handler_el0_32(pantheon::TrapFrame *Frame)
 {
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: IRQ HANDLER EL0_32");
 }
 

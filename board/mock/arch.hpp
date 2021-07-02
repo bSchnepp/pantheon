@@ -105,6 +105,25 @@ typedef struct CpuContext
 
 }CpuContext;
 
+typedef struct TrapFrame
+{
+	UINT64 Regs[31];
+	UINT64 PC;
+	UINT64 PSTATE;
+	UINT64 SP;
+
+	VOID Wipe()
+	{
+		for (UINT64 &Reg : Regs)
+		{
+			Reg = 0;
+		}
+		PC = 0;
+		PSTATE = 0;
+		SP = 0;
+	}
+}TrapFrame;
+
 VOID RearmSystemTimer();
 VOID RearmSystemTimer(UINT64 Freq);
 

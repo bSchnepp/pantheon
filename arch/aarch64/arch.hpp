@@ -8,6 +8,7 @@ namespace pantheon
 {
 
 typedef pantheon::arm::CpuContext CpuContext;
+typedef pantheon::arm::TrapFrame TrapFrame;
 
 inline VOID RearmSystemTimer(UINT64 Freq)
 {

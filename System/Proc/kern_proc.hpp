@@ -59,6 +59,8 @@ public:
 	[[nodiscard]] ProcessState MyState() const;
 	void SetState(ProcessState State);
 
+	[[nodiscard]] static UINT64 DefaultThreadStackSize();
+
 
 
 private:
