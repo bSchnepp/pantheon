@@ -1,5 +1,5 @@
 .equ SYSCALL_AMT, 4
-.equ TRAP_SZ, ((31 * 8) + (3 * 8))
+.equ TRAP_SZ, (16*17)
 
 .macro kern_entry, dpl
 	/* 31 regs, plus sp, pc, and pstate  */
@@ -36,6 +36,8 @@
 	/* Store the status registers (and x30)... */
 	stp x30, x19, [sp, #15 * 16]
 	stp x20, x21, [sp, #16 * 16]
+
+	add x0, sp, #TRAP_SZ
 .endm
 
 .macro kern_exit, dpl

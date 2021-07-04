@@ -138,6 +138,16 @@ typedef struct TrapFrame
 		PSTATE = PSTATE_MODE_USER;
 		SP = 0;
 	}
+
+	VOID SetUser()
+	{
+		this->PSTATE = PSTATE_MODE_USER;
+	}
+
+	VOID SetKern()
+	{
+		this->PSTATE = PSTATE_MODE_KERN;
+	}
 }TrapFrame;
 
 }

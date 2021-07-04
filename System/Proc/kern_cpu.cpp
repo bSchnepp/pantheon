@@ -27,6 +27,7 @@ pantheon::CPU::CoreInfo *pantheon::CPU::GetCoreInfo()
 void pantheon::CPU::InitCoreInfo(UINT8 CoreNo)
 {
 	PerCoreInfo[CoreNo].CurThread = nullptr;
+	PerCoreInfo[CoreNo].CurFrame = nullptr;
 
 	void *MaybeAddr = BasicMalloc(sizeof(pantheon::Scheduler))();
 	if (!MaybeAddr)
@@ -41,4 +42,35 @@ void pantheon::CPU::InitCoreInfo(UINT8 CoreNo)
 pantheon::GlobalScheduler *pantheon::CPU::GetGlobalScheduler()
 {
 	return &(GlobalSched);
+}
+
+pantheon::Thread *pantheon::CPU::GetCurThread()
+{
+	return pantheon::CPU::GetCoreInfo()->CurThread;
+}
+
+pantheon::Scheduler *pantheon::CPU::GetCurSched()
+{
+	return pantheon::CPU::GetCoreInfo()->CurSched;
+}
+
+pantheon::TrapFrame *pantheon::CPU::GetCurFrame()
+{
+	return pantheon::CPU::GetCoreInfo()->CurFrame;
+}
+
+
+extern "C" VOID drop_usermode(UINT64 PC, UINT64 PSTATE, UINT64 SP);
+BOOL pantheon::CPU::DropToUsermode(UINT64 PC)
+{
+	UINT64 StackLoc = 12 * 1024;
+	Optional<void*> StackArea = BasicMalloc(StackLoc);
+	if (!StackArea.GetOkay())
+	{
+		return FALSE;
+	}
+	void *StackAreaAddr = StackArea();
+	StackLoc += ((UINT64)StackAreaAddr);
+	drop_usermode(PC, 0, StackLoc);
+	return TRUE;
 }

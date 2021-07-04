@@ -33,6 +33,7 @@ typedef struct CoreInfo
 {
 	pantheon::Thread *CurThread;
 	pantheon::Scheduler *CurSched;
+	pantheon::TrapFrame *CurFrame;
 }CoreInfo;
 
 void InitCoreInfo(UINT8 CoreNo);
@@ -41,6 +42,12 @@ CoreInfo *GetCoreInfo();
 UINT8 GetProcessorNumber();
 
 GlobalScheduler *GetGlobalScheduler();
+
+pantheon::Thread *GetCurThread();
+pantheon::Scheduler *GetCurSched();
+pantheon::TrapFrame *GetCurFrame();
+
+BOOL DropToUsermode(UINT64 PC);
 
 }
 

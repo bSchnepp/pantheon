@@ -119,7 +119,9 @@ void FiniDriver(const CHAR *DriverName, UINT64 Address)
 				break;
 			}
 
-			INT32 Result = psci::PSCICpuOn(Index, (UINT64)asm_kern_init_core, (UINT64)(MaybeStack.GetValue()));
+			UINT64 StackPtr = (UINT64)(MaybeStack());
+			StackPtr += 256 * 1024;
+			INT32 Result = psci::PSCICpuOn(Index, (UINT64)asm_kern_init_core, StackPtr);
 			
 			/* Then there are no more CPUs on this node. */
 			if (Result == psci::PSCI_INVALID_PARAMETERS)

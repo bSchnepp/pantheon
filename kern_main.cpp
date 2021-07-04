@@ -81,40 +81,39 @@ void Initialize(fdt_header *dtb)
 	SERIAL_LOG("%s\n", "finished going through dtb");
 }
 
+void user_idle()
+{
+	for (;;)
+	{
+		SERIAL_LOG("%s\n", "IN USERSPACE");
+	}
+}
 
-static pantheon::Spinlock PrintLock;
 
 /* Since we don't use the MMU at all, we need thread-unique storage. */
-static UINT64 Count[2000];
 void kern_idle(void *unused)
 {
 	PANTHEON_UNUSED(unused);
-	volatile UINT64 TID = pantheon::CPU::GetCoreInfo()->CurThread->ThreadID();
+	static UINT64 Count[2000];
+	volatile UINT64 TID = pantheon::CPU::GetCurThread()->ThreadID();
 	Count[TID] = 0;
 	for (;;)
 	{
-		Count[TID]++;
-		/* preemption has to be disabled when contending for this lock.
-		 * Otherwise the thread may get preempted before releasing the
-		 * lock, preventing anything else from printing.
-		 */
 		pantheon::CPU::CLI();
-		PrintLock.Acquire();
-		SERIAL_LOG_UNSAFE("(%hhu) %s: %u [%ld]\n", pantheon::CPU::GetProcessorNumber(), "idle: ", Count[TID], TID);
-		PrintLock.Release();
+		Count[TID]++;
+		SERIAL_LOG("(%hhu) %s\t%u \t\t[%ld]\n", pantheon::CPU::GetProcessorNumber(), "idle: ", Count[TID], TID);
 		pantheon::CPU::STI();
+	}
+	for (;;){}
+}
 
-		/* stall for time as a good enough demo to show task switching */
-		for (UINT64 Wait = 0; Wait < 600000; ++Wait)
-		{
-			/* ensure clang doesn't optimize away */
-			char c = 10;
-			c += 10;
-			if (c + Wait == 600000)
-			{
-				break;
-			}
-		}
+void kern_idle2(void *unused)
+{
+	PANTHEON_UNUSED(unused);
+	pantheon::CPU::DropToUsermode((UINT64)user_idle);
+	for (;;)
+	{
+		SERIAL_LOG("%s\n", "STUCK IN KERNEL SPACE");
 	}
 }
 
@@ -140,7 +139,7 @@ void kern_init_core()
 
 	/* Ensure there is always at least the idle proc for this core. */
 	pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle);
-	pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle);
+	pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle2);
 
 	while (pantheon::GetKernelStatus() < pantheon::KERNEL_STATUS_OK)
 	{

@@ -5,7 +5,6 @@
 .macro DEFINE_ISR func
 .align 7
 	kern_entry 1
-	add x0, sp, #TRAP_SZ
 	bl \func
 	b exit_isr
 .endm
@@ -17,7 +16,6 @@ exit_isr:
 .macro DEFINE_ISR_EL0 func
 .align 7
 	kern_entry 0
-	add x0, sp, #TRAP_SZ
 	bl \func
 	b exit_isr_el0
 .endm
