@@ -81,11 +81,13 @@ void Initialize(fdt_header *dtb)
 	SERIAL_LOG("%s\n", "finished going through dtb");
 }
 
+
+extern "C" void svc_LogText(const CHAR *Content);
 void user_idle()
 {
 	for (;;)
 	{
-		SERIAL_LOG("%s\n", "IN USERSPACE");
+		svc_LogText("IN USERSPACE");
 	}
 }
 

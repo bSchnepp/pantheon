@@ -36,8 +36,6 @@
 	/* Store the status registers (and x30)... */
 	stp x30, x19, [sp, #15 * 16]
 	stp x20, x21, [sp, #16 * 16]
-
-	add x0, sp, #TRAP_SZ
 .endm
 
 .macro kern_exit, dpl
@@ -69,3 +67,4 @@
 	add sp, sp, #TRAP_SZ
 	eret
 .endm
+

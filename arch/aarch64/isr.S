@@ -5,6 +5,7 @@
 .macro DEFINE_ISR func
 .align 7
 	kern_entry 1
+	add x0, sp, #TRAP_SZ
 	bl \func
 	b exit_isr
 .endm
@@ -16,6 +17,7 @@ exit_isr:
 .macro DEFINE_ISR_EL0 func
 .align 7
 	kern_entry 0
+	add x0, sp, #TRAP_SZ
 	bl \func
 	b exit_isr_el0
 .endm
@@ -56,13 +58,14 @@ spin:
 .globl _asm_sync_handler_el0
 _asm_sync_handler_el0:
 	kern_entry 0
-	mrs x25, esr_el1
-	lsr x25, x25, #26	/* To find exception reason, this is needed */
-	cmp x25, #0x15
+	mrs x20, esr_el1
+	lsr x19, x20, #26	/* To find exception reason, this is needed */
+	cmp x19, #0x15
 	bne _sync_handler_el0_exit	/* Exit if that's not right */
 	adr x25, syscall_table	/* x25 holds the syscall table pointer */
 	uxtw x26, w8		/* unsigned extend to word for x26 with syscall no */
 	mov x27, #SYSCALL_AMT	/* Is this number valid? */
+	bl enable_interrupts
 	cmp x26, x27		/* Is this syscall number valid? */
 	bhs _sync_handler_el0_exit	/* If not, exit again */
 
@@ -71,7 +74,6 @@ _asm_sync_handler_el0:
 	 * the syscall table + (8 * index), which is the same as lsl 3.
 	 */
 	ldr x9, [x25, x26, lsl #3]
-	bl enable_interrupts
 	blr x9
 	bl disable_interrupts
 
