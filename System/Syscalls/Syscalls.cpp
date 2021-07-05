@@ -44,7 +44,7 @@ pantheon::Result pantheon::SVCAllocateBuffer(UINT64 Sz)
 	return (UINT64)(BasicMalloc(Sz)());
 }
 
-extern "C" void *syscall_table[] = 
+void *syscall_table[] = 
 {
 	(void*)pantheon::SVCExitProcess, 
 	(void*)pantheon::SVCForkProcess, 

@@ -95,7 +95,7 @@ void InitBasicMemory()
 	SetSizeAlloc(((char*)(BasicMemory)) + sizeof(BlockHeader), FALSE, HeapSpace - 2 * sizeof(BlockHeader));
 	SetSizeAlloc(((char*)(BasicMemory)) + HeapSpace - sizeof(BlockHeader), TRUE, sizeof(BlockHeader));
 
-	GlobalFreeList = reinterpret_cast<FreeList*>(NextBlock(BasicMemory));
+	GlobalFreeList = reinterpret_cast<FreeList*>(NextBlock(BasicMemory + sizeof(BlockHeader)));
 	GlobalFreeList->Next = nullptr;
 	GlobalFreeList->Prev = nullptr;
 	InitMemoryOkay = TRUE;

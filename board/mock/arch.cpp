@@ -1,6 +1,10 @@
+#include <kern.h>
+
 #include <arch.hpp>
 #include <arch/aarch64/ints.hpp>
 #include <arch/aarch64/thread.hpp>
+
+#include <System/Syscalls/Syscalls.hpp>
 
 void createprocess_tail()
 {
@@ -58,6 +62,16 @@ extern "C" INT32 CallHVC(UINT64 X0, UINT64 X1, UINT64 X2, UINT64 X3)
 extern "C" VOID asm_kern_init_core()
 {
 
+}
+
+extern "C" VOID drop_usermode(UINT64 PC)
+{
+	PANTHEON_UNUSED(PC);
+}
+
+extern "C" UINT64 svc_LogText(const CHAR *Text)
+{
+	return pantheon::SVCLogText(Text);
 }
 
 VOID PerCoreBoardInit()

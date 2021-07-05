@@ -120,32 +120,6 @@ public:
 
 	void Move(ArrayList<T> &Other) noexcept
 	{
-		this->SpaceCount = Other.SpaceCount;
-		this->EntryCount = Other.EntryCount;
-		this->Content = Other.Content;
-
-		this->Malloc = Other.Malloc;
-		this->Free = Other.Free;
-
-		if (this != &Other)
-		{
-			Other.Clear();
-			Other.SpaceCount = 0;
-			Other.EntryCount = 0;
-			Other.Content = nullptr;
-		}
-	}
-
-	void Clear()
-	{
-		for (UINT64 Index = 0; Index < this->EntryCount; ++Index)
-		{
-			this->Content[Index].~T();
-		}
-	}
-
-	void Copy(const ArrayList<T> &Other) noexcept
-	{
 		if (this == &Other)
 		{
 			return;
@@ -157,23 +131,54 @@ public:
 			this->Free(this->Content);
 		}
 
-		this->SpaceCount = 0;
-		this->EntryCount = 0;
-		this->Content = nullptr;
+		this->SpaceCount = Other.SpaceCount;
+		this->EntryCount = Other.EntryCount;
+		this->Content = Other.Content;
 
 		this->Malloc = Other.Malloc;
 		this->Free = Other.Free;
 
-		auto MaybeMem = this->Malloc(Other.EntryCount);
+		Other.SpaceCount = 0;
+		Other.EntryCount = 0;
+		Other.Content = nullptr;
+	}
+
+	void Clear()
+	{
+	}
+
+	void Copy(const ArrayList<T> &Other) noexcept
+	{
+		if (this == &Other)
+		{
+			return;
+		}
+
+		this->Clear();
+		
+		if (this->Content && this->Free)
+		{
+			this->Free(this->Content);
+
+			this->SpaceCount = 0;
+			this->EntryCount = 0;
+			this->Content = nullptr;
+		}
+
+		this->Malloc = Other.Malloc;
+		this->Free = Other.Free;
+
+		auto MaybeMem = this->Malloc(Other.EntryCount * sizeof(T));
 		if (MaybeMem.GetOkay())
 		{
-			this->Content = (T*)MaybeMem.GetValue();
-			this->SpaceCount = Other.SpaceCount;
-			this->EntryCount = Other.EntryCount;
+			T* NewArea = (T*)MaybeMem.GetValue();
 			for (UINT64 Index = 0; Index < Other.EntryCount; ++Index)
 			{
-				this->Content[Index] = Other.Content[Index];
+				NewArea[Index] = Other.Content[Index];
 			}
+			this->Content = NewArea;
+			this->SpaceCount = Other.SpaceCount;
+			this->EntryCount = Other.EntryCount;
 		}
 	}
 

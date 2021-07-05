@@ -113,6 +113,15 @@ void ClearBuffer(CHAR *Location, UINT32 Amount)
 	}
 }
 
+void CopyMemory(VOID *Dest, VOID *Src, UINT64 Amt)
+{
+	CHAR *DestAsChar = reinterpret_cast<CHAR*>(Dest);
+	CHAR *SrcAsChar = reinterpret_cast<CHAR*>(Src);
+	for (UINT64 Index = 0; Index < Amt; ++Index)
+	{
+		DestAsChar[Index] = SrcAsChar[Index];
+	}
+}
 
 void SERIAL_LOG_UNSAFE(const char *Fmt, ...)
 {

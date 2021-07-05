@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "common_tests.hpp"
+#include "struct_tests.hpp"
 #include "sched_tests.hpp"
 #include "driver_tests.hpp"
 #include "arch_tests.hpp"

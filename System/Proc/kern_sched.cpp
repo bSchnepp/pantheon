@@ -105,6 +105,7 @@ void pantheon::Scheduler::SignalReschedule()
 pantheon::GlobalScheduler::GlobalScheduler()
 {
 	/* NYI */
+	this->Init();
 }
 
 pantheon::GlobalScheduler::~GlobalScheduler()
