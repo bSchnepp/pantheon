@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <System/Memory/kern_paging.hpp>
+#include <System/Memory/kern_physpaging.hpp>
 #include <Common/Structures/kern_bitmap.hpp>
 
 #ifndef STRUCT_TESTS_HPP_
@@ -65,6 +65,26 @@ TEST(Bitmap, CorrectSize)
 	pantheon::Bitmap B(16);
 	ASSERT_EQ(B.GetSizeBytes(), 16);
 	ASSERT_EQ(B.GetSizeBits(), 16 * 8);
+}
+
+TEST(PMMAllocator, BasicInit)
+{
+	pantheon::PhyPageManager Manager;
+	ASSERT_EQ(Manager.FindFreeAddress()(), 0);
+}
+
+TEST(PMMAllocator, ClaimAddresses)
+{
+	pantheon::PhyPageManager Manager;
+	for (UINT64 Index = 0; Index < 16; ++Index)
+	{
+		Optional<UINT64> Addr = Manager.FindFreeAddress();
+		ASSERT_TRUE(Addr.GetOkay());
+		Manager.ClaimAddress(Addr.GetValue());
+	}
+	Optional<UINT64> Addr = Manager.FindFreeAddress();
+	ASSERT_TRUE(Addr.GetOkay());
+	ASSERT_EQ(Addr.GetValue(), 16 * 4096);
 }
 
 #endif

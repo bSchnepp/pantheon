@@ -1,8 +1,8 @@
 LIST(APPEND SYSTEM_HEADERS Syscalls/Syscalls.hpp)
-LIST(APPEND SYSTEM_HEADERS Memory/kern_paging.hpp)
+LIST(APPEND SYSTEM_HEADERS Memory/kern_physpaging.hpp)
 
 LIST(APPEND SYSTEM_SOURCES Syscalls/Syscalls.cpp)
-LIST(APPEND SYSTEM_SOURCES Memory/kern_paging.cpp)
+LIST(APPEND SYSTEM_SOURCES Memory/kern_physpaging.cpp)
 
 ADD_LIBRARY(System STATIC
 	${SYSTEM_HEADERS}

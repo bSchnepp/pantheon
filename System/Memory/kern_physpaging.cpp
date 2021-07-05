@@ -1,18 +1,18 @@
 #include <kern_datatypes.hpp>
 #include <Structures/kern_bitmap.hpp>
 #include <Structures/kern_optional.hpp>
-#include <System/Memory/kern_paging.hpp>
+#include <System/Memory/kern_physpaging.hpp>
 
 pantheon::PhyPageManager::PhyPageManager()
 {
 	/* FIXME: Correctly base on actual pages! */
-	UINT64 MemoryAmt = (8ULL * 1024ULL * 1024ULL * 1024ULL);
+	UINT64 MemoryAmt = (4096 * 18);
 	this->UsedPages = pantheon::Bitmap(MemoryAmt / pantheon::PhyPageManager::PageSize());
 }
 
 pantheon::PhyPageManager::~PhyPageManager()
 {
-
+	
 }
 
 UINT64 pantheon::PhyPageManager::PageSize()
@@ -23,39 +23,26 @@ UINT64 pantheon::PhyPageManager::PageSize()
 
 Optional<UINT64> pantheon::PhyPageManager::FindFreeAddress()
 {
-	UINT64 Index = 0;
-	UINT8 CurByte = 0xFF;
-	while (CurByte == 0xFF)
+	UINT64 Bit = 0;
+	while (Bit < this->UsedPages.GetSizeBits())
 	{
-		if (Index > this->UsedPages.GetSizeBytes())
+		if (this->UsedPages.Get(Bit) == FALSE)
 		{
-			return Optional<UINT64>();
+			return Optional<UINT64>(pantheon::PhyPageManager::PageSize() * Bit);
 		}
-
-		CurByte = this->UsedPages.GetByte(Index++);
+		Bit++;
 	}
-
-	UINT8 Bit = 0;
-	for (Bit = 0; Bit < 8; ++Bit)
-	{
-		if (this->UsedPages.Get((Index * 8) + Bit) == FALSE)
-		{
-			break;
-		}
-	}
-
-	UINT64 PageSz = pantheon::PhyPageManager::PageSize();
-	return Optional<UINT64>((PageSz * Bit) * (8 * PageSz * Index));
+	return Optional<UINT64>();
 }
 
 VOID pantheon::PhyPageManager::FreeAddress(UINT64 Addr)
 {
-	UINT64 AddrDivisor = pantheon::PhyPageManager::PageSize() * 8;
+	UINT64 AddrDivisor = pantheon::PhyPageManager::PageSize();
 	this->UsedPages.Set(Addr / AddrDivisor, FALSE);
 }
 
 VOID pantheon::PhyPageManager::ClaimAddress(UINT64 Addr)
 {
-	UINT64 AddrDivisor = pantheon::PhyPageManager::PageSize() * 8;
+	UINT64 AddrDivisor = pantheon::PhyPageManager::PageSize();
 	this->UsedPages.Set(Addr / AddrDivisor, TRUE);
 }

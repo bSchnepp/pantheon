@@ -16,7 +16,7 @@ public:
 	BOOL Get(UINT64 Index);
 	VOID Set(UINT64 Index, BOOL Bit);
 
-	UINT8 GetByte(UINT8 ByteIndex);
+	UINT8 GetByte(UINT64 ByteIndex);
 
 	[[nodiscard]] UINT64 GetSizeBits() const;
 	[[nodiscard]] UINT64 GetSizeBytes() const;

@@ -36,6 +36,7 @@ public:
 			char Chars[4];
 		}EndianCheck = {0x01020304};
 
+		this->BackingNum = Item;
 		if (EndianCheck.Chars[0] == 0x01)
 		{
 			this->BackingNum = SwapBytes(Item);
@@ -138,6 +139,7 @@ public:
 			char Chars[4];
 		}EndianCheck = {0x01020304};
 
+		this->BackingNum = Item;
 		if (EndianCheck.Chars[0] != 0x01)
 		{
 			this->BackingNum = SwapBytes(Item);
