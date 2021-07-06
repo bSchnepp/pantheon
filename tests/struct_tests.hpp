@@ -69,13 +69,13 @@ TEST(Bitmap, CorrectSize)
 
 TEST(PMMAllocator, BasicInit)
 {
-	pantheon::PhyPageManager Manager;
+	pantheon::PhyPageManager Manager(0, 1);
 	ASSERT_EQ(Manager.FindFreeAddress()(), 0);
 }
 
 TEST(PMMAllocator, ClaimAddresses)
 {
-	pantheon::PhyPageManager Manager;
+	pantheon::PhyPageManager Manager(0, 20);
 	for (UINT64 Index = 0; Index < 16; ++Index)
 	{
 		Optional<UINT64> Addr = Manager.FindFreeAddress();
@@ -83,8 +83,11 @@ TEST(PMMAllocator, ClaimAddresses)
 		Manager.ClaimAddress(Addr.GetValue());
 	}
 	Optional<UINT64> Addr = Manager.FindFreeAddress();
-	ASSERT_TRUE(Addr.GetOkay());
-	ASSERT_EQ(Addr.GetValue(), 16 * 4096);
+
+	if (Addr.GetOkay())
+	{
+		ASSERT_EQ(Addr.GetValue(), 16 * 4096);
+	}
 }
 
 #endif
