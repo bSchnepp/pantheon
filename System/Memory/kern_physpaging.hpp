@@ -43,6 +43,8 @@ public:
 	VOID FreeAddress(UINT64 Addr);
 	VOID ClaimAddress(UINT64 Addr);
 
+	Optional<UINT64> FindAndClaimFirstFreeAddress();
+
 private:
 	ArrayList<PhyPageManager> Managers;
 };

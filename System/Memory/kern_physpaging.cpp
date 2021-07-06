@@ -179,6 +179,30 @@ Optional<UINT64> pantheon::GlobalPhyPageManager::FindFreeAddress()
 }
 
 /**
+ * \~english @brief Claims the first found free page in the global memory area in a single atomic operation, if possible
+ * \~english @author Brian Schnepp
+ * \~english @return The address found inside an Optional, if found. If none found, a None optional is returned instead.
+ * 
+ * @see pantheon::GlobalPhyPageManager::FindFreeAddress
+ * @see pantheon::GlobalPhyPageManager::ClaimAddress
+ */
+Optional<UINT64> pantheon::GlobalPhyPageManager::FindAndClaimFirstFreeAddress()
+{
+	GlobalAccessorLock.Acquire();
+	for (pantheon::PhyPageManager &Manager : this->Managers)
+	{
+		Optional<UINT64> Addr = Manager.FindFreeAddress();
+		if (Addr.GetOkay())
+		{
+			Manager.ClaimAddress(Addr.GetValue());
+			return Addr;
+		}
+	}
+	GlobalAccessorLock.Release();
+	return Optional<UINT64>();
+}
+
+/**
  * \~english @brief Marks a given page address as no longer in use
  * \~english @param[in] Addr The address of the page to mark as free, aligned to the smallest page size
  * \~english @author Brian Schnepp
