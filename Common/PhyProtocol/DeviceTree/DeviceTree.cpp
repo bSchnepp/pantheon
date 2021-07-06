@@ -273,16 +273,7 @@ void DeviceTreeBlob::CopyStringFromStructPropNode(CHAR *Buffer, UINT64 BufferSiz
  */
 void DeviceTreeBlob::CopyU32FromStructPropNode(UINT32 *Buffer)
 {
-	if (this->struct_ptr[this->StructIndex].GetNumHost() != FDT_PROP)
-	{
-		return;
-	}
-
-	CHAR *RawBuf = (CHAR*)(this->struct_ptr);
-	RawBuf += (sizeof(BEIntegerU32) * (this->StructIndex + 3));
-
-	BEIntegerU32 *AsU32 = (BEIntegerU32*)RawBuf;
-	*Buffer = AsU32->GetNumHost();
+	this->CopyU32FromStructPropNode(Buffer, 0);
 }
 
 /**
@@ -291,13 +282,44 @@ void DeviceTreeBlob::CopyU32FromStructPropNode(UINT32 *Buffer)
  */
 void DeviceTreeBlob::CopyU64FromStructPropNode(UINT64 *Buffer)
 {
+	this->CopyU64FromStructPropNode(Buffer, 0);
+}
+
+/**
+ * \~english @brief Copies a u32 from the current property into another buffer. 
+ * \~english @param[in] Buffer The UINT32 to copy to
+ * \~english @param[in] Offset The offset, as an index in array, to copy from the current node
+ * \~english @author Brian Schnepp
+ */
+void DeviceTreeBlob::CopyU32FromStructPropNode(UINT32 *Buffer, UINT32 Offset)
+{
 	if (this->struct_ptr[this->StructIndex].GetNumHost() != FDT_PROP)
 	{
 		return;
 	}
 
 	CHAR *RawBuf = (CHAR*)(this->struct_ptr);
-	RawBuf += (sizeof(BEIntegerU32) * (this->StructIndex + 3));
+	RawBuf += (sizeof(BEIntegerU32) * (this->StructIndex + (3 + Offset)));
+
+	BEIntegerU32 *AsU32 = (BEIntegerU32*)RawBuf;
+	*Buffer = AsU32->GetNumHost();
+}
+
+/**
+ * \~english @brief Copies a u64 from the current property into another buffer. 
+ * \~english @param[in] Buffer The UINT64 to copy to
+ * \~english @param[in] Offset The offset, as an index in array, to copy from the current node
+ * \~english @author Brian Schnepp
+ */
+void DeviceTreeBlob::CopyU64FromStructPropNode(UINT64 *Buffer, UINT32 Offset)
+{
+	if (this->struct_ptr[this->StructIndex].GetNumHost() != FDT_PROP)
+	{
+		return;
+	}
+
+	CHAR *RawBuf = (CHAR*)(this->struct_ptr);
+	RawBuf += (sizeof(BEIntegerU32) * (this->StructIndex + (3 + Offset)));
 
 	BEIntegerU64 *AsU64 = (BEIntegerU64*)RawBuf;
 	*Buffer = AsU64->GetNumHost();

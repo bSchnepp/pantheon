@@ -66,6 +66,9 @@ public:
 	void CopyU32FromStructPropNode(UINT32 *Buffer);
 	void CopyU64FromStructPropNode(UINT64 *Buffer);
 
+	void CopyU32FromStructPropNode(UINT32 *Buffer, UINT32 Offset);
+	void CopyU64FromStructPropNode(UINT64 *Buffer, UINT32 Offset);
+
 	void NodeNameToAddress(CHAR *Buffer, CHAR *DeviceType, UINT64 DeviceTypeBufferSpace, UINT64 *Address);
 
 private:

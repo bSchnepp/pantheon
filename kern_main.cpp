@@ -8,6 +8,8 @@
 #include <Devices/kern_drivers.hpp>
 #include <PhyProtocol/DeviceTree/DeviceTree.hpp>
 
+#include <System/Memory/kern_physpaging.hpp>
+
 void Initialize(fdt_header *dtb)
 {
 	volatile bool CheckMe = CheckHeader(dtb);
@@ -127,14 +129,14 @@ extern "C"
 
 void kern_init_core()
 {
-	UINT8 CpuNo = pantheon::CPU::GetProcessorNumber();
-	pantheon::CPU::InitCoreInfo(CpuNo);
-	PerCoreInit();
-
 	while (pantheon::GetKernelStatus() < pantheon::KERNEL_STATUS_SECOND_STAGE)
 	{
 		/* Loop until core 0 finished essential kernel setup */
 	}
+
+	UINT8 CpuNo = pantheon::CPU::GetProcessorNumber();
+	pantheon::CPU::InitCoreInfo(CpuNo);
+	PerCoreInit();
 
 	SERIAL_LOG("Pantheon booted with core %hhu\n", CpuNo);
 	pantheon::CPU::STI();
@@ -156,6 +158,11 @@ void kern_init_core()
 	}
 }
 
+#ifndef ONLY_TESTS
+extern "C" UINT64 kern_begin;
+extern "C" UINT64 kern_end;
+#endif
+
 void kern_init(fdt_header *dtb)
 {
 	pantheon::CPU::CLI();
@@ -167,6 +174,19 @@ void kern_init(fdt_header *dtb)
 		BoardInit();
 		Initialize(dtb);
 		pantheon::GetGlobalScheduler()->Init();
+
+#ifndef ONLY_TESTS
+		/* Ensure the kernel isn't erroneusly overwritten. */
+		auto *PhyMgr = pantheon::GetGlobalPhyManager();
+		UINT64 PageSize = pantheon::PhyPageManager::PageSize();
+		UINT64 Start = Align((UINT64)(&kern_begin), (UINT64)PageSize) - PageSize;
+		UINT64 End = Align((UINT64)(&kern_begin), (UINT64)PageSize) - PageSize;
+
+		for (UINT64 Index = Start; Index <= End; Index += PageSize)
+		{
+			PhyMgr->ClaimAddress(Index);
+		}
+#endif
 
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_SECOND_STAGE);
 

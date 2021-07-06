@@ -4,6 +4,7 @@ SECTIONS
 {
 	/* aarch64 load address */
 	. = 0x80000 + 0x40000000;
+	kern_begin = .;
 
 	.text :
 	{
@@ -44,6 +45,7 @@ SECTIONS
 	}
 	kern_stack_end = .;
 	kern_stack_size = kern_stack_end - kern_stack_begin;
+	kern_end = .;
 
 	/DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
 	
