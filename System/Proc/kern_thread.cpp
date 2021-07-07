@@ -19,6 +19,7 @@ pantheon::Thread::Thread()
 	this->Registers.Wipe();
 	this->StackSpace = nullptr;
 	this->TID = 0;
+	this->WasVisited = FALSE;
 }
 
 /**
@@ -53,6 +54,7 @@ pantheon::Thread::Thread(Process *OwningProcess, ThreadPriority Priority)
 	this->State = pantheon::THREAD_STATE_INIT;
 
 	this->TID = AcquireThreadID();
+	this->WasVisited = FALSE;
 
 	/* 45 for NORMAL, 30 for LOW, 15 for VERYLOW, etc. */
 	this->RefreshTicks();
@@ -68,6 +70,7 @@ pantheon::Thread::Thread(const pantheon::Thread &Other)
 	this->State = Other.State;
 	this->TID = Other.TID;
 	this->StackSpace = Other.StackSpace;
+	this->WasVisited = Other.WasVisited;
 }
 
 pantheon::Thread::Thread(pantheon::Thread &&Other) noexcept
@@ -80,6 +83,7 @@ pantheon::Thread::Thread(pantheon::Thread &&Other) noexcept
 	this->State = Other.State;
 	this->TID = Other.TID;
 	this->StackSpace = Other.StackSpace;
+	this->WasVisited = Other.WasVisited;
 }
 
 pantheon::Thread::~Thread()
@@ -171,7 +175,7 @@ VOID pantheon::Thread::AddTicks(UINT64 TickCount)
 
 VOID pantheon::Thread::RefreshTicks()
 {
-	this->RemainingTicks = (this->Priority + 1) * 15;
+	this->RemainingTicks = (this->Priority + 1) * 3;
 }
 
 /**
@@ -248,4 +252,15 @@ void pantheon::Thread::SetStackAddr(UINT64 Addr)
 {
 	this->Registers.SetSP(Addr);
 	this->StackSpace = reinterpret_cast<void*>((CHAR*)Addr);
+}
+
+VOID pantheon::Thread::SetVisited(BOOL Value)
+{
+	this->WasVisited = Value;
+}
+
+[[nodiscard]]
+BOOL pantheon::Thread::Visited() const
+{
+	return this->WasVisited;
 }

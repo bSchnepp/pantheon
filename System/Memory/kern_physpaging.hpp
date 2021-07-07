@@ -49,6 +49,8 @@ private:
 	ArrayList<PhyPageManager> Managers;
 };
 
+
+VOID InitGlobalPhyPageManager();
 GlobalPhyPageManager *GetGlobalPhyManager();
 
 }

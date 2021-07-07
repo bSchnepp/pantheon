@@ -103,8 +103,8 @@ void kern_idle(void *unused)
 	Count[TID] = 0;
 	for (;;)
 	{
-		pantheon::CPU::CLI();
 		Count[TID]++;
+		pantheon::CPU::CLI();
 		SERIAL_LOG("(%hhu) %s\t%u \t\t[%ld]\n", pantheon::CPU::GetProcessorNumber(), "idle: ", Count[TID], TID);
 		pantheon::CPU::STI();
 	}
@@ -169,8 +169,10 @@ void kern_init(fdt_header *dtb)
 	if (pantheon::CPU::GetProcessorNumber() == 0)
 	{
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);
+		pantheon::InitGlobalPhyPageManager();
 
 		/* The most basic kernel initialization should be done here. */
+
 		BoardInit();
 		Initialize(dtb);
 		pantheon::GetGlobalScheduler()->Init();
@@ -180,7 +182,7 @@ void kern_init(fdt_header *dtb)
 		auto *PhyMgr = pantheon::GetGlobalPhyManager();
 		UINT64 PageSize = pantheon::PhyPageManager::PageSize();
 		UINT64 Start = Align((UINT64)(&kern_begin), (UINT64)PageSize) - PageSize;
-		UINT64 End = Align((UINT64)(&kern_begin), (UINT64)PageSize) - PageSize;
+		UINT64 End = Align((UINT64)(&kern_begin), (UINT64)PageSize) + PageSize;
 
 		for (UINT64 Index = Start; Index <= End; Index += PageSize)
 		{

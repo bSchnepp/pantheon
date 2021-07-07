@@ -31,7 +31,9 @@ pantheon::Result pantheon::SVCForkProcess()
 
 pantheon::Result pantheon::SVCLogText(const CHAR *Data)
 {
+	pantheon::CPU::CLI();
 	SERIAL_LOG("%s\n", Data);
+	pantheon::CPU::STI();
 	return 0;
 }
 

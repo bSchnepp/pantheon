@@ -61,6 +61,8 @@ public:
 
 	[[nodiscard]] static UINT64 DefaultThreadStackSize();
 
+	VOID WipeVisited();
+
 
 
 private:

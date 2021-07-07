@@ -192,13 +192,21 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 		if (SelectedProc.NumInactiveThreads())
 		{
 			SelectedThread = SelectedProc.ActivateThread();
-			if (SelectedThread == nullptr)
+			if (SelectedThread)
 			{
-				continue;
+				break;
 			}
-			break;
 		}
 	}
+
+	if (SelectedThread == nullptr)
+	{
+		for (pantheon::Process &Proc : this->ProcessList)
+		{
+			Proc.WipeVisited();
+		}
+	}
+
 	ProcAccessSpinlock.Release();
 	return SelectedThread;
 }

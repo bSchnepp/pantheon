@@ -66,6 +66,9 @@ public:
 	Thread &operator=(const Thread &Other);
 	Thread &operator=(Thread &&Other) noexcept;
 
+	void SetVisited(BOOL Value);
+	[[nodiscard]] BOOL Visited() const;
+
 private:
 	UINT64 TID;
 
@@ -79,6 +82,8 @@ private:
 	UINT64 RemainingTicks;
 
 	void *StackSpace;
+
+	BOOL WasVisited;
 };
 
 }

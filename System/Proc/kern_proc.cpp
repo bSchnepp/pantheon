@@ -147,26 +147,27 @@ UINT64 pantheon::Process::NumInactiveThreads() const
 static pantheon::Spinlock ActivateThreadLock;
 pantheon::Thread* pantheon::Process::ActivateThread()
 {
+	pantheon::Thread *SelectedThread = nullptr;
 	if (this->NumInactiveThreads() == 0)
 	{
-		return nullptr;
+		return SelectedThread;
 	}
 
 	ActivateThreadLock.Acquire();
-
-	pantheon::Thread *SelectedThread = nullptr;
-
+	
 	/* TODO: Gracefully handle BLOCKED state. */
 	for (pantheon::Thread &T : this->Threads)
 	{
 		pantheon::ThreadState TState = T.MyState();
 		if (TState == pantheon::THREAD_STATE_RUNNING 
-			|| TState == pantheon::THREAD_STATE_TERMINATED)
+			|| TState == pantheon::THREAD_STATE_TERMINATED
+			|| T.Visited())
 		{
 			continue;
 		}
 
 		T.SetState(pantheon::THREAD_STATE_RUNNING);
+		T.SetVisited(TRUE);
 		this->InactiveTIDCount--;
 		SelectedThread = &T;
 		break;
@@ -193,4 +194,12 @@ pantheon::ProcessState pantheon::Process::MyState() const
 void pantheon::Process::SetState(pantheon::ProcessState State)
 {
 	this->CurState = State;
+}
+
+VOID pantheon::Process::WipeVisited()
+{
+	for (pantheon::Thread &T : this->Threads)
+	{
+		T.SetVisited(FALSE);
+	}
 }

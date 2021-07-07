@@ -45,7 +45,8 @@ pantheon::PhyPageManager::PhyPageManager(UINT64 NumPages) :
  */
 pantheon::PhyPageManager::PhyPageManager(UINT64 BaseAddr, UINT64 NumPages)
 {
-	this->UsedPages = pantheon::Bitmap(NumPages / 8);
+	UINT64 AlignedPages = Align<UINT64>(NumPages, 8);
+	this->UsedPages = pantheon::Bitmap(AlignedPages / 8);
 	this->BaseAddress = BaseAddr;
 	if (BaseAddr % pantheon::PhyPageManager::PageSize())
 	{
@@ -248,6 +249,17 @@ VOID pantheon::GlobalPhyPageManager::ClaimAddress(UINT64 Addr)
 
 static pantheon::GlobalPhyPageManager *GlobalManager = nullptr;
 
+VOID pantheon::InitGlobalPhyPageManager()
+{
+	GlobalAccessorLock.Acquire();
+	if (!GlobalManager)
+	{
+		GlobalManager = (pantheon::GlobalPhyPageManager*)BasicMalloc(sizeof(pantheon::GlobalPhyPageManager))();
+		*GlobalManager = pantheon::GlobalPhyPageManager();
+	}
+	GlobalAccessorLock.Release();
+}
+
 /**
  * \~english @brief Obtains the GlobalPhyPageManager singleton
  * \~english @return A pointer to the GlobalPhyPageManager for this system
@@ -255,10 +267,5 @@ static pantheon::GlobalPhyPageManager *GlobalManager = nullptr;
  */
 pantheon::GlobalPhyPageManager *pantheon::GetGlobalPhyManager()
 {
-	if (!GlobalManager)
-	{
-		GlobalManager = (pantheon::GlobalPhyPageManager*)BasicMalloc(sizeof(pantheon::GlobalPhyPageManager))();
-		*GlobalManager = pantheon::GlobalPhyPageManager();
-	}
 	return GlobalManager;
 }
