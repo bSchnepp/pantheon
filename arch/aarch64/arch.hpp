@@ -4,6 +4,8 @@
 #include <arch/aarch64/ints.hpp>
 #include <arch/aarch64/thread.hpp>
 
+#include "vmm/vmm.hpp"
+
 namespace pantheon
 {
 

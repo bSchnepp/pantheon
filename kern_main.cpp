@@ -139,7 +139,6 @@ void kern_init_core()
 	PerCoreInit();
 
 	SERIAL_LOG("Pantheon booted with core %hhu\n", CpuNo);
-	pantheon::CPU::STI();
 
 	/* Ensure there is always at least the idle proc for this core. */
 	pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle);
@@ -150,6 +149,7 @@ void kern_init_core()
 		/* Loop until core 0 finished kernel setup */
 	}
 
+	pantheon::CPU::STI();
 	pantheon::RearmSystemTimer(1000);
 	pantheon::CPU::GetCoreInfo()->CurSched->SignalReschedule();
 	for (;;)
@@ -161,6 +161,11 @@ void kern_init_core()
 #ifndef ONLY_TESTS
 extern "C" UINT64 kern_begin;
 extern "C" UINT64 kern_end;
+
+void init_pmm()
+{
+
+}
 #endif
 
 void kern_init(fdt_header *dtb)
@@ -169,27 +174,19 @@ void kern_init(fdt_header *dtb)
 	if (pantheon::CPU::GetProcessorNumber() == 0)
 	{
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);
-		pantheon::InitGlobalPhyPageManager();
 
 		/* The most basic kernel initialization should be done here. */
+		pantheon::InitGlobalPhyPageManagers();
 
 		BoardInit();
 		Initialize(dtb);
+
+		init_pmm();
+
+		pantheon::vmm::PageTable *InitTable = pantheon::vmm::CreateBasicPageTables();
+		PANTHEON_UNUSED(InitTable);
+
 		pantheon::GetGlobalScheduler()->Init();
-
-#ifndef ONLY_TESTS
-		/* Ensure the kernel isn't erroneusly overwritten. */
-		auto *PhyMgr = pantheon::GetGlobalPhyManager();
-		UINT64 PageSize = pantheon::PhyPageManager::PageSize();
-		UINT64 Start = Align((UINT64)(&kern_begin), (UINT64)PageSize) - PageSize;
-		UINT64 End = Align((UINT64)(&kern_begin), (UINT64)PageSize) + PageSize;
-
-		for (UINT64 Index = Start; Index <= End; Index += PageSize)
-		{
-			PhyMgr->ClaimAddress(Index);
-		}
-#endif
-
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_SECOND_STAGE);
 
 		/* Create an extra idle thread to ensure rescheduling happens */

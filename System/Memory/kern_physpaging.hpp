@@ -4,6 +4,8 @@
 
 #include <kern_container.hpp>
 
+#include <Sync/kern_spinlock.hpp>
+
 #ifndef _KERN_PHYSPAGING_HPP_
 #define _KERN_PHYSPAGING_HPP_
 
@@ -21,6 +23,8 @@ public:
 	Optional<UINT64> FindFreeAddress();
 	VOID FreeAddress(UINT64 Addr);
 	VOID ClaimAddress(UINT64 Addr);
+
+	BOOL CheckClaimed(UINT64 Address);
 
 	static UINT64 PageSize();
 	[[nodiscard]] UINT64 BaseAddr() const;
@@ -43,15 +47,20 @@ public:
 	VOID FreeAddress(UINT64 Addr);
 	VOID ClaimAddress(UINT64 Addr);
 
+	BOOL CheckClaimed(UINT64 Address);
+
 	Optional<UINT64> FindAndClaimFirstFreeAddress();
 
+	UINT64 HighestAddress();
+
 private:
+	pantheon::Spinlock GlobalAccessorLock;
 	ArrayList<PhyPageManager> Managers;
 };
 
-
-VOID InitGlobalPhyPageManager();
+VOID InitGlobalPhyPageManagers();
 GlobalPhyPageManager *GetGlobalPhyManager();
+GlobalPhyPageManager *GetGlobalMMIOManager();
 
 }
 

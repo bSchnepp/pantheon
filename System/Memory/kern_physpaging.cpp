@@ -1,7 +1,11 @@
 #include <kern_datatypes.hpp>
+
 #include <Structures/kern_bitmap.hpp>
 #include <Structures/kern_optional.hpp>
+
+#include <Common/Sync/kern_atomic.hpp>
 #include <Common/Sync/kern_spinlock.hpp>
+
 #include <System/Memory/kern_physpaging.hpp>
 
 /**
@@ -101,6 +105,12 @@ VOID pantheon::PhyPageManager::FreeAddress(UINT64 Addr)
 	this->UsedPages.Set((Addr - this->BaseAddress) / AddrDivisor, FALSE);
 }
 
+BOOL pantheon::PhyPageManager::CheckClaimed(UINT64 Addr)
+{
+	UINT64 AddrDivisor = pantheon::PhyPageManager::PageSize();
+	return this->UsedPages.Get((Addr - this->BaseAddress) / AddrDivisor);
+}
+
 /**
  * \~english @brief Marks a given page as being in use.
  * \~english @author Brian Schnepp
@@ -134,8 +144,6 @@ UINT64 pantheon::PhyPageManager::NumPages() const
 	return this->UsedPages.GetSizeBits();
 }
 
-static pantheon::Spinlock GlobalAccessorLock;
-
 /**
  * \~english @brief Initializes the global page manager, which manages the entire address space
  * \~english @author Brian Schnepp
@@ -156,6 +164,18 @@ VOID pantheon::GlobalPhyPageManager::AddArea(UINT64 BaseAddress, UINT64 NumPages
 {
 	GlobalAccessorLock.Acquire();
 	this->Managers.Add(pantheon::PhyPageManager(BaseAddress, NumPages));
+	GlobalAccessorLock.Release();
+}
+
+BOOL pantheon::GlobalPhyPageManager::CheckClaimed(UINT64 Address)
+{
+	GlobalAccessorLock.Acquire();
+	BOOL Present = FALSE;
+	for (pantheon::PhyPageManager &Mgr : this->Managers)
+	{
+		Present |= Mgr.CheckClaimed(Address);
+	}
+	return Present;
 	GlobalAccessorLock.Release();
 }
 
@@ -247,17 +267,23 @@ VOID pantheon::GlobalPhyPageManager::ClaimAddress(UINT64 Addr)
 	GlobalAccessorLock.Release();
 }
 
-static pantheon::GlobalPhyPageManager *GlobalManager = nullptr;
+static pantheon::Atomic<pantheon::GlobalPhyPageManager*> GlobalManager = nullptr;
+static pantheon::Atomic<pantheon::GlobalPhyPageManager*> GlobalMMIOManager = nullptr;
 
-VOID pantheon::InitGlobalPhyPageManager()
+VOID pantheon::InitGlobalPhyPageManagers()
 {
-	GlobalAccessorLock.Acquire();
-	if (!GlobalManager)
+	if (!GlobalManager.Load())
 	{
-		GlobalManager = (pantheon::GlobalPhyPageManager*)BasicMalloc(sizeof(pantheon::GlobalPhyPageManager))();
-		*GlobalManager = pantheon::GlobalPhyPageManager();
+		auto MemMgr = (pantheon::GlobalPhyPageManager*)BasicMalloc(sizeof(pantheon::GlobalPhyPageManager))();
+		*MemMgr = pantheon::GlobalPhyPageManager();
+		GlobalManager.Store(MemMgr);
 	}
-	GlobalAccessorLock.Release();
+	if (!GlobalMMIOManager.Load())
+	{
+		auto MemMgr = (pantheon::GlobalPhyPageManager*)BasicMalloc(sizeof(pantheon::GlobalPhyPageManager))();
+		*MemMgr = pantheon::GlobalPhyPageManager();
+		GlobalMMIOManager.Store(MemMgr);
+	}
 }
 
 /**
@@ -267,5 +293,15 @@ VOID pantheon::InitGlobalPhyPageManager()
  */
 pantheon::GlobalPhyPageManager *pantheon::GetGlobalPhyManager()
 {
-	return GlobalManager;
+	return GlobalManager.Load();
+}
+
+/**
+ * \~english @brief Obtains the GlobalPhyPageManager singleton
+ * \~english @return A pointer to the GlobalPhyPageManager for this system
+ * \~english @author Brian Schnepp
+ */
+pantheon::GlobalPhyPageManager *pantheon::GetGlobalMMIOManager()
+{
+	return GlobalMMIOManager.Load();
 }

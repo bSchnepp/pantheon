@@ -4,12 +4,13 @@ SECTIONS
 {
 	/* aarch64 load address */
 	. = 0x80000 + 0x40000000;
+
+	. = ALIGN(4096);
 	kern_begin = .;
 
-	.text :
+	.text.early :
 	{
 		*(.text.early)
-		*(.text)
 	}
 
 	. = ALIGN(0x800);
@@ -17,7 +18,13 @@ SECTIONS
 	{
 		*(.text.exceptions)
 	}
-	
+
+	. = ALIGN(4096);
+	.text :
+	{
+		*(.text)
+	}
+
 	.rodata :
 	{
 		*(.rodata*)
@@ -45,6 +52,9 @@ SECTIONS
 	}
 	kern_stack_end = .;
 	kern_stack_size = kern_stack_end - kern_stack_begin;
+
+
+	. = ALIGN(4096);
 	kern_end = .;
 
 	/DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
