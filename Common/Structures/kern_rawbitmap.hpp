@@ -1,18 +1,17 @@
 #include <kern_datatypes.hpp>
-#include "kern_rawbitmap.hpp"
 
-#ifndef _KERN_BITMAP_
-#define _KERN_BITMAP_
+#ifndef _KERN_RAWBITMAP_HPP_
+#define _KERN_RAWBITMAP_HPP_
 
 namespace pantheon
 {
 
-class Bitmap
+class RawBitmap
 {
 public:
-	Bitmap();
-	Bitmap(UINT64 ByteAmount);
-	~Bitmap();
+	RawBitmap();
+	RawBitmap(UINT8 *Area, UINT64 ByteAmount);
+	~RawBitmap();
 
 	BOOL Get(UINT64 Index);
 	VOID Set(UINT64 Index, BOOL Bit);
@@ -22,8 +21,11 @@ public:
 	[[nodiscard]] UINT64 GetSizeBits() const;
 	[[nodiscard]] UINT64 GetSizeBytes() const;
 
+	[[nodiscard]] UINT8 *GetAddress() const;
+
 private:
-	pantheon::RawBitmap RawArea;
+	UINT64 Size;
+	UINT8 *Area;
 };
 
 }

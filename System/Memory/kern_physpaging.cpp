@@ -267,23 +267,8 @@ VOID pantheon::GlobalPhyPageManager::ClaimAddress(UINT64 Addr)
 	GlobalAccessorLock.Release();
 }
 
-static pantheon::Atomic<pantheon::GlobalPhyPageManager*> GlobalManager = nullptr;
-static pantheon::Atomic<pantheon::GlobalPhyPageManager*> GlobalMMIOManager = nullptr;
-
 VOID pantheon::InitGlobalPhyPageManagers()
 {
-	if (!GlobalManager.Load())
-	{
-		auto MemMgr = (pantheon::GlobalPhyPageManager*)BasicMalloc(sizeof(pantheon::GlobalPhyPageManager))();
-		*MemMgr = pantheon::GlobalPhyPageManager();
-		GlobalManager.Store(MemMgr);
-	}
-	if (!GlobalMMIOManager.Load())
-	{
-		auto MemMgr = (pantheon::GlobalPhyPageManager*)BasicMalloc(sizeof(pantheon::GlobalPhyPageManager))();
-		*MemMgr = pantheon::GlobalPhyPageManager();
-		GlobalMMIOManager.Store(MemMgr);
-	}
 }
 
 /**
@@ -293,7 +278,8 @@ VOID pantheon::InitGlobalPhyPageManagers()
  */
 pantheon::GlobalPhyPageManager *pantheon::GetGlobalPhyManager()
 {
-	return GlobalManager.Load();
+	static pantheon::GlobalPhyPageManager GlobalManager;
+	return &GlobalManager;
 }
 
 /**
@@ -303,5 +289,6 @@ pantheon::GlobalPhyPageManager *pantheon::GetGlobalPhyManager()
  */
 pantheon::GlobalPhyPageManager *pantheon::GetGlobalMMIOManager()
 {
-	return GlobalMMIOManager.Load();
+	static pantheon::GlobalPhyPageManager GlobalMMIOManager;
+	return &GlobalMMIOManager;
 }

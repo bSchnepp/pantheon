@@ -9,6 +9,7 @@ LIST(APPEND COMMON_HEADERS Sync/kern_spinlock.hpp)
 LIST(APPEND COMMON_HEADERS Sync/kern_atomic.hpp)
 LIST(APPEND COMMON_HEADERS Structures/kern_optional.hpp)
 LIST(APPEND COMMON_HEADERS Structures/kern_bitmap.hpp)
+LIST(APPEND COMMON_HEADERS Structures/kern_rawbitmap.hpp)
 
 LIST(APPEND COMMON_SOURCES kern_runtime.cpp)
 LIST(APPEND COMMON_SOURCES kern_basic_malloc.cpp)
@@ -16,6 +17,7 @@ LIST(APPEND COMMON_SOURCES kern_status.cpp)
 LIST(APPEND COMMON_SOURCES kern_string.cpp)
 LIST(APPEND COMMON_SOURCES Sync/kern_spinlock.cpp)
 LIST(APPEND COMMON_SOURCES Structures/kern_bitmap.cpp)
+LIST(APPEND COMMON_SOURCES Structures/kern_rawbitmap.cpp)
 
 INCLUDE_DIRECTORIES(../externals)
 

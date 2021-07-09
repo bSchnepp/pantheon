@@ -1,5 +1,4 @@
 #include "kern_bitmap.hpp"
-#include "kern_bitmap.hpp"
 
 #include <kern_runtime.hpp>
 #include <kern_datatypes.hpp>
@@ -22,20 +21,17 @@ pantheon::Bitmap::Bitmap(UINT64 ByteAmt)
 	Optional<void*> MaybeMem = BasicMalloc(ByteAmt);
 	if (!MaybeMem.GetOkay())
 	{
-		this->Area = nullptr;
-		this->Size = 0;
 		return;
 	}
-	this->Size = ByteAmt;
-	this->Area = (UINT8*)(MaybeMem.GetValue());
-	ClearBuffer((CHAR*)this->Area, ByteAmt);
+	this->RawArea = pantheon::RawBitmap((UINT8*)MaybeMem.GetValue(), ByteAmt);
 }
 
 pantheon::Bitmap::~Bitmap()
 {
-	if (this->Area)
+	UINT8 *Area = this->RawArea.GetAddress();
+	if (Area)
 	{
-		BasicFree(this->Area);
+		BasicFree(Area);
 	}
 }
 
@@ -47,15 +43,7 @@ pantheon::Bitmap::~Bitmap()
  */
 BOOL pantheon::Bitmap::Get(UINT64 Index)
 {
-	UINT64 Byte = Index / 8;
-	UINT8 Offset = Index % 8;
-	if (this->Size <= Byte)
-	{
-		return FALSE;
-	}
-
-	UINT8 ByteEntry = this->Area[Byte];
-	return (ByteEntry & (1 << Offset)) != 0;
+	return this->RawArea.Get(Index);
 }
 
 /**
@@ -66,11 +54,7 @@ BOOL pantheon::Bitmap::Get(UINT64 Index)
  */
 UINT8 pantheon::Bitmap::GetByte(UINT64 ByteIndex)
 {
-	if (this->Size <= ByteIndex)
-	{
-		return 0;
-	}
-	return this->Area[ByteIndex];
+	return this->RawArea.GetByte(ByteIndex);
 }
 
 /**
@@ -81,18 +65,7 @@ UINT8 pantheon::Bitmap::GetByte(UINT64 ByteIndex)
  */
 VOID pantheon::Bitmap::Set(UINT64 Index, BOOL Bit)
 {
-	UINT64 Byte = Index / 8;
-	UINT8 Offset = Index % 8;
-	if (this->Size <= Byte)
-	{
-		return;
-	}
-
-	UINT8 ByteEntry = this->Area[Byte];
-	UINT8 Bitmask = (1 << Offset);
-	ByteEntry &= ~Bitmask;
-	ByteEntry |= (Bit << Offset);
-	this->Area[Byte] = ByteEntry;
+	this->RawArea.Set(Index, Bit);
 }
 
 /**
@@ -103,7 +76,7 @@ VOID pantheon::Bitmap::Set(UINT64 Index, BOOL Bit)
 [[nodiscard]]
 UINT64 pantheon::Bitmap::GetSizeBits() const
 {
-	return this->Size * 8;
+	return this->RawArea.GetSizeBits();
 }
 
 /**
@@ -114,5 +87,5 @@ UINT64 pantheon::Bitmap::GetSizeBits() const
 [[nodiscard]]
 UINT64 pantheon::Bitmap::GetSizeBytes() const
 {
-	return this->Size;
+	return this->RawArea.GetSizeBytes();
 }
