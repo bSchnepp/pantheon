@@ -40,13 +40,14 @@ public:
 	GlobalScheduler();
 	~GlobalScheduler();
 
-	void Init();
-
 	BOOL CreateProcess(pantheon::String ProcStr, void *StartAddr);
 	VOID CreateIdleProc(void *StartAddr);
 
 	Thread* AcquireThread();
 	void ReleaseThread(Thread *T);
+
+	UINT64 NumProcs();
+	UINT64 NumThreads();
 
 private:
 	ArrayList<Process> ProcessList;

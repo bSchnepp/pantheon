@@ -5,6 +5,7 @@
 #include <arch/aarch64/thread.hpp>
 
 #include <System/Syscalls/Syscalls.hpp>
+#include <System/Memory/kern_physpaging.hpp>
 
 void createprocess_tail()
 {
@@ -77,4 +78,43 @@ extern "C" UINT64 svc_LogText(const CHAR *Text)
 VOID PerCoreBoardInit()
 {
 	
+}
+
+
+pantheon::vmm::PageTableEntry pantheon::vmm::CreateEntry(
+	const PageTableEntry *NextLevel, 
+	PageGranularity Size, 
+	PageAccessor Accessor, 
+	UINT64 Permission, 
+	PageSharableType Sharable, 
+	PageTypeMMIOAccessor MMIOType)
+{
+	pantheon::vmm::PageTableEntry Entry = 0;
+
+	UINT64 FinalAddr = (UINT64)NextLevel;
+	FinalAddr &= ~0xFFFULL;			/* Wipe lower bits */
+	FinalAddr &= ~(0x1FFEULL << 52);	/* Wipe upper bits */
+	Entry |= FinalAddr;			/* And write the address in */
+
+	/* For each attribute given, also put that in. */
+	Entry |= Size;
+	Entry |= Accessor;
+	Entry |= Permission;
+	Entry |= Sharable;
+	Entry |= MMIOType;
+
+	return Entry;
+}
+
+pantheon::vmm::PageTable *pantheon::vmm::CreateBasicPageTables()
+{
+	Optional<UINT64> MaybeAddr = pantheon::GetGlobalPhyManager()->FindAndClaimFirstFreeAddress();
+	if (!MaybeAddr.GetOkay())
+	{
+		return nullptr;
+	}
+	
+	auto *Table = (pantheon::vmm::PageTable *)(MaybeAddr.GetValue());
+	ClearBuffer((CHAR*)Table, pantheon::PhyPageManager::PageSize());
+	return Table;
 }

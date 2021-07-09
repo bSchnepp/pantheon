@@ -52,13 +52,17 @@ public:
 	Optional<UINT64> FindAndClaimFirstFreeAddress();
 
 	UINT64 HighestAddress();
+	UINT64 NumAreas();
+
+	VOID Init();
 
 private:
 	pantheon::Spinlock GlobalAccessorLock;
 	ArrayList<PhyPageManager> Managers;
 };
 
-VOID InitGlobalPhyPageManagers();
+VOID InitPMMManagers();
+
 GlobalPhyPageManager *GetGlobalPhyManager();
 GlobalPhyPageManager *GetGlobalMMIOManager();
 

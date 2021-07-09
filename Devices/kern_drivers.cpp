@@ -141,18 +141,18 @@ void DriverHandleDTB(const CHAR *DriverName, DeviceTreeBlob *CurState)
 
 			for (UINT32 Index = 0; Index < AddressCells; ++Index)
 			{
-				Address <<= sizeof(UINT32);
+				Address <<= sizeof(UINT32) * 8;
 				Address += Values[Index];
 			}
 
 			for (UINT32 Index = 0; Index < SizeCells; ++Index)
 			{
-				Size <<= sizeof(UINT32);
+				Size <<= sizeof(UINT32) * 8;
 				Size += Values[AddressCells + Index];
 			}
 
-			pantheon::GlobalPhyPageManager *Mgr = pantheon::GetGlobalPhyManager();
-			Mgr->AddArea(Address, Size);
+			Size /= pantheon::PhyPageManager::PageSize();
+			pantheon::GetGlobalPhyManager()->AddArea(Address, Size);
 		}
 	}
 	else if (*DriverName == '\0')
@@ -191,14 +191,14 @@ void FiniDriver(const CHAR *DriverName, UINT64 Address)
 		for (UINT8 Index = 0; Index < 255; ++Index)
 		{
 			/* Allocate 256K of stack */
-			Optional<void*> MaybeStack = BasicMalloc(256 * 1024);
+			Optional<void*> MaybeStack = BasicMalloc(32 * 1024);
 			if (!MaybeStack.GetOkay())
 			{
 				break;
 			}
 
 			UINT64 StackPtr = (UINT64)(MaybeStack());
-			StackPtr += 256 * 1024;
+			StackPtr += 32 * 1024;
 			INT32 Result = psci::PSCICpuOn(Index, (UINT64)asm_kern_init_core, StackPtr);
 			
 			/* Then there are no more CPUs on this node. */

@@ -11,6 +11,7 @@ class Bitmap
 public:
 	Bitmap();
 	Bitmap(UINT64 ByteAmount);
+	Bitmap(const Bitmap &Other);
 	~Bitmap();
 
 	BOOL Get(UINT64 Index);
@@ -20,6 +21,12 @@ public:
 
 	[[nodiscard]] UINT64 GetSizeBits() const;
 	[[nodiscard]] UINT64 GetSizeBytes() const;
+
+	VOID Copy(const Bitmap &Other);
+	VOID Move(Bitmap &Other);
+
+	Bitmap &operator=(const Bitmap &Other);
+	Bitmap &operator=(Bitmap &&Other) noexcept;
 
 private:
 	UINT64 Size;

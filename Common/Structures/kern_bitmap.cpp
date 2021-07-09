@@ -31,12 +31,62 @@ pantheon::Bitmap::Bitmap(UINT64 ByteAmt)
 	ClearBuffer((CHAR*)this->Area, ByteAmt);
 }
 
+pantheon::Bitmap::Bitmap(const pantheon::Bitmap &Other)
+{
+	this->Copy(Other);
+}
+
 pantheon::Bitmap::~Bitmap()
 {
 	if (this->Area)
 	{
 		BasicFree(this->Area);
 	}
+}
+
+VOID pantheon::Bitmap::Copy(const pantheon::Bitmap &Other)
+{
+	Optional<void*> MaybeMem = BasicMalloc(Other.Size);
+	if (!MaybeMem.GetOkay())
+	{
+		this->Area = nullptr;
+		this->Size = 0;
+		return;
+	}
+	this->Size = Other.Size;
+	this->Area = (UINT8*)(MaybeMem.GetValue());
+	CopyMemory(this->Area, Other.Area, this->Size);
+}
+
+VOID pantheon::Bitmap::Move(pantheon::Bitmap &Other)
+{
+	this->Area = Other.Area;
+	this->Size = Other.Size;
+
+	Other.Area = nullptr;
+	Other.Size = 0;
+}
+
+pantheon::Bitmap &pantheon::Bitmap::operator=(const pantheon::Bitmap &Other)
+{
+	if (this == &Other)
+	{
+		return *this;
+	}
+
+	this->Copy(Other);
+	return *this;
+}
+
+pantheon::Bitmap &pantheon::Bitmap::operator=(pantheon::Bitmap &&Other) noexcept
+{
+	if (this == &Other)
+	{
+		return *this;
+	}
+
+	this->Move(Other);
+	return *this;
 }
 
 /**

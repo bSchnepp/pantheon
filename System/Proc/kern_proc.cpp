@@ -39,7 +39,7 @@ pantheon::Process::Process(const Process &Other) noexcept
 	this->PID = Other.PID;
 	this->Priority = Other.Priority;
 	this->ProcessCommand = Other.ProcessCommand;
-	this->Threads.Copy(Other.Threads);
+	this->Threads = ArrayList<pantheon::Thread>(Other.Threads);
 	this->InactiveTIDCount = Other.InactiveTIDCount;
 }
 
@@ -68,7 +68,7 @@ pantheon::Process &pantheon::Process::operator=(const pantheon::Process &Other)
 	this->PID = Other.PID;
 	this->Priority = Other.Priority;
 	this->ProcessCommand = Other.ProcessCommand;
-	this->Threads = Other.Threads;
+	this->Threads = ArrayList<pantheon::Thread>(Other.Threads);
 	this->InactiveTIDCount = Other.InactiveTIDCount;
 	return *this;
 }
@@ -102,7 +102,7 @@ UINT64 pantheon::Process::NumThreads() const
 
 [[nodiscard]] UINT64 pantheon::Process::DefaultThreadStackSize()
 {
-	return 128 * 1024;
+	return 32 * 1024;
 }
 
 BOOL pantheon::Process::CreateThread(void *StartAddr, void *ThreadData)

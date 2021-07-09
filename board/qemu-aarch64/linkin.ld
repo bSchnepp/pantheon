@@ -3,7 +3,10 @@ ENTRY(_cpu_start)
 SECTIONS
 {
 	/* aarch64 load address */
-	. = 0x80000 + 0x40000000;
+	. = 0x40000000;
+	MEMSTART = .;
+
+	. += 0x80000;
 
 	. = ALIGN(4096);
 	kern_begin = .;
@@ -48,7 +51,7 @@ SECTIONS
 	kern_stack_begin = .;
 	.kern_stack :
 	{
-		. += 2 * 1024 * 1024;
+		. += 128 * 1024;
 	}
 	kern_stack_end = .;
 	kern_stack_size = kern_stack_end - kern_stack_begin;

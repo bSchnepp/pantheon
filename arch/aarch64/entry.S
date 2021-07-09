@@ -32,11 +32,11 @@ asm_kern_init_core:
 	b _hang
 
 _zero_bss:
-	cbz w2, _zero_bss_end
-	str xzr, [x1], #8
-	sub w2, w2, #1
-	cbnz w2, _zero_bss
-	
+	cmp x2, #1
+	blt _zero_bss_end
+	subs x2, x2, #1
+	strb wzr, [x1], #1
+	b _zero_bss
 _zero_bss_end:
 	ret
 

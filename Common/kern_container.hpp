@@ -11,6 +11,7 @@ typedef void (*AllocatorFreeFn)(void*);
 template<typename T>
 struct ArrayListIterator
 {
+	ArrayListIterator() : ArrayListIterator(nullptr){};
 	ArrayListIterator(T *Ptr) : Loc(Ptr){};
 
 	T &operator*() 
@@ -80,6 +81,12 @@ public:
 		Other.EntryCount = 0;		
 	}
 
+	ArrayList(const ArrayList &Other) noexcept
+	{
+		*this = ArrayList<T>(1);
+		this->Copy(Other);
+	}
+
 	~ArrayList()
 	{
 		if (this->Content)
@@ -145,6 +152,14 @@ public:
 
 	void Clear()
 	{
+		if (this->Content)
+		{
+			for (T &Item : *this)
+			{
+				Item.~T();
+			}
+			ClearBuffer((CHAR*)this->Content, sizeof(T) * this->SpaceCount);
+		}
 	}
 
 	void Copy(const ArrayList<T> &Other) noexcept
@@ -155,30 +170,23 @@ public:
 		}
 
 		this->Clear();
-		
-		if (this->Content && this->Free)
+		if (this->SpaceCount < Other.EntryCount)
 		{
 			this->Free(this->Content);
-
-			this->SpaceCount = 0;
-			this->EntryCount = 0;
-			this->Content = nullptr;
+			auto MaybeMem = Other.Malloc(Other.EntryCount * sizeof(T));
+			if (MaybeMem.GetOkay())
+			{
+				this->Content = (T*)MaybeMem.GetValue();
+			}
+			this->SpaceCount = Other.SpaceCount;
 		}
-
+		this->EntryCount = Other.EntryCount;
 		this->Malloc = Other.Malloc;
 		this->Free = Other.Free;
 
-		auto MaybeMem = this->Malloc(Other.EntryCount * sizeof(T));
-		if (MaybeMem.GetOkay())
+		for (UINT64 Index = 0; Index < Other.EntryCount; ++Index)
 		{
-			T* NewArea = (T*)MaybeMem.GetValue();
-			for (UINT64 Index = 0; Index < Other.EntryCount; ++Index)
-			{
-				NewArea[Index] = Other.Content[Index];
-			}
-			this->Content = NewArea;
-			this->SpaceCount = Other.SpaceCount;
-			this->EntryCount = Other.EntryCount;
+			this->Content[Index] = Other.Content[Index];
 		}
 	}
 
@@ -215,6 +223,11 @@ public:
 
 	void Add(T NewItem)
 	{
+		if (this->Content == nullptr)
+		{
+			*this = ArrayList<T>(1);
+		}
+
 		if (EntryCount + 1 < SpaceCount)
 		{
 			this->Content[this->EntryCount] = NewItem;
@@ -223,8 +236,7 @@ public:
 		}
 		
 		/* If it couldn't fit, expand the storage */
-		this->SpaceCount *= 2;
-		this->SpaceCount++;
+		this->SpaceCount += 10;
 		auto MaybeMem = this->Malloc(sizeof(T) * this->SpaceCount);
 		if (MaybeMem.GetOkay())
 		{
@@ -234,7 +246,11 @@ public:
 				T &Current = this->Content[Index];
 				NewContent[Index] = Current;
 			}
-			this->Clear();
+
+			for (T &Item : *this)
+			{
+				Item.~T();
+			}
 			this->Free(this->Content);
 			this->Content = NewContent;
 			this->Add(NewItem);
@@ -252,13 +268,15 @@ public:
 		if (MaybeMem.GetOkay())
 		{
 			T* NewContent = (T*)MaybeMem.GetValue();
-			for (UINT64 SIndex = 0; SIndex < Index; ++SIndex)
+			UINT64 NewIndex = 0;
+			for (UINT64 OrigIndex = 0; OrigIndex < this->EntryCount; ++OrigIndex)
 			{
-				NewContent[SIndex] = this->Content[SIndex];
-			}
-			for (UINT64 SIndex = Index + 1; SIndex < this->EntryCount; ++SIndex)
-			{
-				NewContent[SIndex-1] = this->Content[SIndex];
+				NewContent[NewIndex] = this->Content[OrigIndex];
+				if (OrigIndex == Index)
+				{
+					continue;
+				}
+				NewIndex++;
 			}
 			this->Clear();
 			this->Free(this->Content);
@@ -268,11 +286,19 @@ public:
 
 	ArrayListIterator<T> begin()
 	{
+		if (this->EntryCount == 0)
+		{
+			return ArrayListIterator<T>();
+		}
 		return ArrayListIterator<T>(this->Content);
 	}
 
 	ArrayListIterator<T> end()
 	{
+		if (this->EntryCount == 0)
+		{
+			return ArrayListIterator<T>();
+		}
 		return ArrayListIterator<T>(&(this->Content[this->EntryCount]));
 	}
 

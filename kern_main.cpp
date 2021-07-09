@@ -161,7 +161,21 @@ void kern_init_core()
 #ifndef ONLY_TESTS
 extern "C" UINT64 kern_begin;
 extern "C" UINT64 kern_end;
+extern "C" UINT64 MEMSTART;
+void init_pmm()
+{
+	/* Ensure the kernel isn't erroneusly overwritten. */
+	auto *PhyMgr = pantheon::GetGlobalPhyManager();
+	UINT64 PageSize = pantheon::PhyPageManager::PageSize();
+	UINT64 Start = Align((UINT64)(&MEMSTART), (UINT64)PageSize) - PageSize;
+	UINT64 End = Align((UINT64)(&kern_begin), (UINT64)PageSize) + (2 * PageSize);
 
+	for (UINT64 Index = Start; Index <= End; Index += PageSize)
+	{
+		PhyMgr->ClaimAddress(Index);
+	}
+}
+#else
 void init_pmm()
 {
 
@@ -176,17 +190,13 @@ void kern_init(fdt_header *dtb)
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);
 
 		/* The most basic kernel initialization should be done here. */
-		pantheon::InitGlobalPhyPageManagers();
-
 		BoardInit();
+		pantheon::InitPMMManagers();
 		Initialize(dtb);
 
 		init_pmm();
+		pantheon::vmm::CreateBasicPageTables();
 
-		pantheon::vmm::PageTable *InitTable = pantheon::vmm::CreateBasicPageTables();
-		PANTHEON_UNUSED(InitTable);
-
-		pantheon::GetGlobalScheduler()->Init();
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_SECOND_STAGE);
 
 		/* Create an extra idle thread to ensure rescheduling happens */

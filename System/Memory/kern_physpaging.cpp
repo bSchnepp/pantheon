@@ -101,14 +101,16 @@ Optional<UINT64> pantheon::PhyPageManager::FindFreeAddress()
  */
 VOID pantheon::PhyPageManager::FreeAddress(UINT64 Addr)
 {
-	UINT64 AddrDivisor = pantheon::PhyPageManager::PageSize();
-	this->UsedPages.Set((Addr - this->BaseAddress) / AddrDivisor, FALSE);
+	UINT64 ToRelAddr = Addr - this->BaseAddress;
+	UINT64 ToPageNo = ToRelAddr / pantheon::PhyPageManager::PageSize();
+	this->UsedPages.Set(ToPageNo, FALSE);
 }
 
 BOOL pantheon::PhyPageManager::CheckClaimed(UINT64 Addr)
 {
-	UINT64 AddrDivisor = pantheon::PhyPageManager::PageSize();
-	return this->UsedPages.Get((Addr - this->BaseAddress) / AddrDivisor);
+	UINT64 ToRelAddr = Addr - this->BaseAddress;
+	UINT64 ToPageNo = ToRelAddr / pantheon::PhyPageManager::PageSize();
+	return this->UsedPages.Get(ToPageNo);
 }
 
 /**
@@ -118,8 +120,9 @@ BOOL pantheon::PhyPageManager::CheckClaimed(UINT64 Addr)
  */
 VOID pantheon::PhyPageManager::ClaimAddress(UINT64 Addr)
 {
-	UINT64 AddrDivisor = pantheon::PhyPageManager::PageSize();
-	this->UsedPages.Set((Addr - this->BaseAddress) / AddrDivisor, TRUE);
+	UINT64 ToRelAddr = Addr - this->BaseAddress;
+	UINT64 ToPageNo = ToRelAddr / pantheon::PhyPageManager::PageSize();
+	this->UsedPages.Set(ToPageNo, TRUE);
 }
 
 /**
@@ -175,8 +178,8 @@ BOOL pantheon::GlobalPhyPageManager::CheckClaimed(UINT64 Address)
 	{
 		Present |= Mgr.CheckClaimed(Address);
 	}
-	return Present;
 	GlobalAccessorLock.Release();
+	return Present;
 }
 
 /**
@@ -192,6 +195,7 @@ Optional<UINT64> pantheon::GlobalPhyPageManager::FindFreeAddress()
 		Optional<UINT64> Addr = Manager.FindFreeAddress();
 		if (Addr.GetOkay())
 		{
+			GlobalAccessorLock.Release();
 			return Addr;
 		}
 	}
@@ -216,6 +220,7 @@ Optional<UINT64> pantheon::GlobalPhyPageManager::FindAndClaimFirstFreeAddress()
 		if (Addr.GetOkay())
 		{
 			Manager.ClaimAddress(Addr.GetValue());
+			GlobalAccessorLock.Release();
 			return Addr;
 		}
 	}
@@ -267,23 +272,19 @@ VOID pantheon::GlobalPhyPageManager::ClaimAddress(UINT64 Addr)
 	GlobalAccessorLock.Release();
 }
 
-static pantheon::Atomic<pantheon::GlobalPhyPageManager*> GlobalManager = nullptr;
-static pantheon::Atomic<pantheon::GlobalPhyPageManager*> GlobalMMIOManager = nullptr;
+static pantheon::GlobalPhyPageManager GlobalMgr;
+static pantheon::GlobalPhyPageManager GlobalMMIOMgr;
 
-VOID pantheon::InitGlobalPhyPageManagers()
+VOID pantheon::GlobalPhyPageManager::Init()
 {
-	if (!GlobalManager.Load())
-	{
-		auto MemMgr = (pantheon::GlobalPhyPageManager*)BasicMalloc(sizeof(pantheon::GlobalPhyPageManager))();
-		*MemMgr = pantheon::GlobalPhyPageManager();
-		GlobalManager.Store(MemMgr);
-	}
-	if (!GlobalMMIOManager.Load())
-	{
-		auto MemMgr = (pantheon::GlobalPhyPageManager*)BasicMalloc(sizeof(pantheon::GlobalPhyPageManager))();
-		*MemMgr = pantheon::GlobalPhyPageManager();
-		GlobalMMIOManager.Store(MemMgr);
-	}
+	this->GlobalAccessorLock = pantheon::Spinlock();
+	this->Managers = ArrayList<pantheon::PhyPageManager>();
+}
+
+VOID pantheon::InitPMMManagers()
+{
+	GlobalMgr.Init();
+	GlobalMMIOMgr.Init();
 }
 
 /**
@@ -293,7 +294,7 @@ VOID pantheon::InitGlobalPhyPageManagers()
  */
 pantheon::GlobalPhyPageManager *pantheon::GetGlobalPhyManager()
 {
-	return GlobalManager.Load();
+	return &GlobalMgr;
 }
 
 /**
@@ -303,5 +304,31 @@ pantheon::GlobalPhyPageManager *pantheon::GetGlobalPhyManager()
  */
 pantheon::GlobalPhyPageManager *pantheon::GetGlobalMMIOManager()
 {
-	return GlobalMMIOManager.Load();
+	return &GlobalMMIOMgr;
+}
+
+UINT64 pantheon::GlobalPhyPageManager::HighestAddress()
+{
+	GlobalAccessorLock.Acquire();
+	UINT64 Highest = 0;
+	for (auto &Mgr : this->Managers)
+	{
+		UINT64 CurHighest = Mgr.BaseAddr();
+		CurHighest += (pantheon::PhyPageManager::PageSize() * Mgr.NumPages());
+		if (CurHighest > Highest)
+		{
+			Highest = CurHighest;
+		}
+	}
+	GlobalAccessorLock.Release();
+	return Highest;
+}
+
+UINT64 pantheon::GlobalPhyPageManager::NumAreas()
+{
+	UINT64 Size = 0;
+	GlobalAccessorLock.Acquire();
+	Size = this->Managers.Size();
+	GlobalAccessorLock.Release();
+	return Size;
 }

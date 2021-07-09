@@ -45,6 +45,11 @@ extern "C" void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New,
  */
 void pantheon::Scheduler::Reschedule()
 {
+	if (pantheon::GetGlobalScheduler()->NumThreads() == 0)
+	{
+		return;
+	}
+
 	/* Don't allow interrupts while a process is getting scheduled */
 	pantheon::CPU::CLI();
 
@@ -104,8 +109,8 @@ void pantheon::Scheduler::SignalReschedule()
 
 pantheon::GlobalScheduler::GlobalScheduler()
 {
-	/* NYI */
-	this->Init();
+	this->ProcessList = ArrayList<Process>(5);
+	this->ProcessList.Add(pantheon::Process());
 }
 
 pantheon::GlobalScheduler::~GlobalScheduler()
@@ -142,13 +147,6 @@ BOOL pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *St
 
 	pantheon::CPU::STI();
 	return Val;
-}
-
-
-VOID pantheon::GlobalScheduler::Init()
-{
-	this->ProcessList = ArrayList<Process>();
-	this->ProcessList.Add(pantheon::Process());
 }
 
 VOID pantheon::GlobalScheduler::CreateIdleProc(void *StartAddr)
@@ -221,7 +219,6 @@ void pantheon::GlobalScheduler::ReleaseThread(Thread *T)
 
 static pantheon::Spinlock ThreadIDLock;
 static pantheon::Spinlock ProcIDLock;
-static pantheon::GlobalScheduler GlobalSched;
 
 UINT32 pantheon::AcquireProcessID()
 {
@@ -255,5 +252,21 @@ UINT64 pantheon::AcquireThreadID()
 
 pantheon::GlobalScheduler *pantheon::GetGlobalScheduler()
 {
+	static pantheon::GlobalScheduler GlobalSched;
 	return &GlobalSched;
+}
+
+UINT64 pantheon::GlobalScheduler::NumProcs()
+{
+	return this->ProcessList.Size();
+}
+
+UINT64 pantheon::GlobalScheduler::NumThreads()
+{
+	UINT64 Total = 0;
+	for (pantheon::Process &Proc : this->ProcessList)
+	{
+		Total += Proc.NumThreads();
+	}
+	return Total;
 }
