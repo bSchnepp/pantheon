@@ -11,6 +11,7 @@ typedef void (*AllocatorFreeFn)(void*);
 template<typename T>
 struct ArrayListIterator
 {
+	ArrayListIterator() : ArrayListIterator(nullptr){};
 	ArrayListIterator(T *Ptr) : Loc(Ptr){};
 
 	T &operator*() 
@@ -268,11 +269,19 @@ public:
 
 	ArrayListIterator<T> begin()
 	{
+		if (this->EntryCount == 0)
+		{
+			return ArrayListIterator<T>();
+		}
 		return ArrayListIterator<T>(this->Content);
 	}
 
 	ArrayListIterator<T> end()
 	{
+		if (this->EntryCount == 0)
+		{
+			return ArrayListIterator<T>();
+		}
 		return ArrayListIterator<T>(&(this->Content[this->EntryCount]));
 	}
 

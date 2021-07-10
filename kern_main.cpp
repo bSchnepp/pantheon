@@ -166,6 +166,11 @@ void init_pmm()
 {
 
 }
+#else
+void init_pmm()
+{
+
+}
 #endif
 
 void kern_init(fdt_header *dtb)
@@ -182,9 +187,6 @@ void kern_init(fdt_header *dtb)
 		Initialize(dtb);
 
 		init_pmm();
-
-		pantheon::vmm::PageTable *InitTable = pantheon::vmm::CreateBasicPageTables();
-		PANTHEON_UNUSED(InitTable);
 
 		pantheon::GetGlobalScheduler()->Init();
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_SECOND_STAGE);
