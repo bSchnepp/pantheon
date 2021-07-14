@@ -173,8 +173,10 @@ void init_pmm()
 }
 #endif
 
-void kern_init(fdt_header *dtb)
+void kern_init(fdt_header *dtb, void *initial_load_addr)
 {
+	PANTHEON_UNUSED(initial_load_addr);
+	
 	pantheon::CPU::CLI();
 	if (pantheon::CPU::GetProcessorNumber() == 0)
 	{

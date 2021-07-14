@@ -59,4 +59,9 @@ PageTable *CreateBasicPageTables();
 
 }
 
+extern "C" VOID write_ttbr0_el1(UINT64 Val);
+extern "C" VOID write_ttbr1_el1(UINT64 Val);
+
+extern "C" void initial_paging(void *initial_address);
+
 #endif

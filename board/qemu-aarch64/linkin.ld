@@ -42,6 +42,16 @@ SECTIONS
 		*(.bss*)
 	}
 	bss_end = .;
+
+	. = ALIGN(4096);
+	TTBR0_AREA = .;
+	. += 4096;
+	TTBR1_AREA = .;
+	. += 4096;
+	TTL2_AREA = .;
+	. += 4096;
+	TTL3_AREA = .;
+	. += 4096;
 	bss_size = bss_end - bss_begin;
 
 	/* Hack for now to make this work for us. */
