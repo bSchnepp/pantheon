@@ -25,6 +25,11 @@ _cpu_start:
 	adrp x0, kern_stack_end
 	add x0, x0, :lo12:kern_stack_end
 	mov sp, x0
+
+	/* If this is not core/thread 0, dont clear bss again */
+	mrs x0, mpidr_el1
+	and x0, x0, #0xFF
+	cbnz x0, go_kern_main
 	
 	/* x0 and x1 are unused. */
 	adrp x0, bss_begin
@@ -35,6 +40,7 @@ _cpu_start:
 	sub x1, x1, x0
 	bl _zero_bss
 
+go_kern_main:
 	adrp x1, dtb_ptr
 	add x1, x1, :lo12:dtb_ptr
 	ldr x0, [x1]
