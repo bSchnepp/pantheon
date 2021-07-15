@@ -50,18 +50,80 @@ typedef enum PageTypeMMIOAccessor : UINT64
 	PAGE_TYPE_MMIO_ACCESSOR_NO_CACHE = (0b10ULL << 2),
 }PageTypeMMIOAccessor;
 
+typedef enum MAIREntry
+{
+	MAIREntry_0 = (0b000 << 2),
+	MAIREntry_1 = (0b001 << 2),
+	MAIREntry_2 = (0b010 << 2),
+	MAIREntry_3 = (0b011 << 2),
+	MAIREntry_4 = (0b100 << 2),
+	MAIREntry_5 = (0b101 << 2),
+	MAIREntry_6 = (0b110 << 2),
+	MAIREntry_7 = (0b111 << 2),
+}MAIREntry;
+
 typedef UINT64 PageTableEntry;
-typedef PageTableEntry PageTable[512];
 
 PageTableEntry CreateEntry(const PageTableEntry *NextLevel, PageGranularity Size, PageAccessor Accessor, UINT64 Permission, PageSharableType Sharable, PageTypeMMIOAccessor MMIOType);
 
-PageTable *CreateBasicPageTables();
+}
 
+
+constexpr UINT64 IdentityAttributes()
+{
+	UINT64 IdentityFlags = 0;
+	IdentityFlags |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_USER;
+	IdentityFlags |= pantheon::vmm::PAGE_ACCESSOR_KERNEL;
+	IdentityFlags |= pantheon::vmm::PAGE_SHARABLE_TYPE_INNER;
+	IdentityFlags |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_KERN;
+	IdentityFlags |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_USER;
+	IdentityFlags |= pantheon::vmm::PAGE_GRANULARITY_PAGE;
+	IdentityFlags |= pantheon::vmm::MAIREntry_0;
+	return IdentityFlags;
+}
+
+constexpr UINT64 TextAttributes()
+{
+	UINT64 TextFlags = 0;
+	TextFlags |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_USER;
+	TextFlags |= pantheon::vmm::PAGE_ACCESSOR_KERNEL;
+	TextFlags |= pantheon::vmm::PAGE_SHARABLE_TYPE_INNER;
+	TextFlags |= pantheon::vmm::PAGE_PERMISSION_READ_ONLY_KERN;
+	TextFlags |= pantheon::vmm::PAGE_PERMISSION_READ_ONLY_USER;
+	TextFlags |= pantheon::vmm::PAGE_GRANULARITY_PAGE;
+	TextFlags |= pantheon::vmm::MAIREntry_0;
+	return TextFlags;
+}
+
+constexpr UINT64 RodataAttributes()
+{
+	UINT64 RodataFlags = 0;
+	RodataFlags |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_USER;
+	RodataFlags |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_KERN;
+	RodataFlags |= pantheon::vmm::PAGE_ACCESSOR_KERNEL;
+	RodataFlags |= pantheon::vmm::PAGE_SHARABLE_TYPE_INNER;
+	RodataFlags |= pantheon::vmm::PAGE_PERMISSION_READ_ONLY_KERN;
+	RodataFlags |= pantheon::vmm::PAGE_PERMISSION_READ_ONLY_USER;
+	RodataFlags |= pantheon::vmm::PAGE_GRANULARITY_PAGE;
+	RodataFlags |= pantheon::vmm::MAIREntry_0;
+	return RodataFlags;
+}
+
+constexpr UINT64 DataAttributes()
+{
+	UINT64 DataFlags = 0;
+	DataFlags |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_USER;
+	DataFlags |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_KERN;
+	DataFlags |= pantheon::vmm::PAGE_ACCESSOR_KERNEL;
+	DataFlags |= pantheon::vmm::PAGE_SHARABLE_TYPE_INNER;
+	DataFlags |= pantheon::vmm::PAGE_PERMISSION_READ_ONLY_USER;
+	DataFlags |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_KERN;
+	DataFlags |= pantheon::vmm::PAGE_GRANULARITY_PAGE;
+	DataFlags |= pantheon::vmm::MAIREntry_0;
+	return DataFlags;
 }
 
 extern "C" VOID write_ttbr0_el1(UINT64 Val);
 extern "C" VOID write_ttbr1_el1(UINT64 Val);
-
-extern "C" void initial_paging(void *initial_address);
 
 #endif

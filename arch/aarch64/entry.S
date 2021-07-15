@@ -1,6 +1,5 @@
 .section ".text.early"
 
-
 .globl _cpu_start
 .globl asm_kern_init_core
 .globl CallHVC
@@ -14,30 +13,34 @@ _cpu_start:
 	/* x0 must be preserved and passed to the kernel proper. */
 	adr x20, .
 
-	ldr x1, =dtb_ptr
+	adrp x1, dtb_ptr
+	add x1, x1, :lo12:dtb_ptr
 	str x0, [x1]
 
-	ldr x1, =initial_addr
+	adrp x1, initial_addr
+	add x1, x1, :lo12:initial_addr
 	str x20, [x1]
 
 	/* Set up the stack */
-	ldr x0, =kern_stack_end
+	adrp x0, kern_stack_end
+	add x0, x0, :lo12:kern_stack_end
 	mov sp, x0
 	
 	/* x0 and x1 are unused. */
-	ldr x0, =bss_begin
-	ldr x1, =bss_end
+	adrp x0, bss_begin
+	add x0, x0, :lo12:bss_begin
+	adrp x1, bss_end
+	add x1, x1, :lo12:bss_end
+
 	sub x1, x1, x0
 	bl _zero_bss
 
-	ldr x1, =initial_addr
-	ldr x0, [x1]
-	bl initial_paging
-
-	ldr x1, =dtb_ptr
+	adrp x1, dtb_ptr
+	add x1, x1, :lo12:dtb_ptr
 	ldr x0, [x1]
 
-	ldr x2, =initial_addr
+	adrp x2, initial_addr
+	add x1, x1, :lo12:initial_addr
 	ldr x1, [x2]
 
 	bl kern_init
