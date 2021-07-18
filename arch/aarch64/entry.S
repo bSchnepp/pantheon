@@ -5,8 +5,8 @@
 .globl CallHVC
 .globl CallSMC
 
+.extern BootInit
 .extern kern_init
-.extern initial_paging
 
 _cpu_start:
 	/* TODO: Handle spinloop initialization (ala rpi) */
@@ -36,8 +36,6 @@ _cpu_start:
 	add x0, x0, :lo12:bss_begin
 	adrp x1, bss_end
 	add x1, x1, :lo12:bss_end
-
-	sub x1, x1, x0
 	bl _zero_bss
 
 go_kern_main:
@@ -49,6 +47,15 @@ go_kern_main:
 	add x1, x1, :lo12:initial_addr
 	ldr x1, [x2]
 
+	ldr x2, =_cpu_start
+	bl BootInit
+
+
+	adrp x2, initial_addr
+	add x1, x1, :lo12:initial_addr
+	ldr x0, [x2]
+
+	ldr x1, =_cpu_start
 	bl kern_init
 	b _hang
 
@@ -61,10 +68,11 @@ asm_kern_init_core:
 	b _hang
 
 _zero_bss:
-	cbz w2, _zero_bss_end
-	str xzr, [x1], #8
-	sub w2, w2, #1
-	cbnz w2, _zero_bss
+	cmp x0, x1
+	beq _zero_bss_end
+	str xzr, [x0]
+	add x0, x0, #8
+	b _zero_bss
 	
 _zero_bss_end:
 	ret

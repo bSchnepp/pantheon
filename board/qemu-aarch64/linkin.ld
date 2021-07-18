@@ -73,8 +73,8 @@ SECTIONS
 	TTL3_AREA = .;
 	. += 4096;
 
-	bss_end = .;
 	. = ALIGN(64 * 1024);
+	bss_end = .;
 	bss_size = bss_end - bss_begin;
 
 	. += 0x1000;	/* Add extra space just in case... */
