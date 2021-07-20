@@ -4,9 +4,6 @@
 
 #include <Common/Sync/kern_atomic.hpp>
 
-
-static pantheon::Atomic<BOOL> InterruptsEnabled[256];
-
 UINT8 pantheon::CPU::GetProcessorNumber()
 {
 	UINT64 RetVal = 0;
@@ -16,24 +13,12 @@ UINT8 pantheon::CPU::GetProcessorNumber()
 
 VOID pantheon::CPU::CLI()
 {
-	UINT8 ProcNum = pantheon::CPU::GetProcessorNumber();
-	if (InterruptsEnabled[ProcNum].Load() == FALSE)
-	{
-		return;
-	}
 	pantheon::arm::CLI();
-	InterruptsEnabled[ProcNum].Store(FALSE);
 }
 
 VOID pantheon::CPU::STI()
 {
-	UINT8 ProcNum = pantheon::CPU::GetProcessorNumber();
-	if (InterruptsEnabled[ProcNum].Load() == TRUE)
-	{
-		return;
-	}
 	pantheon::arm::STI();
-	InterruptsEnabled[ProcNum].Store(TRUE);
 }
 
 VOID pantheon::CPU::PAUSE()
