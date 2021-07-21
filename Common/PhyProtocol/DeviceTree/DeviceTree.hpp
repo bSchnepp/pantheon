@@ -71,8 +71,17 @@ public:
 
 	void NodeNameToAddress(CHAR *Buffer, CHAR *DeviceType, UINT64 DeviceTypeBufferSpace, UINT64 *Address);
 
+	[[nodiscard]] UINT64 AddressCells() const;
+	[[nodiscard]] UINT64 SizeCells() const;
+
+	void SetAddressCells(UINT64 Amt);
+	void SetSizeCells(UINT64 Amt);
+
 private:
 	UINT64 StructIndex;
+
+	UINT64 AddressCellsAmt;
+	UINT64 SizeCellsAmt;
 
 	BEIntegerU32 *rsmvm_ptr;
 	CHAR *strings_ptr;

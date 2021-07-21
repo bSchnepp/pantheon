@@ -14,12 +14,6 @@
 #include <Common/PhyProtocol/PSCI/PSCI.hpp>
 #include <Common/PhyProtocol/DeviceTree/DeviceTree.hpp>
 
-#include <System/Memory/kern_physpaging.hpp>
-
-
-static UINT32 SizeCells = 0;
-static UINT32 AddressCells = 0;
-
 static BOOL UseGIC = FALSE;
 static BOOL UseECAM = FALSE;
 
@@ -104,57 +98,6 @@ void DriverHandleDTB(const CHAR *DriverName, DeviceTreeBlob *CurState)
 			}
 		}		
 	}
-	else if (StringCompare(DriverName, ("memory"), 6))
-	{
-		UINT64 Offset = CurState->GetPropStructNameIndex();
-		CHAR Buffer[512];
-		CHAR Buffer2[512];
-		for (UINT32 Index = 0; Index < 512; ++Index)
-		{
-			Buffer[Index] = '\0';
-			Buffer2[Index] = '\0';
-		}
-		CurState->CopyStringFromOffset(Offset, Buffer, 512);
-
-		if (StringCompare(Buffer, ("reg"), 9))
-		{
-			/* Assume we'll never need more...? */
-			UINT32 Values[64 * 64];
-
-			if (SizeCells > 64)
-			{
-				SizeCells = 64;
-			}
-
-			if (AddressCells > 64)
-			{
-				AddressCells = 64;
-			}
-
-			for (UINT32 TotalOffset = 0; TotalOffset < SizeCells * AddressCells; ++TotalOffset)
-			{
-				CurState->CopyU32FromStructPropNode(&Values[TotalOffset], TotalOffset);
-			}
-
-			UINT64 Address = 0;
-			UINT64 Size = 0;
-
-			for (UINT32 Index = 0; Index < AddressCells; ++Index)
-			{
-				Address <<= sizeof(UINT32);
-				Address += Values[Index];
-			}
-
-			for (UINT32 Index = 0; Index < SizeCells; ++Index)
-			{
-				Size <<= sizeof(UINT32);
-				Size += Values[AddressCells + Index];
-			}
-
-			pantheon::GlobalPhyPageManager *Mgr = pantheon::GetGlobalPhyManager();
-			Mgr->AddArea(Address, Size);
-		}
-	}
 	else if (*DriverName == '\0')
 	{
 		/* root node */
@@ -170,11 +113,15 @@ void DriverHandleDTB(const CHAR *DriverName, DeviceTreeBlob *CurState)
 
 		if (StringCompare(Buffer, ("#size-cells"), 12))
 		{
+			UINT32 SizeCells;
 			CurState->CopyU32FromStructPropNode(&SizeCells);
+			CurState->SetSizeCells(SizeCells);
 		} 
 		else if (StringCompare(Buffer, ("#address-cells"), 12))
 		{
+			UINT32 AddressCells;
 			CurState->CopyU32FromStructPropNode(&AddressCells);
+			CurState->SetAddressCells(AddressCells);
 		}
 	}
 }

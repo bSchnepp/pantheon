@@ -8,7 +8,72 @@
 #include <Devices/kern_drivers.hpp>
 #include <PhyProtocol/DeviceTree/DeviceTree.hpp>
 
-#include <System/Memory/kern_physpaging.hpp>
+#include <Common/Structures/kern_bitmap.hpp>
+
+#ifndef ONLY_TESTING
+extern "C" CHAR *kern_begin;
+extern "C" CHAR *kern_end;
+#else
+UINT64 kern_begin = 0;
+UINT64 kern_end = 0;
+#endif
+
+typedef struct InitialMemoryArea
+{
+	UINT64 BaseAddress;
+	pantheon::RawBitmap Map;
+}InitialMemoryArea;
+
+void ProcessMemory(DeviceTreeBlob *CurState)
+{
+	UINT64 Offset = CurState->GetPropStructNameIndex();
+	CHAR Buffer[512];
+	CHAR Buffer2[512];
+	for (UINT32 Index = 0; Index < 512; ++Index)
+	{
+		Buffer[Index] = '\0';
+		Buffer2[Index] = '\0';
+	}
+	CurState->CopyStringFromOffset(Offset, Buffer, 512);
+
+	if (StringCompare(Buffer, ("reg"), 9))
+	{
+		/* Assume we'll never need more...? */
+		UINT32 Values[64 * 64];
+
+		UINT32 SizeCells = CurState->SizeCells();
+		if (SizeCells > 64)
+		{
+			SizeCells = 64;
+		}
+
+		UINT32 AddressCells = CurState->AddressCells();
+		if (AddressCells > 64)
+		{
+			AddressCells = 64;
+		}
+
+		for (UINT32 TotalOffset = 0; TotalOffset < SizeCells * AddressCells; ++TotalOffset)
+		{
+			CurState->CopyU32FromStructPropNode(&Values[TotalOffset], TotalOffset);
+		}
+
+		UINT64 Address = 0;
+		UINT64 Size = 0;
+
+		for (UINT32 Index = 0; Index < AddressCells; ++Index)
+		{
+			Address <<= sizeof(UINT32);
+			Address += Values[Index];
+		}
+
+		for (UINT32 Index = 0; Index < SizeCells; ++Index)
+		{
+			Size <<= sizeof(UINT32);
+			Size += Values[AddressCells + Index];
+		}
+	}
+}
 
 void Initialize(fdt_header *dtb)
 {
@@ -57,7 +122,15 @@ void Initialize(fdt_header *dtb)
 			CHAR DevName[512];
 			UINT64 Addr;
 			DTBState.NodeNameToAddress(CurDevNode, DevName, 512, &Addr);
-			DriverHandleDTB(DevName, &DTBState);
+			if (StringCompare(DevName, "memory", 7) == TRUE)
+			{
+				ProcessMemory(&DTBState);
+			}
+			else
+			{
+				/* TODO: This should be connecting to a driver init graph... */
+				DriverHandleDTB(DevName, &DTBState);
+			}
 			SERIAL_LOG("%s", "\n");
 		}
 		else if (CurNode == FDT_BEGIN_NODE)

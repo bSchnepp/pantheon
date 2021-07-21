@@ -38,9 +38,12 @@ bool CheckHeader(fdt_header *Header)
 DeviceTreeBlob::DeviceTreeBlob(fdt_header *Header)
 {
 	this->StructIndex = 0;
+	this->AddressCellsAmt = 0;
+	this->SizeCellsAmt = 0;
+
 	this->rsmvm_ptr = (BEIntegerU32*)(((CHAR*)Header) + (Header->off_mem_rsvmap.GetNumHost()));
 	this->strings_ptr = (((CHAR*)Header) + (Header->off_dt_strings.GetNumHost()));
-	this->struct_ptr = (BEIntegerU32*)(((CHAR*)Header) + (Header->off_dt_struct.GetNumHost()));	
+	this->struct_ptr = (BEIntegerU32*)(((CHAR*)Header) + (Header->off_dt_struct.GetNumHost()));
 }
 
 DeviceTreeBlob::~DeviceTreeBlob()
@@ -372,6 +375,55 @@ void DeviceTreeBlob::NodeNameToAddress(CHAR *Buffer, CHAR *DeviceType, UINT64 De
 	{
 		*Address = CharStarNumberAtoiB16<UINT64>(Buffer + AtLocation + 1);
 	}
+}
+
+/**
+ * \~english @brief Obtains the size specified in the address-cells block of the DTB
+ * \~english @details The address-cells block defines the number of 32-bit cells which
+ * define the address in any reg field. On a 64-bit system, this is typically 2.
+ * If this was not yet processed, the function will return 0.
+ * \~english @return The number of cells needed to represent an address, or 0 if not yet known.
+ * \~english @author Brian Schnepp
+ */
+[[nodiscard]]
+UINT64 DeviceTreeBlob::AddressCells() const
+{
+	return this->AddressCellsAmt;
+}
+
+/**
+ * \~english @brief Obtains the size specified in the size-cells block of the DTB
+ * \~english @details The size-cells block defines the number of 32-bit cells which
+ * define the size in any reg field. This defines the size of the area of the DTB,
+ * in bytes. 
+ * If this was not yet processed, the function will return 0.
+ * \~english @return The number of cells needed to represent an address, or 0 if not yet known.
+ * \~english @author Brian Schnepp
+ */
+[[nodiscard]]
+UINT64 DeviceTreeBlob::SizeCells() const
+{
+	return this->SizeCellsAmt;
+}
+
+/**
+ * \internal
+ * \~english @brief Sets the address cells amount for this DTB parser.
+ * \~english @author Brian Schnepp
+ */
+void DeviceTreeBlob::SetAddressCells(UINT64 Amt)
+{
+	this->AddressCellsAmt = Amt;
+}
+
+/**
+ * \internal
+ * \~english @brief Sets the size cells amount for this DTB parser.
+ * \~english @author Brian Schnepp
+ */
+void DeviceTreeBlob::SetSizeCells(UINT64 Amt)
+{
+	this->SizeCellsAmt = Amt;
 }
 
 
