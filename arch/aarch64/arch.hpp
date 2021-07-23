@@ -6,6 +6,12 @@
 
 #include "vmm/vmm.hpp"
 
+typedef struct PagingInfo
+{
+	UINT64 TTBR0;
+	UINT64 TTBR1;
+}PagingInfo;
+
 namespace pantheon
 {
 

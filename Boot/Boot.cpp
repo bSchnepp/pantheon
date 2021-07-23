@@ -10,19 +10,73 @@
 
 #include <Common/Structures/kern_bitmap.hpp>
 
+#include "Boot.hpp"
+
 #ifndef ONLY_TESTING
 extern "C" CHAR *kern_begin;
 extern "C" CHAR *kern_end;
 #else
-UINT64 kern_begin = 0;
-UINT64 kern_end = 0;
+static UINT8 Area[50000];
+UINT64 kern_begin = (UINT64)&Area;
+UINT64 kern_end = (UINT64)(&Area + 50000);
 #endif
 
-typedef struct InitialMemoryArea
+static InitialBootInfo InitBootInfo;
+static UINT64 MemArea = (UINT64)&kern_end;
+
+InitialBootInfo *GetInitBootInfo()
 {
-	UINT64 BaseAddress;
-	pantheon::RawBitmap Map;
-}InitialMemoryArea;
+	return &InitBootInfo;
+}
+
+void AllocateMemoryArea(UINT64 StartAddr, UINT64 Size)
+{
+	UINT64 ToBitmapPageSize = Size / (8 * 4096);
+	InitBootInfo.InitMemoryAreas[InitBootInfo.NumMemoryAreas].BaseAddress = (UINT64)StartAddr;
+	InitBootInfo.InitMemoryAreas[InitBootInfo.NumMemoryAreas].Map = pantheon::RawBitmap((UINT8*)MemArea, ToBitmapPageSize);
+	MemArea += ToBitmapPageSize;
+	InitBootInfo.NumMemoryAreas++;
+}
+
+void AllocatePage(UINT64 Addr)
+{
+	UINT64 NumMemAreas = InitBootInfo.NumMemoryAreas;
+	for (UINT64 InitArea = 0; InitArea < NumMemAreas; ++InitArea)
+	{
+		InitialMemoryArea &InitMemArea = InitBootInfo.InitMemoryAreas[InitArea];
+
+		UINT64 MinAddr = InitMemArea.BaseAddress;
+		UINT64 MaxAddr = MinAddr + InitMemArea.Map.GetSizeBytes();
+
+		if (Addr < MinAddr || Addr > MaxAddr)
+		{
+			continue;
+		}
+
+		UINT64 Offset = (Addr - MinAddr) / (4096);
+		InitMemArea.Map.Set(Offset, TRUE);
+	}
+}
+
+void FreePage(UINT64 Addr)
+{
+	UINT64 NumMemAreas = InitBootInfo.NumMemoryAreas;
+	for (UINT64 InitArea = 0; InitArea < NumMemAreas; ++InitArea)
+	{
+		InitialMemoryArea &InitMemArea = InitBootInfo.InitMemoryAreas[InitArea];
+
+		UINT64 MinAddr = InitMemArea.BaseAddress;
+		UINT64 MaxAddr = MinAddr + InitMemArea.Map.GetSizeBytes();
+
+		if (Addr < MinAddr || Addr > MaxAddr)
+		{
+			continue;
+		}
+
+		UINT64 Offset = (Addr - MinAddr) / (4096);
+		InitMemArea.Map.Set(Offset, FALSE);
+	}
+}
 
 void ProcessMemory(DeviceTreeBlob *CurState)
 {
@@ -72,6 +126,7 @@ void ProcessMemory(DeviceTreeBlob *CurState)
 			Size <<= sizeof(UINT32);
 			Size += Values[AddressCells + Index];
 		}
+		AllocateMemoryArea(Address, Size);
 	}
 }
 
@@ -166,5 +221,11 @@ extern "C" void BootInit(fdt_header *dtb, void *initial_load_addr, void *virt_lo
 	{
 		BoardInit();
 		Initialize(dtb);
+	}
+
+	for (UINT64 Start = (UINT64)&kern_begin; 
+		Start <= Align<UINT64>(MemArea + 4096, 4096UL); Start += 4096)
+	{
+		AllocatePage(Start);
 	}
 }
