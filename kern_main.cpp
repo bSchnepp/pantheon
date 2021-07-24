@@ -7,6 +7,8 @@
 #include <Proc/kern_cpu.hpp>
 #include <Devices/kern_drivers.hpp>
 
+#include <Boot/Boot.hpp>
+
 extern "C" void svc_LogText(const CHAR *Content);
 void user_idle()
 {
@@ -17,7 +19,8 @@ void user_idle()
 }
 
 
-/* Since we don't use the MMU at all, we need thread-unique storage. */
+/* Since we don't use the MMU at all, we need thread-unique storage, 
+ * since theres no kernel-level thread-local storage. */
 void kern_idle(void *unused)
 {
 	PANTHEON_UNUSED(unused);
@@ -81,8 +84,9 @@ void kern_init_core()
 	}
 }
 
-void kern_init(void *initial_load_addr, void *virt_load_addr)
+void kern_init(InitialBootInfo *InitBootInfo, void *initial_load_addr, void *virt_load_addr)
 {
+	PANTHEON_UNUSED(InitBootInfo);
 	PANTHEON_UNUSED(virt_load_addr);
 	PANTHEON_UNUSED(initial_load_addr);
 	

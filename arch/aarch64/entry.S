@@ -49,13 +49,13 @@ go_kern_main:
 
 	ldr x2, =_cpu_start
 	bl BootInit
-
+	mov x0, x0 /* No-op, but to clarify x0 needs to be preserved. */
 
 	adrp x2, initial_addr
-	add x1, x1, :lo12:initial_addr
-	ldr x0, [x2]
+	add x2, x2, :lo12:initial_addr
+	ldr x1, [x2]
 
-	ldr x1, =_cpu_start
+	ldr x2, =_cpu_start
 	bl kern_init
 	b _hang
 

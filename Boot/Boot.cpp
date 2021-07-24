@@ -211,7 +211,7 @@ void Initialize(fdt_header *dtb)
 	SERIAL_LOG("%s\n", "finished going through dtb");
 }
 
-extern "C" void BootInit(fdt_header *dtb, void *initial_load_addr, void *virt_load_addr)
+extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, void *virt_load_addr)
 {
 	PANTHEON_UNUSED(initial_load_addr);
 	PANTHEON_UNUSED(virt_load_addr);
@@ -228,4 +228,6 @@ extern "C" void BootInit(fdt_header *dtb, void *initial_load_addr, void *virt_lo
 	{
 		AllocatePage(Start);
 	}
+
+	return GetInitBootInfo();
 }
