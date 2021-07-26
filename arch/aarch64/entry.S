@@ -44,7 +44,7 @@ go_kern_main:
 	ldr x0, [x1]
 
 	adrp x2, initial_addr
-	add x1, x1, :lo12:initial_addr
+	add x2, x2, :lo12:initial_addr
 	ldr x1, [x2]
 
 	ldr x2, =_cpu_start

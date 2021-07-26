@@ -15,6 +15,7 @@
 #ifndef ONLY_TESTING
 extern "C" CHAR *kern_begin;
 extern "C" CHAR *kern_end;
+extern "C" CHAR *kern_size;
 #else
 static UINT8 Area[50000];
 UINT64 kern_begin = (UINT64)&Area;
@@ -22,7 +23,7 @@ UINT64 kern_end = (UINT64)(&Area + 50000);
 #endif
 
 static InitialBootInfo InitBootInfo;
-static UINT64 MemArea = (UINT64)&kern_end;
+static UINT64 MemArea;
 
 InitialBootInfo *GetInitBootInfo()
 {
@@ -219,15 +220,20 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 	pantheon::CPU::CLI();
 	if (pantheon::CPU::GetProcessorNumber() == 0)
 	{
+		UINT64 InitAddr = (UINT64)initial_load_addr;
+		UINT64 KernSize = (UINT64)&kern_end - (UINT64)&kern_begin;
+		MemArea = InitAddr + KernSize + 4096;
+
+
 		BoardInit();
 		Initialize(dtb);
-	}
 
-	for (UINT64 Start = (UINT64)&kern_begin; 
-		Start <= Align<UINT64>(MemArea + 4096, 4096UL); Start += 4096)
-	{
-		AllocatePage(Start);
+		for (UINT64 Start = InitAddr; 
+			Start <= Align<UINT64>(MemArea + 4096, 4096UL); 
+			Start += 4096)
+		{
+			AllocatePage(Start);
+		}
 	}
-
 	return GetInitBootInfo();
 }
