@@ -15,7 +15,6 @@
 #ifndef ONLY_TESTING
 extern "C" CHAR *kern_begin;
 extern "C" CHAR *kern_end;
-extern "C" CHAR *kern_size;
 #else
 static UINT8 Area[50000];
 UINT64 kern_begin = (UINT64)&Area;
@@ -131,7 +130,128 @@ void ProcessMemory(DeviceTreeBlob *CurState)
 	}
 }
 
+void InitializeMemory(fdt_header *dtb)
+{
+	volatile bool CheckMe = CheckHeader(dtb);
+	if (!CheckMe)
+	{
+		/* Loop forever: can't really do anything. */
+		for (;;) {}
+	}
+
+	DeviceTreeBlob DTBState(dtb);
+	CHAR CurDevNode[512];
+	ClearBuffer(CurDevNode, 512);
+
+	while (!DTBState.EndStruct())
+	{
+		DTBState.NextStruct();
+		FDTNodeType CurNode = DTBState.GetStructType();
+		if (CurNode == FDT_PROP)
+		{
+			UINT64 Offset = DTBState.GetPropStructNameIndex();
+			CHAR Buffer[512];
+			ClearBuffer(Buffer, 512);
+			DTBState.CopyStringFromOffset(Offset, Buffer, 512);
+			if (IsStringPropType(Buffer) || IsStringListPropType(Buffer))
+			{
+				CHAR Buffer2[512];
+				ClearBuffer(Buffer2, 512);
+				DTBState.CopyStringFromStructPropNode(Buffer2, 512);
+			}
+			else if (IsU32PropType(Buffer))
+			{
+				UINT32 U32;
+				DTBState.CopyU32FromStructPropNode(&U32);
+			}
+			else if (IsU64PropType(Buffer))
+			{
+				UINT64 U64;
+				DTBState.CopyU64FromStructPropNode(&U64);
+			}
+			
+			CHAR DevName[512];
+			UINT64 Addr;
+			DTBState.NodeNameToAddress(CurDevNode, DevName, 512, &Addr);
+			if (StringCompare(DevName, "memory", 7) == TRUE)
+			{
+				ProcessMemory(&DTBState);
+			}
+		}
+	}
+}
+
 void Initialize(fdt_header *dtb)
+{
+	volatile bool CheckMe = CheckHeader(dtb);
+	if (!CheckMe)
+	{
+		/* Loop forever: can't really do anything. */
+		for (;;) {}
+	}
+
+	DeviceTreeBlob DTBState(dtb);
+	CHAR CurDevNode[512];
+	ClearBuffer(CurDevNode, 512);
+
+	while (!DTBState.EndStruct())
+	{
+		DTBState.NextStruct();
+		FDTNodeType CurNode = DTBState.GetStructType();
+		if (CurNode == FDT_PROP)
+		{
+			UINT64 Offset = DTBState.GetPropStructNameIndex();
+			CHAR Buffer[512];
+			ClearBuffer(Buffer, 512);
+			DTBState.CopyStringFromOffset(Offset, Buffer, 512);
+			if (IsStringPropType(Buffer) || IsStringListPropType(Buffer))
+			{
+				CHAR Buffer2[512];
+				ClearBuffer(Buffer2, 512);
+				DTBState.CopyStringFromStructPropNode(Buffer2, 512);
+			}
+			else if (IsU32PropType(Buffer))
+			{
+				UINT32 U32;
+				DTBState.CopyU32FromStructPropNode(&U32);
+			}
+			else if (IsU64PropType(Buffer))
+			{
+				UINT64 U64;
+				DTBState.CopyU64FromStructPropNode(&U64);
+			}
+			
+			CHAR DevName[512];
+			UINT64 Addr;
+			DTBState.NodeNameToAddress(CurDevNode, DevName, 512, &Addr);
+			if (StringCompare(DevName, "memory", 7) == FALSE)
+			{
+				/* TODO: This should be connecting to a driver init graph... */
+				DriverHandleDTB(DevName, &DTBState);
+			}
+		}
+		else if (CurNode == FDT_BEGIN_NODE)
+		{
+			ClearBuffer(CurDevNode, 512);
+			DTBState.CopyStringFromStructBeginNode(CurDevNode, 512);
+
+			CHAR DevName[512];
+			UINT64 Addr;
+			DTBState.NodeNameToAddress(CurDevNode, DevName, 512, &Addr);
+			InitDriver(DevName, Addr);
+
+		}
+		else if (CurNode == FDT_END_NODE)
+		{
+			CHAR DevName[512];
+			UINT64 Addr;
+			DTBState.NodeNameToAddress(CurDevNode, DevName, 512, &Addr);
+			FiniDriver(DevName, Addr);
+		}
+	}
+}
+
+void PrintDTB(fdt_header *dtb)
 {
 	volatile bool CheckMe = CheckHeader(dtb);
 	if (!CheckMe)
@@ -178,15 +298,6 @@ void Initialize(fdt_header *dtb)
 			CHAR DevName[512];
 			UINT64 Addr;
 			DTBState.NodeNameToAddress(CurDevNode, DevName, 512, &Addr);
-			if (StringCompare(DevName, "memory", 7) == TRUE)
-			{
-				ProcessMemory(&DTBState);
-			}
-			else
-			{
-				/* TODO: This should be connecting to a driver init graph... */
-				DriverHandleDTB(DevName, &DTBState);
-			}
 			SERIAL_LOG("%s", "\n");
 		}
 		else if (CurNode == FDT_BEGIN_NODE)
@@ -195,18 +306,6 @@ void Initialize(fdt_header *dtb)
 			DTBState.CopyStringFromStructBeginNode(CurDevNode, 512);
 			SERIAL_LOG("%s%s%s", "<<", CurDevNode, ">>\n");
 
-			CHAR DevName[512];
-			UINT64 Addr;
-			DTBState.NodeNameToAddress(CurDevNode, DevName, 512, &Addr);
-			InitDriver(DevName, Addr);
-
-		}
-		else if (CurNode == FDT_END_NODE)
-		{
-			CHAR DevName[512];
-			UINT64 Addr;
-			DTBState.NodeNameToAddress(CurDevNode, DevName, 512, &Addr);
-			FiniDriver(DevName, Addr);
 		}
 	}
 	SERIAL_LOG("%s\n", "finished going through dtb");
@@ -224,16 +323,28 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 		UINT64 KernSize = (UINT64)&kern_end - (UINT64)&kern_begin;
 		MemArea = InitAddr + KernSize + 4096;
 
-
-		BoardInit();
-		Initialize(dtb);
+		/* The DTB is handled in 3 passes:
+		 * The first initializes memory areas, so the physical
+		 * memory manager can be started. The second is to prepare
+		 * a driver init graph, so the kernel can load drivers as needed.
+		 * Lastly, another pass is done to simply print the contents of
+		 * the area.
+		 */
+		InitializeMemory(dtb);
 
 		for (UINT64 Start = InitAddr; 
-			Start <= Align<UINT64>(MemArea + 4096, 4096UL); 
+			Start <= Align<UINT64>(MemArea + 4096, 4096UL);
 			Start += 4096)
 		{
 			AllocatePage(Start);
 		}
+
+		/* At this point, paging should be set up so the kernel
+		 * gets the page tables expected...
+		 */
+		BoardInit();
+		Initialize(dtb);
+		PrintDTB(dtb);
 	}
 	return GetInitBootInfo();
 }
