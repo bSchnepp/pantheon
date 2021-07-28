@@ -10,8 +10,13 @@ class RawBitmap
 {
 public:
 	RawBitmap();
+	RawBitmap(const RawBitmap &Other);
+	RawBitmap(RawBitmap &&Other) noexcept;
 	RawBitmap(UINT8 *Area, UINT64 ByteAmount);
 	~RawBitmap();
+
+	RawBitmap &operator=(const RawBitmap &Other);
+	RawBitmap &operator=(RawBitmap &&Other) noexcept;
 
 	BOOL Get(UINT64 Index);
 	VOID Set(UINT64 Index, BOOL Bit);

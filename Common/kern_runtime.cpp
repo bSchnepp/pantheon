@@ -107,7 +107,15 @@ BOOL StringCompare(const CHAR *Arg1, const CHAR *Arg2, UINT64 Amt)
 
 void ClearBuffer(CHAR *Location, UINT32 Amount)
 {
-	for (UINT32 Index = 0; Index < Amount; ++Index)
+	UINT32 Index = 0;
+
+	UINT64 *AsUINT64 = (UINT64*)Location;
+	for (Index = 0; Index < Amount; Index += 8)
+	{
+		AsUINT64[Index / 8] = 0;
+	}
+
+	for (; Index < Amount; ++Index)
 	{
 		Location[Index] = '\0';
 	}

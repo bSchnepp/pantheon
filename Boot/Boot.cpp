@@ -46,7 +46,7 @@ void AllocatePage(UINT64 Addr)
 		InitialMemoryArea &InitMemArea = InitBootInfo.InitMemoryAreas[InitArea];
 
 		UINT64 MinAddr = InitMemArea.BaseAddress;
-		UINT64 MaxAddr = MinAddr + InitMemArea.Map.GetSizeBytes();
+		UINT64 MaxAddr = MinAddr + InitMemArea.Map.GetSizeBytes() * 4096 * 8;
 
 		if (Addr < MinAddr || Addr > MaxAddr)
 		{
@@ -66,7 +66,7 @@ void FreePage(UINT64 Addr)
 		InitialMemoryArea &InitMemArea = InitBootInfo.InitMemoryAreas[InitArea];
 
 		UINT64 MinAddr = InitMemArea.BaseAddress;
-		UINT64 MaxAddr = MinAddr + InitMemArea.Map.GetSizeBytes();
+		UINT64 MaxAddr = MinAddr + InitMemArea.Map.GetSizeBytes() * 4096 * 8;
 
 		if (Addr < MinAddr || Addr > MaxAddr)
 		{
@@ -76,6 +76,23 @@ void FreePage(UINT64 Addr)
 		UINT64 Offset = (Addr - MinAddr) / (4096);
 		InitMemArea.Map.Set(Offset, FALSE);
 	}
+}
+
+UINT64 FindPage()
+{
+	UINT64 NumMemAreas = InitBootInfo.NumMemoryAreas;
+	for (UINT64 InitArea = 0; InitArea < NumMemAreas; ++InitArea)
+	{
+		InitialMemoryArea &InitMemArea = InitBootInfo.InitMemoryAreas[InitArea];
+		for (UINT64 Bit = 0; Bit < InitMemArea.Map.GetSizeBits(); ++Bit)
+		{
+			if (InitMemArea.Map.Get(Bit))
+			{
+				return InitMemArea.BaseAddress + (4096 * Bit);
+			}
+		}
+	}
+	return 0;
 }
 
 void ProcessMemory(DeviceTreeBlob *CurState)
@@ -90,7 +107,7 @@ void ProcessMemory(DeviceTreeBlob *CurState)
 	}
 	CurState->CopyStringFromOffset(Offset, Buffer, 512);
 
-	if (StringCompare(Buffer, ("reg"), 9))
+	if (StringCompare(Buffer, ("reg"), 4))
 	{
 		/* Assume we'll never need more...? */
 		UINT32 Values[64 * 64];
@@ -117,13 +134,13 @@ void ProcessMemory(DeviceTreeBlob *CurState)
 
 		for (UINT32 Index = 0; Index < AddressCells; ++Index)
 		{
-			Address <<= sizeof(UINT32);
+			Address <<= 32;
 			Address += Values[Index];
 		}
 
 		for (UINT32 Index = 0; Index < SizeCells; ++Index)
 		{
-			Size <<= sizeof(UINT32);
+			Size <<= 32;
 			Size += Values[AddressCells + Index];
 		}
 		AllocateMemoryArea(Address, Size);
@@ -153,23 +170,7 @@ void InitializeMemory(fdt_header *dtb)
 			CHAR Buffer[512];
 			ClearBuffer(Buffer, 512);
 			DTBState.CopyStringFromOffset(Offset, Buffer, 512);
-			if (IsStringPropType(Buffer) || IsStringListPropType(Buffer))
-			{
-				CHAR Buffer2[512];
-				ClearBuffer(Buffer2, 512);
-				DTBState.CopyStringFromStructPropNode(Buffer2, 512);
-			}
-			else if (IsU32PropType(Buffer))
-			{
-				UINT32 U32;
-				DTBState.CopyU32FromStructPropNode(&U32);
-			}
-			else if (IsU64PropType(Buffer))
-			{
-				UINT64 U64;
-				DTBState.CopyU64FromStructPropNode(&U64);
-			}
-			
+
 			CHAR DevName[512];
 			UINT64 Addr;
 			DTBState.NodeNameToAddress(CurDevNode, DevName, 512, &Addr);
@@ -177,6 +178,36 @@ void InitializeMemory(fdt_header *dtb)
 			{
 				ProcessMemory(&DTBState);
 			}
+			else if (*DevName == '\0')
+			{
+				UINT64 Offset = DTBState.GetPropStructNameIndex();
+				CHAR Buffer[512];
+				CHAR Buffer2[512];
+				for (UINT32 Index = 0; Index < 512; ++Index)
+				{
+					Buffer[Index] = '\0';
+					Buffer2[Index] = '\0';
+				}
+				DTBState.CopyStringFromOffset(Offset, Buffer, 512);	
+
+				if (StringCompare(Buffer, ("#size-cells"), 12))
+				{
+					UINT32 SizeCells;
+					DTBState.CopyU32FromStructPropNode(&SizeCells);
+					DTBState.SetSizeCells(SizeCells);
+				} 
+				else if (StringCompare(Buffer, ("#address-cells"), 12))
+				{
+					UINT32 AddressCells;
+					DTBState.CopyU32FromStructPropNode(&AddressCells);
+					DTBState.SetAddressCells(AddressCells);
+				}
+			}
+		}
+		else if (CurNode == FDT_BEGIN_NODE)
+		{
+			ClearBuffer(CurDevNode, 512);
+			DTBState.CopyStringFromStructBeginNode(CurDevNode, 512);
 		}
 	}
 }
@@ -333,7 +364,7 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 		InitializeMemory(dtb);
 
 		for (UINT64 Start = InitAddr; 
-			Start <= Align<UINT64>(MemArea + 4096, 4096UL);
+			Start <= Align<UINT64>(MemArea, 4096UL);
 			Start += 4096)
 		{
 			AllocatePage(Start);

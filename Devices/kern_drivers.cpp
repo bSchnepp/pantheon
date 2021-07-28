@@ -98,32 +98,6 @@ void DriverHandleDTB(const CHAR *DriverName, DeviceTreeBlob *CurState)
 			}
 		}		
 	}
-	else if (*DriverName == '\0')
-	{
-		/* root node */
-		UINT64 Offset = CurState->GetPropStructNameIndex();
-		CHAR Buffer[512];
-		CHAR Buffer2[512];
-		for (UINT32 Index = 0; Index < 512; ++Index)
-		{
-			Buffer[Index] = '\0';
-			Buffer2[Index] = '\0';
-		}
-		CurState->CopyStringFromOffset(Offset, Buffer, 512);
-
-		if (StringCompare(Buffer, ("#size-cells"), 12))
-		{
-			UINT32 SizeCells;
-			CurState->CopyU32FromStructPropNode(&SizeCells);
-			CurState->SetSizeCells(SizeCells);
-		} 
-		else if (StringCompare(Buffer, ("#address-cells"), 12))
-		{
-			UINT32 AddressCells;
-			CurState->CopyU32FromStructPropNode(&AddressCells);
-			CurState->SetAddressCells(AddressCells);
-		}
-	}
 }
 
 void FiniDriver(const CHAR *DriverName, UINT64 Address)

@@ -27,6 +27,37 @@ pantheon::RawBitmap::~RawBitmap()
 {
 }
 
+pantheon::RawBitmap::RawBitmap(pantheon::RawBitmap &&Other) noexcept
+{
+	this->Area = Other.Area;
+	this->Size = Other.Size;
+
+	Other.Area = nullptr;
+	Other.Size = 0;
+}
+
+pantheon::RawBitmap::RawBitmap(const pantheon::RawBitmap &Other)
+{
+	/* This shares resources, but is necessary because we can't just
+	 * malloc another one.
+	 */
+	this->Area = Other.Area;
+	this->Size = Other.Size;
+}
+
+pantheon::RawBitmap &pantheon::RawBitmap::operator=(pantheon::RawBitmap &&Other) noexcept
+{
+	this->Area = Other.Area;
+	this->Size = Other.Size;
+
+	if (this != &Other)
+	{
+		Other.Area = nullptr;
+		Other.Size = 0;
+	}
+	return *this;
+}
+
 /**
  * \~english @brief Obtains the value of a bit in the RawBitmap
  * \~english @param[in] Index The bit to index, with 0 being the first bit
@@ -108,4 +139,14 @@ UINT64 pantheon::RawBitmap::GetSizeBytes() const
 [[nodiscard]] UINT8 *pantheon::RawBitmap::GetAddress() const
 {
 	return this->Area;
+}
+
+pantheon::RawBitmap &pantheon::RawBitmap::operator=(const pantheon::RawBitmap &Other)
+{
+	if (&Other != this)
+	{
+		this->Area = Other.Area;
+		this->Size = Other.Size;
+	}
+	return *this;
 }
