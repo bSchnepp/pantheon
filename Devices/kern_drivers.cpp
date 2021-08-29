@@ -10,6 +10,8 @@
 #include <arch/aarch64/gic.hpp>
 #endif
 
+#include <Proc/kern_cpu.hpp>
+
 #include <Common/PhyProtocol/PCI/PCIe.hpp>
 #include <Common/PhyProtocol/PSCI/PSCI.hpp>
 #include <Common/PhyProtocol/DeviceTree/DeviceTree.hpp>
@@ -111,16 +113,14 @@ void FiniDriver(const CHAR *DriverName, UINT64 Address)
 	{
 		for (UINT8 Index = 0; Index < 255; ++Index)
 		{
-			/* Allocate 256K of stack */
-			Optional<void*> MaybeStack = BasicMalloc(256 * 1024);
-			if (!MaybeStack.GetOkay())
+			/* If we have too many CPUs, stop. */
+			if (Index > MAX_NUM_CPUS)
 			{
 				break;
 			}
 
-			UINT64 StackPtr = (UINT64)(MaybeStack());
-			StackPtr += 256 * 1024;
-			INT32 Result = psci::PSCICpuOn(Index, (UINT64)asm_kern_init_core, StackPtr);
+			void *StackPtr = pantheon::CPU::GetStackArea(Index);
+			INT32 Result = psci::PSCICpuOn(Index, (UINT64)asm_kern_init_core, (UINT64)StackPtr);
 			
 			/* Then there are no more CPUs on this node. */
 			if (Result == psci::PSCI_INVALID_PARAMETERS)

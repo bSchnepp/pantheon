@@ -7,6 +7,9 @@
 #ifndef _KERN_CPU_HPP_
 #define _KERN_CPU_HPP_
 
+#define MAX_NUM_CPUS (8)
+#define DEFAULT_STACK_SIZE (4 * 1024)
+
 namespace pantheon
 {
 
@@ -46,6 +49,8 @@ GlobalScheduler *GetGlobalScheduler();
 pantheon::Thread *GetCurThread();
 pantheon::Scheduler *GetCurSched();
 pantheon::TrapFrame *GetCurFrame();
+
+void *GetStackArea(UINT64 Core);
 
 BOOL DropToUsermode(UINT64 PC);
 

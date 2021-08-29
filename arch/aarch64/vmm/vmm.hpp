@@ -9,8 +9,8 @@ namespace pantheon::vmm
 
 typedef enum PageGranularity : UINT64
 {
-	PAGE_GRANULARITY_PAGE = 0b11,
-	PAGE_GRANULARITY_BLOCK = 0b01,
+	PAGE_GRANULARITY_PAGE = 0b11ULL,
+	PAGE_GRANULARITY_BLOCK = 0b01ULL,
 }PageGranularity;
 
 typedef enum PageAccessor : UINT64
@@ -52,22 +52,20 @@ typedef enum PageTypeMMIOAccessor : UINT64
 
 typedef enum MAIREntry
 {
-	MAIREntry_0 = (0b000 << 2),
-	MAIREntry_1 = (0b001 << 2),
-	MAIREntry_2 = (0b010 << 2),
-	MAIREntry_3 = (0b011 << 2),
-	MAIREntry_4 = (0b100 << 2),
-	MAIREntry_5 = (0b101 << 2),
-	MAIREntry_6 = (0b110 << 2),
-	MAIREntry_7 = (0b111 << 2),
+	MAIREntry_0 = (0b000ULL << 2),
+	MAIREntry_1 = (0b001ULL << 2),
+	MAIREntry_2 = (0b010ULL << 2),
+	MAIREntry_3 = (0b011ULL << 2),
+	MAIREntry_4 = (0b100ULL << 2),
+	MAIREntry_5 = (0b101ULL << 2),
+	MAIREntry_6 = (0b110ULL << 2),
+	MAIREntry_7 = (0b111ULL << 2),
 }MAIREntry;
 
 typedef UINT64 PageTableEntry;
 
 PageTableEntry CreateEntry(const PageTableEntry *NextLevel, PageGranularity Size, PageAccessor Accessor, UINT64 Permission, PageSharableType Sharable, PageTypeMMIOAccessor MMIOType);
-
-}
-
+PageTableEntry CreateEntry(const PageTableEntry *NextLevel, UINT64 Attributes);
 
 constexpr UINT64 IdentityAttributes()
 {
@@ -121,6 +119,8 @@ constexpr UINT64 DataAttributes()
 	DataFlags |= pantheon::vmm::PAGE_GRANULARITY_PAGE;
 	DataFlags |= pantheon::vmm::MAIREntry_0;
 	return DataFlags;
+}
+
 }
 
 extern "C" VOID write_ttbr0_el1(UINT64 Val);

@@ -41,6 +41,8 @@ extern char interrupt_table[];
 
 void BoardInit()
 {
+	/* FIXME: Handle paging for all the devices as needed. */
+
 	pantheon::pl011::PL011Init(DEVICE_TYPE_UART, 0);
 
 	pantheon::arm::GICSetMMIOAddr(pantheon::arm::GIC_CLASS_DISTRIBUTOR, DEVICE_TYPE_GIC_DIST);

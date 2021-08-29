@@ -75,3 +75,10 @@ BOOL pantheon::CPU::DropToUsermode(UINT64 PC)
 	drop_usermode(PC, 0, StackLoc);
 	return TRUE;
 }
+
+alignas(4096) static char StackArea[MAX_NUM_CPUS * DEFAULT_STACK_SIZE];
+
+void *pantheon::CPU::GetStackArea(UINT64 Core)
+{
+	return StackArea + (Core * DEFAULT_STACK_SIZE);
+}
