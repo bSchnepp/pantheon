@@ -253,14 +253,3 @@ void pantheon::Thread::SetStackAddr(UINT64 Addr)
 	this->Registers.SetSP(Addr);
 	this->StackSpace = reinterpret_cast<void*>((CHAR*)Addr);
 }
-
-VOID pantheon::Thread::SetVisited(BOOL Value)
-{
-	this->WasVisited = Value;
-}
-
-[[nodiscard]]
-BOOL pantheon::Thread::Visited() const
-{
-	return this->WasVisited;
-}

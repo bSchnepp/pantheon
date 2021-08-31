@@ -48,8 +48,12 @@ public:
 	Thread* AcquireThread();
 	void ReleaseThread(Thread *T);
 
+	ArrayList<Thread> &BorrowThreadList();
+	void ReleaseThreadList();
+
 private:
 	ArrayList<Process> ProcessList;
+	ArrayList<Thread> ThreadList;
 };
 
 UINT32 AcquireProcessID();

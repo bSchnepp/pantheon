@@ -18,7 +18,7 @@ void disable_interrupts()
 VOID pantheon::SVCExitProcess()
 {
 	pantheon::Thread *CurThread = pantheon::CPU::GetCoreInfo()->CurThread;
-	CurThread->MyProc()->DeactivateThread(CurThread);
+	pantheon::GetGlobalScheduler()->ReleaseThread(CurThread);
 	CurThread->MyProc()->SetState(pantheon::PROCESS_STATE_ZOMBIE);
 	pantheon::CPU::GetCoreInfo()->CurSched->Reschedule();
 }
