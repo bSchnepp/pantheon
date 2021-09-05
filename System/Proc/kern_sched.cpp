@@ -144,6 +144,28 @@ BOOL pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *St
 	return Val;
 }
 
+BOOL pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData)
+{
+	pantheon::Thread T(Proc);
+
+	/* Attempt 128KB of stack space for now... */
+	UINT64 StackSz = 4096 * 4096;
+	Optional<void*> StackSpace = BasicMalloc(StackSz);
+	if (StackSpace.GetOkay())
+	{
+		UINT64 IStartAddr = (UINT64)StartAddr;
+		UINT64 IThreadData = (UINT64)ThreadData;
+		UINT64 IStackSpace = (UINT64)StackSpace();
+		IStackSpace += StackSz;
+
+		pantheon::CpuContext &Regs = T.GetRegisters();
+		Regs.SetInitContext(IStartAddr, IThreadData, IStackSpace);
+
+		this->ThreadList.Add(T);
+	}
+	return StackSpace.GetOkay();
+}
+
 
 VOID pantheon::GlobalScheduler::Init()
 {
@@ -216,29 +238,9 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 void pantheon::GlobalScheduler::ReleaseThread(Thread *T)
 {
 	AccessSpinlock.Acquire();
-	for (UINT64 Index = 0; Index < this->ThreadList.Size(); ++Index)
-	{
-		pantheon::Thread &Item = this->ThreadList[Index];
-		if (Item.ThreadID() == T->ThreadID())
-		{
-			this->ThreadList.Delete(Index);
-			break;
-		}
-	}
+	T->SetState(pantheon::THREAD_STATE_WAITING);
 	AccessSpinlock.Release();
 }
-
-ArrayList<pantheon::Thread> &pantheon::GlobalScheduler::BorrowThreadList()
-{
-	AccessSpinlock.Acquire();
-	return this->ThreadList;
-}
-
-void pantheon::GlobalScheduler::ReleaseThreadList()
-{
-	AccessSpinlock.Release();
-}
-
 
 static pantheon::Spinlock ThreadIDLock;
 static pantheon::Spinlock ProcIDLock;

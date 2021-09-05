@@ -48,10 +48,7 @@ public:
 
 	[[nodiscard]] const String &GetProcessString() const;
 	[[nodiscard]] UINT32 ProcessID() const;
-
-	[[nodiscard]] UINT64 NumThreads() const;
 	BOOL CreateThread(void *StartAddr, void *ThreadData);
-	[[nodiscard]] UINT64 NumInactiveThreads() const;
 
 	[[nodiscard]] ProcessState MyState() const;
 	void SetState(ProcessState State);

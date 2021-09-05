@@ -83,44 +83,9 @@ const pantheon::String &pantheon::Process::GetProcessString() const
 	return this->ProcessCommand;
 }
 
-[[nodiscard]] 
-UINT64 pantheon::Process::NumThreads() const
-{
-	ArrayList<Thread> &List = pantheon::GetGlobalScheduler()->BorrowThreadList();
-	UINT64 Count = 0;
-	for (auto &Item : List)
-	{
-		if (Item.MyProc() == this)
-		{
-			Count++;
-		}
-	}
-	pantheon::GetGlobalScheduler()->ReleaseThreadList();
-	return Count;
-}
-
 BOOL pantheon::Process::CreateThread(void *StartAddr, void *ThreadData)
 {
-	pantheon::Thread T(this);
-
-	/* Attempt 128KB of stack space for now... */
-	UINT64 StackSz = 4096 * 4096;
-	Optional<void*> StackSpace = BasicMalloc(StackSz);
-	if (StackSpace.GetOkay())
-	{
-		UINT64 IStartAddr = (UINT64)StartAddr;
-		UINT64 IThreadData = (UINT64)ThreadData;
-		UINT64 IStackSpace = (UINT64)StackSpace();
-		IStackSpace += StackSz;
-
-		pantheon::CpuContext &Regs = T.GetRegisters();
-		Regs.SetInitContext(IStartAddr, IThreadData, IStackSpace);
-
-		ArrayList<Thread> &List = pantheon::GetGlobalScheduler()->BorrowThreadList();
-		List.Add(T);
-		pantheon::GetGlobalScheduler()->ReleaseThreadList();
-	}
-	return StackSpace.GetOkay();
+	return pantheon::GetGlobalScheduler()->CreateThread(this, StartAddr, ThreadData);
 }
 
 [[nodiscard]]
