@@ -42,7 +42,7 @@ public:
 	Thread(Thread &&Other) noexcept;
 	~Thread();
 
-	Process *MyProc();
+	[[nodiscard]] Process *MyProc() const;
 
 	ThreadState MyState();
 	ThreadPriority MyPriority();

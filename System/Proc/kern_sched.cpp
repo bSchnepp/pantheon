@@ -55,10 +55,9 @@ void pantheon::Scheduler::Reschedule()
 	pantheon::CPU::GetCoreInfo()->CurThread = this->CurThread;
 	if (Old && New && Old != New)
 	{
+		this->ShouldReschedule.Store(FALSE);
 		pantheon::CpuContext *Prev = &(Old->GetRegisters());
 		pantheon::CpuContext *Next = &(New->GetRegisters());
-
-		this->ShouldReschedule.Store(FALSE);
 
 		New->RefreshTicks();
 		cpu_switch(Prev, Next, CpuIRegOffset);
@@ -149,7 +148,7 @@ BOOL pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *Star
 	pantheon::Thread T(Proc);
 
 	/* Attempt 128KB of stack space for now... */
-	UINT64 StackSz = 4096 * 4096;
+	UINT64 StackSz = 4096;
 	Optional<void*> StackSpace = BasicMalloc(StackSz);
 	if (StackSpace.GetOkay())
 	{
@@ -199,6 +198,7 @@ VOID pantheon::GlobalScheduler::CreateIdleProc(void *StartAddr)
  */
 pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 {
+	pantheon::Thread *Thr = nullptr;
 	static UINT64 AcquireCounter = 0;
 
 	/* This should be replaced with a skiplist (or linked list), 
@@ -214,25 +214,43 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 		AcquireCounter++;
 		AcquireCounter %= this->ThreadList.Size();
 
-		pantheon::Thread *Thr = &(this->ThreadList[AcquireCounter]);
+		Thr = &(this->ThreadList[AcquireCounter]);
 		pantheon::Process *Proc = Thr->MyProc();
 
 		if (Proc)
 		{
 			if (Proc->MyState() != pantheon::PROCESS_STATE_RUNNING)
 			{
+				Thr = nullptr;
 				continue;
 			}
 		}
 
 		if (Thr->MyState() == pantheon::THREAD_STATE_RUNNING)
 		{
+			Thr = nullptr;
 			continue;
 		}
-		return Thr;
+		break;
 	}
 	AccessSpinlock.Release();
-	return nullptr;
+	return Thr;
+}
+
+[[nodiscard]] 
+UINT64 pantheon::GlobalScheduler::CountThreads(UINT64 PID) const
+{
+	UINT64 Count = 0;
+	AccessSpinlock.Acquire();
+	for (const pantheon::Thread &T : this->ThreadList)
+	{
+		if (T.MyProc()->ProcessID() == PID)
+		{
+			Count++;
+		}
+	}
+	AccessSpinlock.Release();
+	return Count;
 }
 
 void pantheon::GlobalScheduler::ReleaseThread(Thread *T)

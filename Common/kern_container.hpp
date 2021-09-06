@@ -267,7 +267,7 @@ public:
 		}
 	}
 
-	ArrayListIterator<T> begin()
+	[[nodiscard]] ArrayListIterator<T> begin() const
 	{
 		if (this->EntryCount == 0)
 		{
@@ -276,7 +276,7 @@ public:
 		return ArrayListIterator<T>(this->Content);
 	}
 
-	ArrayListIterator<T> end()
+	[[nodiscard]] ArrayListIterator<T> end() const
 	{
 		if (this->EntryCount == 0)
 		{

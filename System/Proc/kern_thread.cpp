@@ -99,7 +99,8 @@ pantheon::Thread::~Thread()
  * \~english @author Brian Schnepp
  * \~english @return A pointer to the owning process of this thread.
  */
-pantheon::Process *pantheon::Thread::MyProc()
+[[nodiscard]]
+pantheon::Process *pantheon::Thread::MyProc() const
 {
 	return this->ParentProcess;
 }

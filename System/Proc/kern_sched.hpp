@@ -47,6 +47,7 @@ public:
 	VOID CreateIdleProc(void *StartAddr);
 
 	Thread* AcquireThread();
+	[[nodiscard]] UINT64 CountThreads(UINT64 TID) const;
 	void ReleaseThread(Thread *T);
 
 private:
