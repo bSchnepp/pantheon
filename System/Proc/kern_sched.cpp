@@ -159,7 +159,7 @@ BOOL pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *Star
 
 		pantheon::CpuContext &Regs = T.GetRegisters();
 		Regs.SetInitContext(IStartAddr, IThreadData, IStackSpace);
-
+		T.SetState(pantheon::THREAD_STATE_WAITING);
 		this->ThreadList.Add(T);
 	}
 	return StackSpace.GetOkay();
@@ -215,18 +215,8 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 		AcquireCounter %= this->ThreadList.Size();
 
 		Thr = &(this->ThreadList[AcquireCounter]);
-		pantheon::Process *Proc = Thr->MyProc();
 
-		if (Proc)
-		{
-			if (Proc->MyState() != pantheon::PROCESS_STATE_RUNNING)
-			{
-				Thr = nullptr;
-				continue;
-			}
-		}
-
-		if (Thr->MyState() == pantheon::THREAD_STATE_RUNNING)
+		if (Thr->MyState() != pantheon::THREAD_STATE_WAITING)
 		{
 			Thr = nullptr;
 			continue;
