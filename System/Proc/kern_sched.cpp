@@ -45,12 +45,13 @@ extern "C" void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New,
  */
 void pantheon::Scheduler::Reschedule()
 {
-	pantheon::Thread *Old = this->CurThread;
-	pantheon::Thread *New = pantheon::GetGlobalScheduler()->AcquireThread();
-
 	/* Don't allow interrupts while a process is getting scheduled */
 	pantheon::CPU::CLI();
+
+	pantheon::Thread *Old = this->CurThread;
+	pantheon::Thread *New = pantheon::GetGlobalScheduler()->AcquireThread();
 	this->CurThread = New;
+	
 	pantheon::CPU::GetCoreInfo()->CurThread = this->CurThread;
 	if (Old && New && Old != New)
 	{
@@ -197,15 +198,13 @@ VOID pantheon::GlobalScheduler::CreateIdleProc(void *StartAddr)
  */
 pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 {
-	pantheon::Thread *Thr = nullptr;
-	static UINT64 AcquireCounter = 0;
-
+	AccessSpinlock.Acquire();
 	/* This should be replaced with a skiplist (or linked list), 
 	 * so finding an inactive thread becomes an O(1) process.
 	 */
+	static UINT64 AcquireCounter = 0;
 	UINT64 TotalCount = 0;
-
-	AccessSpinlock.Acquire();
+	pantheon::Thread *Thr = nullptr;
 	UINT64 TListSize = this->ThreadList.Size();
 	AcquireCounter %= TListSize;
 	while (TotalCount < TListSize)

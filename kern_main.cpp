@@ -30,7 +30,9 @@ void kern_idle(void *unused)
 	for (;;)
 	{
 		Count[TID]++;
+		pantheon::CPU::CLI();
 		SERIAL_LOG("(%hhu) %s\t%u \t\t[%ld]\n", pantheon::CPU::GetProcessorNumber(), "idle: ", Count[TID], TID);
+		pantheon::CPU::STI();
 	}
 	for (;;){}
 }
@@ -41,7 +43,9 @@ void kern_idle2(void *unused)
 	pantheon::CPU::DropToUsermode((UINT64)user_idle);
 	for (;;)
 	{
+		pantheon::CPU::CLI();
 		SERIAL_LOG("%s\n", "STUCK IN KERNEL SPACE");
+		pantheon::CPU::STI();
 	}
 }
 
