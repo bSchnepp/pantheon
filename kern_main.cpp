@@ -30,9 +30,7 @@ void kern_idle(void *unused)
 	for (;;)
 	{
 		Count[TID]++;
-		pantheon::CPU::CLI();
 		SERIAL_LOG("(%hhu) %s\t%u \t\t[%ld]\n", pantheon::CPU::GetProcessorNumber(), "idle: ", Count[TID], TID);
-		pantheon::CPU::STI();
 	}
 	for (;;){}
 }
