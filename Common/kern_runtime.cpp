@@ -155,3 +155,10 @@ void SERIAL_LOG(const char *Fmt, ...)
 	va_end(Args);
 	PrintMutex.Release();
 }
+
+void pantheon::StopError(const char *Reason)
+{
+	SERIAL_LOG_UNSAFE("%s\n", Reason);
+	/* TODO: stop other cores */
+	for (;;){};
+}

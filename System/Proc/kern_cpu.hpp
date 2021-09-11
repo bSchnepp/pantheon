@@ -37,6 +37,8 @@ typedef struct CoreInfo
 	pantheon::Thread *CurThread;
 	pantheon::Scheduler *CurSched;
 	pantheon::TrapFrame *CurFrame;
+	UINT64 NOff;
+	BOOL IntStatus;
 }CoreInfo;
 
 void InitCoreInfo(UINT8 CoreNo);

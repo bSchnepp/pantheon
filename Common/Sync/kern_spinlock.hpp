@@ -10,12 +10,21 @@ class Spinlock
 {
 public:
 	Spinlock();
+	Spinlock(const char *Name);
 	~Spinlock();
 
 	void Acquire();
 	void Release();
 
+	[[nodiscard]] UINT8 Holder() const;
+	[[nodiscard]] BOOL IsLocked() const;
+
+	void SetDebugName(const char *Name);
+	const char *GetDebugName();
+
 private:
+	const char *DebugName;
+	UINT8 CoreNo;
 	BOOL Locked; 
 };
 

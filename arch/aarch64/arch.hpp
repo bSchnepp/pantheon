@@ -44,6 +44,10 @@ UINT8 GetProcessorNumber();
 
 VOID CLI();
 VOID STI();
+BOOL IF();
+
+VOID PUSHI();
+VOID POPI();
 
 VOID PAUSE();
 

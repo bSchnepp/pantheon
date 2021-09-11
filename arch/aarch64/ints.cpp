@@ -178,6 +178,13 @@ VOID pantheon::arm::DisableSystemTimer()
 			:: "r"(ClockSpeed), "r"(TimerCtl) : "memory");	
 }
 
+UINT64 pantheon::arm::DAIFR()
+{
+	UINT64 Val;
+	asm volatile("mrs %0, daif\n" : "=r"(Val));
+	return Val;
+}
+
 VOID pantheon::arm::CLI()
 {
 	asm volatile("msr daifset, #3\n");

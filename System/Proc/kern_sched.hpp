@@ -47,10 +47,11 @@ public:
 	VOID CreateIdleProc(void *StartAddr);
 
 	Thread* AcquireThread();
-	[[nodiscard]] UINT64 CountThreads(UINT64 TID) const;
+	UINT64 CountThreads(UINT64 TID);
 	void ReleaseThread(Thread *T);
 
 private:
+	Spinlock AccessSpinlock;
 	ArrayList<Process> ProcessList;
 	ArrayList<Thread> ThreadList;
 };

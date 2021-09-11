@@ -46,7 +46,7 @@ extern "C" void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New,
 void pantheon::Scheduler::Reschedule()
 {
 	/* Don't allow interrupts while a process is getting scheduled */
-	pantheon::CPU::CLI();
+	pantheon::CPU::PUSHI();
 
 	pantheon::Thread *Old = this->CurThread;
 	pantheon::Thread *New = pantheon::GetGlobalScheduler()->AcquireThread();
@@ -63,7 +63,7 @@ void pantheon::Scheduler::Reschedule()
 		cpu_switch(Prev, Next, CpuIRegOffset);
 		pantheon::GetGlobalScheduler()->ReleaseThread(Old);
 	}
-	pantheon::CPU::STI();
+	pantheon::CPU::POPI();
 }
 
 pantheon::Process *pantheon::Scheduler::MyProc()
@@ -112,8 +112,6 @@ pantheon::GlobalScheduler::~GlobalScheduler()
 	/* NYI */
 }
 
-static pantheon::Spinlock AccessSpinlock;
-
 /**
  * \~english @brief Creates a process, visible globally, from a name and address.
  * \~english @details A process is created, such that it can be run on any
@@ -128,19 +126,16 @@ static pantheon::Spinlock AccessSpinlock;
  */
 BOOL pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *StartAddr)
 {
-	pantheon::CPU::CLI();
+	BOOL Value = FALSE;
+	
+	AccessSpinlock.Acquire();
+	UINT64 Index = this->ProcessList.Size();
 	pantheon::Process NewProc(ProcStr);
-	BOOL Val = NewProc.CreateThread(StartAddr, nullptr);
-
-	if (Val)
-	{
-		AccessSpinlock.Acquire();
-		this->ProcessList.Add(NewProc);
-		AccessSpinlock.Release();
-	}
-
-	pantheon::CPU::STI();
-	return Val;
+	this->ProcessList.Add(NewProc);
+	Value = this->ProcessList[Index].CreateThread(StartAddr, nullptr);
+	AccessSpinlock.Release();
+	
+	return Value;
 }
 
 BOOL pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData)
@@ -165,18 +160,21 @@ BOOL pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *Star
 	return StackSpace.GetOkay();
 }
 
+static pantheon::Spinlock ThreadIDLock;
+static pantheon::Spinlock ProcIDLock;
 
 VOID pantheon::GlobalScheduler::Init()
 {
+	this->ThreadList = ArrayList<Thread>();
 	this->ProcessList = ArrayList<Process>();
 	this->ProcessList.Add(pantheon::Process());
 
-	this->ThreadList = ArrayList<Thread>();
+	ThreadIDLock = Spinlock("threadid");
+	ProcIDLock = Spinlock("procid");
 }
 
 VOID pantheon::GlobalScheduler::CreateIdleProc(void *StartAddr)
 {
-	pantheon::CPU::CLI();
 	AccessSpinlock.Acquire();
 	for (pantheon::Process &Proc : this->ProcessList)
 	{
@@ -187,7 +185,6 @@ VOID pantheon::GlobalScheduler::CreateIdleProc(void *StartAddr)
 		}
 	}
 	AccessSpinlock.Release();
-	pantheon::CPU::STI();
 }
 
 
@@ -225,8 +222,7 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 	return Thr;
 }
 
-[[nodiscard]] 
-UINT64 pantheon::GlobalScheduler::CountThreads(UINT64 PID) const
+UINT64 pantheon::GlobalScheduler::CountThreads(UINT64 PID)
 {
 	UINT64 Count = 0;
 	AccessSpinlock.Acquire();
@@ -248,8 +244,6 @@ void pantheon::GlobalScheduler::ReleaseThread(Thread *T)
 	AccessSpinlock.Release();
 }
 
-static pantheon::Spinlock ThreadIDLock;
-static pantheon::Spinlock ProcIDLock;
 static pantheon::GlobalScheduler GlobalSched;
 
 UINT32 pantheon::AcquireProcessID()
