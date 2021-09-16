@@ -29,7 +29,7 @@ VOID pantheon::CPU::PAUSE()
 
 BOOL pantheon::CPU::IF()
 {
-	return ((pantheon::arm::DAIFR() >> 6) & 0b111) > 0;
+	return ((pantheon::arm::DAIFR() >> 6) & 0b111) != 0;
 }
 
 VOID pantheon::CPU::PUSHI()

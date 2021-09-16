@@ -143,7 +143,7 @@ void SERIAL_LOG_UNSAFE(const char *Fmt, ...)
  * this mutex is technically in undefined state. We'll need .init_array to work
  * right first...
  */
-static pantheon::Spinlock PrintMutex;
+static pantheon::Spinlock PrintMutex("print lock");
 
 void SERIAL_LOG(const char *Fmt, ...)
 {
@@ -158,7 +158,15 @@ void SERIAL_LOG(const char *Fmt, ...)
 
 void pantheon::StopError(const char *Reason)
 {
-	SERIAL_LOG_UNSAFE("%s\n", Reason);
+	if (Reason)
+	{
+		SERIAL_LOG_UNSAFE("%s\n", Reason);
+	}
+	else
+	{
+		SERIAL_LOG_UNSAFE("%s\n", "unknown reason");
+	}
+	
 	/* TODO: stop other cores */
 	for (;;){};
 }

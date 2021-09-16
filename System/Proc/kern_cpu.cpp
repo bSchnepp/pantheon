@@ -26,7 +26,6 @@ pantheon::CPU::CoreInfo *pantheon::CPU::GetCoreInfo()
  */
 void pantheon::CPU::InitCoreInfo(UINT8 CoreNo)
 {
-	PerCoreInfo[CoreNo].CurThread = nullptr;
 	PerCoreInfo[CoreNo].CurFrame = nullptr;
 
 	void *MaybeAddr = BasicMalloc(sizeof(pantheon::Scheduler))();
@@ -47,7 +46,7 @@ pantheon::GlobalScheduler *pantheon::CPU::GetGlobalScheduler()
 
 pantheon::Thread *pantheon::CPU::GetCurThread()
 {
-	return pantheon::CPU::GetCoreInfo()->CurThread;
+	return pantheon::CPU::GetCoreInfo()->CurSched->MyThread();
 }
 
 pantheon::Scheduler *pantheon::CPU::GetCurSched()

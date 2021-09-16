@@ -33,7 +33,7 @@ void pantheon::Spinlock::Acquire()
 
 	for (;;)
 	{
-		if (__atomic_exchange_n(&this->Locked, TRUE, __ATOMIC_ACQUIRE) == FALSE)
+		if (__sync_lock_test_and_set(&this->Locked, TRUE) == FALSE)
 		{
 			break;
 		}
@@ -48,15 +48,12 @@ void pantheon::Spinlock::Acquire()
 
 void pantheon::Spinlock::Release()
 {
-	if (this->IsLocked())
+	if (!this->Locked || this->Holder() != pantheon::CPU::GetProcessorNumber())
 	{
-		if (this->Holder() != pantheon::CPU::GetProcessorNumber())
-		{
-			pantheon::StopError(this->DebugName);
-		}
+		pantheon::StopError(this->DebugName);
 	}
-	__atomic_exchange_n(&this->Locked, FALSE, __ATOMIC_RELEASE);
 	__sync_synchronize();
+	__sync_lock_release(&this->Locked);
 	this->CoreNo = 0;
 	pantheon::CPU::POPI();
 }

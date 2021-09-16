@@ -73,9 +73,9 @@ void kern_init_core()
 		/* Loop until core 0 finished kernel setup */
 	}
 
-	pantheon::CPU::STI();
 	pantheon::RearmSystemTimer(1000);
 	pantheon::CPU::GetCoreInfo()->CurSched->SignalReschedule();
+	pantheon::CPU::STI();
 	for (;;)
 	{
 		pantheon::CPU::GetCoreInfo()->CurSched->MaybeReschedule();
