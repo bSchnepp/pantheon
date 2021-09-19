@@ -27,6 +27,11 @@ VOID pantheon::CPU::PAUSE()
 	asm volatile("yield\n");
 }
 
+VOID pantheon::CPU::HLT()
+{
+	asm volatile("wfi\n");
+}
+
 BOOL pantheon::CPU::IF()
 {
 	return ((pantheon::arm::DAIFR() >> 6) & 0b111) != 0;
@@ -48,9 +53,10 @@ VOID pantheon::CPU::PUSHI()
 VOID pantheon::CPU::POPI()
 {
 	pantheon::CPU::CoreInfo *CoreInfo = pantheon::CPU::GetCoreInfo();
-	if (pantheon::CPU::IF() || CoreInfo->NOff == 0)
+	if (pantheon::CPU::IF() == FALSE || CoreInfo->NOff == 0)
 	{
 		/* This is probably an error... */
+		StopError("Mismatched PUSHI/POPI (trying to pop)");
 		return;
 	}
 	CoreInfo->NOff--;
@@ -59,4 +65,10 @@ VOID pantheon::CPU::POPI()
 	{
 		pantheon::CPU::STI();
 	}
+}
+
+UINT64 pantheon::CPU::ICOUNT()
+{
+	pantheon::CPU::CoreInfo *CoreInfo = pantheon::CPU::GetCoreInfo();
+	return CoreInfo->NOff;
 }

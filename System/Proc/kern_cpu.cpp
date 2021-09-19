@@ -27,6 +27,7 @@ pantheon::CPU::CoreInfo *pantheon::CPU::GetCoreInfo()
 void pantheon::CPU::InitCoreInfo(UINT8 CoreNo)
 {
 	PerCoreInfo[CoreNo].CurFrame = nullptr;
+	PerCoreInfo[CoreNo].NOff = 0;
 
 	void *MaybeAddr = BasicMalloc(sizeof(pantheon::Scheduler))();
 	if (!MaybeAddr)

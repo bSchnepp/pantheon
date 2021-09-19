@@ -48,13 +48,19 @@ void pantheon::Spinlock::Acquire()
 
 void pantheon::Spinlock::Release()
 {
-	if (!this->Locked || this->Holder() != pantheon::CPU::GetProcessorNumber())
+	if (!this->Locked)
 	{
 		pantheon::StopError(this->DebugName);
 	}
+
+	if (this->Holder() != pantheon::CPU::GetProcessorNumber())
+	{
+		pantheon::StopError(this->DebugName);
+	}
+	
+	this->CoreNo = 0;
 	__sync_synchronize();
 	__sync_lock_release(&this->Locked);
-	this->CoreNo = 0;
 	pantheon::CPU::POPI();
 }
 

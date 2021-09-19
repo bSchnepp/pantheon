@@ -29,6 +29,8 @@ public:
 	void SignalReschedule();
 
 private:
+	BOOL PerformCpuSwitch(Thread *Old, Thread *New);
+
 	Thread *CurThread;
 	Atomic<BOOL> ShouldReschedule;
 };
@@ -59,6 +61,8 @@ private:
 UINT32 AcquireProcessID();
 UINT64 AcquireThreadID();
 GlobalScheduler *GetGlobalScheduler();
+
+void AttemptReschedule();
 
 }
 

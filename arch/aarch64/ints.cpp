@@ -64,24 +64,8 @@ extern "C" void irq_handler_el1(pantheon::TrapFrame *Frame)
 	pantheon::arm::GICAckInterrupt(IAR);
 	if ((IAR & 0x3FF) == 30)
 	{
-		pantheon::CPU::CoreInfo *CoreData = pantheon::CPU::GetCoreInfo();
-		pantheon::Scheduler *CurSched = CoreData->CurSched;
-		pantheon::Thread *CurThread = CurSched->MyThread();
 		pantheon::arm::RearmSystemTimer();
-
-		UINT64 RemainingTicks = 0;
-		if (CurThread)
-		{
-			CurThread->CountTick();
-			RemainingTicks = CurThread->TicksLeft();
-		}
-		
-		if (RemainingTicks == 0)
-		{
-			CurSched->SignalReschedule();
-		}
-
-		CurSched->MaybeReschedule();
+		pantheon::AttemptReschedule();
 	}
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }

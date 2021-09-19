@@ -33,6 +33,35 @@ pantheon::Scheduler::~Scheduler()
 
 extern "C" void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New, UINT32 RegOffset);
 
+BOOL pantheon::Scheduler::PerformCpuSwitch(Thread *Old, Thread *New)
+{
+	if (Old == New)
+	{
+		return FALSE;
+	}
+
+	if (New == nullptr)
+	{
+		pantheon::CPU::HLT();
+		return FALSE;
+	}
+
+	this->CurThread = New;
+	if (Old && New)
+	{
+		pantheon::CpuContext *Prev = (Old->GetRegisters());
+		pantheon::CpuContext *Next = (New->GetRegisters());
+
+		New->RefreshTicks();
+		this->ShouldReschedule.Store(FALSE);
+		pantheon::GetGlobalScheduler()->ReleaseThread(Old);
+		cpu_switch(Prev, Next, CpuIRegOffset);
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
 /**
  * \~english @brief Changes the current thread of this core.
  * \~english @details Forcefully changes the current thread by iterating to
@@ -45,21 +74,18 @@ extern "C" void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New,
  */
 void pantheon::Scheduler::Reschedule()
 {
-	/* Don't allow interrupts while a process is getting scheduled */
+	/* Interrupts must be enabled before we can do anything. */
+	if (pantheon::CPU::ICOUNT())
+	{
+		return;
+	}
+
+	pantheon::CPU::STI();
+
 	pantheon::Thread *Old = this->CurThread;
 	pantheon::Thread *New = pantheon::GetGlobalScheduler()->AcquireThread();
 
-	this->CurThread = New;
-	if (Old && New && Old != New)
-	{
-		this->ShouldReschedule.Store(FALSE);
-		pantheon::CpuContext *Prev = &(Old->GetRegisters());
-		pantheon::CpuContext *Next = &(New->GetRegisters());
-
-		New->RefreshTicks();
-		cpu_switch(Prev, Next, CpuIRegOffset);
-		pantheon::GetGlobalScheduler()->ReleaseThread(Old);
-	}
+	this->PerformCpuSwitch(Old, New);
 }
 
 pantheon::Process *pantheon::Scheduler::MyProc()
@@ -148,8 +174,8 @@ BOOL pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *Star
 		UINT64 IStackSpace = (UINT64)StackSpace();
 		IStackSpace += StackSz;
 
-		pantheon::CpuContext &Regs = T.GetRegisters();
-		Regs.SetInitContext(IStartAddr, IThreadData, IStackSpace);
+		pantheon::CpuContext *Regs = T.GetRegisters();
+		Regs->SetInitContext(IStartAddr, IThreadData, IStackSpace);
 		T.SetState(pantheon::THREAD_STATE_WAITING);
 		this->ThreadList.Add(T);
 	}
@@ -192,34 +218,44 @@ VOID pantheon::GlobalScheduler::CreateIdleProc(void *StartAddr)
 pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 {
 	static UINT64 AcquireCounter = 0;
+	static BOOL VisitFlag = FALSE;
 	pantheon::Thread *Thr = nullptr;
 
 	/* This should be replaced with a skiplist (or linked list), 
 	 * so finding an inactive thread becomes an O(1) process.
 	 */
 	AccessSpinlock.Acquire();
-	UINT64 TotalCount = 0;
 	UINT64 TListSize = this->ThreadList.Size();
 	AcquireCounter %= TListSize;
+	UINT8 OrigCount = 0;
 	while (Thr == nullptr)
 	{
-		TotalCount++;
-		AcquireCounter++;
-		AcquireCounter %= TListSize;
-
-		pantheon::Thread &MaybeThr = this->ThreadList[AcquireCounter];
-
-		if (MaybeThr.MyState() == pantheon::THREAD_STATE_WAITING)
-		{
-			Thr = &(this->ThreadList[AcquireCounter]);
-			Thr->SetState(pantheon::THREAD_STATE_RUNNING);
-			break;
-		}
-
-		if (TotalCount == TListSize)
+		if (OrigCount == 4)
 		{
 			break;
 		}
+
+		for (UINT64 Index = 0; Index < TListSize; ++Index)
+		{
+			AcquireCounter++;
+			AcquireCounter %= TListSize;
+
+			pantheon::Thread &MaybeThr = this->ThreadList[AcquireCounter];
+			if (MaybeThr.GetVisitFlag() != VisitFlag)
+			{
+				continue;
+			}
+
+			if (MaybeThr.MyState() == pantheon::THREAD_STATE_WAITING)
+			{
+				Thr = &(this->ThreadList[AcquireCounter]);
+				Thr->SetState(pantheon::THREAD_STATE_RUNNING);
+				Thr->FlipVisitFlag();
+				break;
+			}
+		}
+		OrigCount++;
+		VisitFlag = !VisitFlag;
 	}
 	AccessSpinlock.Release();
 	return Thr;
@@ -282,4 +318,25 @@ UINT64 pantheon::AcquireThreadID()
 pantheon::GlobalScheduler *pantheon::GetGlobalScheduler()
 {
 	return &GlobalSched;
+}
+
+void pantheon::AttemptReschedule()
+{
+	pantheon::CPU::CoreInfo *CoreData = pantheon::CPU::GetCoreInfo();
+	pantheon::Scheduler *CurSched = CoreData->CurSched;
+	pantheon::Thread *CurThread = CurSched->MyThread();
+
+	UINT64 RemainingTicks = 0;
+	if (CurThread)
+	{
+		CurThread->CountTick();
+		RemainingTicks = CurThread->TicksLeft();
+	}
+		
+	if (RemainingTicks == 0)
+	{
+		CurSched->SignalReschedule();
+	}
+
+	CurSched->MaybeReschedule();
 }

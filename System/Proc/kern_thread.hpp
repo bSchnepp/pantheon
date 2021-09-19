@@ -60,8 +60,11 @@ public:
 
 	VOID SetEntryLocation(UINT64 IP, UINT64 SP, VOID* ThreadData);
 
-	CpuContext &GetRegisters();
+	CpuContext *GetRegisters();
 	void SetStackAddr(UINT64 Addr);
+
+	void FlipVisitFlag();
+	[[nodiscard]] BOOL GetVisitFlag() const;
 
 	Thread &operator=(const Thread &Other);
 	Thread &operator=(Thread &&Other) noexcept;
@@ -80,7 +83,7 @@ private:
 
 	void *StackSpace;
 
-	BOOL WasVisited;
+	BOOL VisitFlag;
 };
 
 }
