@@ -4,10 +4,7 @@
 #ifndef _AARCH64_INTS_HPP_
 #define _AARCH64_INTS_HPP_
 
-namespace pantheon
-{
-
-namespace arm
+namespace pantheon::arm
 {
 
 VOID LoadInterruptTable(VOID *Table);
@@ -21,7 +18,7 @@ VOID DisableSystemTimer();
 VOID CLI();
 VOID STI();
 
-}
+UINT64 DAIFR();
 
 }
 

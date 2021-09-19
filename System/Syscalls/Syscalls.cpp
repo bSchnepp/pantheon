@@ -17,8 +17,8 @@ void disable_interrupts()
 
 VOID pantheon::SVCExitProcess()
 {
-	pantheon::Thread *CurThread = pantheon::CPU::GetCoreInfo()->CurThread;
-	CurThread->MyProc()->DeactivateThread(CurThread);
+	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+	pantheon::GetGlobalScheduler()->ReleaseThread(CurThread);
 	CurThread->MyProc()->SetState(pantheon::PROCESS_STATE_ZOMBIE);
 	pantheon::CPU::GetCoreInfo()->CurSched->Reschedule();
 }
@@ -31,9 +31,9 @@ pantheon::Result pantheon::SVCForkProcess()
 
 pantheon::Result pantheon::SVCLogText(const CHAR *Data)
 {
-	pantheon::CPU::CLI();
+	pantheon::CPU::PUSHI();
 	SERIAL_LOG("%s\n", Data);
-	pantheon::CPU::STI();
+	pantheon::CPU::POPI();
 	return 0;
 }
 

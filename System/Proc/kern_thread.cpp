@@ -19,7 +19,7 @@ pantheon::Thread::Thread()
 	this->Registers.Wipe();
 	this->StackSpace = nullptr;
 	this->TID = 0;
-	this->WasVisited = FALSE;
+	this->VisitFlag = FALSE;
 }
 
 /**
@@ -54,7 +54,7 @@ pantheon::Thread::Thread(Process *OwningProcess, ThreadPriority Priority)
 	this->State = pantheon::THREAD_STATE_INIT;
 
 	this->TID = AcquireThreadID();
-	this->WasVisited = FALSE;
+	this->VisitFlag = FALSE;
 
 	/* 45 for NORMAL, 30 for LOW, 15 for VERYLOW, etc. */
 	this->RefreshTicks();
@@ -70,7 +70,7 @@ pantheon::Thread::Thread(const pantheon::Thread &Other)
 	this->State = Other.State;
 	this->TID = Other.TID;
 	this->StackSpace = Other.StackSpace;
-	this->WasVisited = Other.WasVisited;
+	this->VisitFlag = Other.VisitFlag;
 }
 
 pantheon::Thread::Thread(pantheon::Thread &&Other) noexcept
@@ -83,7 +83,7 @@ pantheon::Thread::Thread(pantheon::Thread &&Other) noexcept
 	this->State = Other.State;
 	this->TID = Other.TID;
 	this->StackSpace = Other.StackSpace;
-	this->WasVisited = Other.WasVisited;
+	this->VisitFlag = Other.VisitFlag;
 }
 
 pantheon::Thread::~Thread()
@@ -99,7 +99,8 @@ pantheon::Thread::~Thread()
  * \~english @author Brian Schnepp
  * \~english @return A pointer to the owning process of this thread.
  */
-pantheon::Process *pantheon::Thread::MyProc()
+[[nodiscard]]
+pantheon::Process *pantheon::Thread::MyProc() const
 {
 	return this->ParentProcess;
 }
@@ -206,10 +207,10 @@ VOID pantheon::Thread::SetPriority(ThreadPriority Priority)
  * \~english @brief Obtains a reference to the registers of the thread.
  * \~english @author Brian Schnepp
  */
-pantheon::CpuContext &pantheon::Thread::GetRegisters()
+pantheon::CpuContext *pantheon::Thread::GetRegisters()
 {
 	/* TODO: Copy the actual registers to the internal representation! */
-	return this->Registers;
+	return &this->Registers;
 }
 
 pantheon::Thread &pantheon::Thread::operator=(const pantheon::Thread &Other)
@@ -254,13 +255,13 @@ void pantheon::Thread::SetStackAddr(UINT64 Addr)
 	this->StackSpace = reinterpret_cast<void*>((CHAR*)Addr);
 }
 
-VOID pantheon::Thread::SetVisited(BOOL Value)
+void pantheon::Thread::FlipVisitFlag()
 {
-	this->WasVisited = Value;
+	this->VisitFlag = !this->VisitFlag;
 }
 
 [[nodiscard]]
-BOOL pantheon::Thread::Visited() const
+BOOL pantheon::Thread::GetVisitFlag() const
 {
-	return this->WasVisited;
+	return this->VisitFlag;
 }

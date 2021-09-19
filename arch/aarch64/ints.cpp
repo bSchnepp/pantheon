@@ -11,49 +11,49 @@ static UINT64 TimerClock = 1000;
 extern "C" void sync_handler_el1_sp0(pantheon::TrapFrame *Frame)
 {
 	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
-	SERIAL_LOG("%s\n", "ERR: SYNC HANDLER EL1 SP0");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: SYNC HANDLER EL1 SP0");
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void err_handler_el1_sp0(pantheon::TrapFrame *Frame)
 {
 	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
-	SERIAL_LOG("%s\n", "ERR: ERR HANDLER EL1 SP0");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: ERR HANDLER EL1 SP0");
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void fiq_handler_el1_sp0(pantheon::TrapFrame *Frame)
 {
 	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
-	SERIAL_LOG("%s\n", "ERR: FIQ HANDLER EL1 SP0");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: FIQ HANDLER EL1 SP0");
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void irq_handler_el1_sp0(pantheon::TrapFrame *Frame)
 {
 	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
-	SERIAL_LOG("%s\n", "ERR: IRQ HANDLER EL1 SP0");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: IRQ HANDLER EL1 SP0");
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void sync_handler_el1(pantheon::TrapFrame *Frame)
 {
 	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
-	SERIAL_LOG("%s\n", "ERR: SYNC HANDLER EL1");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: SYNC HANDLER EL1");
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void err_handler_el1(pantheon::TrapFrame *Frame)
 {
 	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
-	SERIAL_LOG("%s\n", "ERR: ERR HANDLER EL1");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: ERR HANDLER EL1");
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void fiq_handler_el1(pantheon::TrapFrame *Frame)
 {
 	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
-	SERIAL_LOG("%s\n", "ERR: FIQ HANDLER EL1");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: FIQ HANDLER EL1");
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
@@ -64,24 +64,8 @@ extern "C" void irq_handler_el1(pantheon::TrapFrame *Frame)
 	pantheon::arm::GICAckInterrupt(IAR);
 	if ((IAR & 0x3FF) == 30)
 	{
-		pantheon::CPU::CoreInfo *CoreData = pantheon::CPU::GetCoreInfo();
-		pantheon::Scheduler *CurSched = CoreData->CurSched;
-		pantheon::Thread *CurThread = CurSched->MyThread();
 		pantheon::arm::RearmSystemTimer();
-
-		UINT64 RemainingTicks = 0;
-		if (CurThread)
-		{
-			CurThread->CountTick();
-			RemainingTicks = CurThread->TicksLeft();
-		}
-		
-		if (RemainingTicks == 0)
-		{
-			CurSched->SignalReschedule();
-		}
-
-		CurSched->MaybeReschedule();
+		pantheon::AttemptReschedule();
 	}
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
@@ -92,14 +76,14 @@ extern "C" void irq_handler_el1(pantheon::TrapFrame *Frame)
 extern "C" void err_handler_el0(pantheon::TrapFrame *Frame)
 {
 	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
-	SERIAL_LOG("%s\n", "ERR: ERR HANDLER EL0");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: ERR HANDLER EL0");
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void fiq_handler_el0(pantheon::TrapFrame *Frame)
 {
 	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
-	SERIAL_LOG("%s\n", "ERR: FIQ HANDLER EL0");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: FIQ HANDLER EL0");
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
@@ -112,28 +96,28 @@ extern "C" void irq_handler_el0(pantheon::TrapFrame *Frame)
 extern "C" void sync_handler_el0_32(pantheon::TrapFrame *Frame)
 {
 	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
-	SERIAL_LOG("%s\n", "ERR: SYNC HANDLER EL0_32");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: SYNC HANDLER EL0_32");
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void err_handler_el0_32(pantheon::TrapFrame *Frame)
 {
 	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
-	SERIAL_LOG("%s\n", "ERR: ERR HANDLER EL0_32");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: ERR HANDLER EL0_32");
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void fiq_handler_el0_32(pantheon::TrapFrame *Frame)
 {
 	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
-	SERIAL_LOG("%s\n", "ERR: FIQ HANDLER EL0_32");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: FIQ HANDLER EL0_32");
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void irq_handler_el0_32(pantheon::TrapFrame *Frame)
 {
 	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
-	SERIAL_LOG("%s\n", "ERR: IRQ HANDLER EL0_32");
+	SERIAL_LOG_UNSAFE("%s\n", "ERR: IRQ HANDLER EL0_32");
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
@@ -176,6 +160,13 @@ VOID pantheon::arm::DisableSystemTimer()
 	asm volatile ("msr cntp_tval_el0, %0\n" 
 			"msr cntp_ctl_el0, %1"
 			:: "r"(ClockSpeed), "r"(TimerCtl) : "memory");	
+}
+
+UINT64 pantheon::arm::DAIFR()
+{
+	UINT64 Val;
+	asm volatile("mrs %0, daif\n" : "=r"(Val));
+	return Val;
 }
 
 VOID pantheon::arm::CLI()

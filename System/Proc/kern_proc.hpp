@@ -48,22 +48,10 @@ public:
 
 	[[nodiscard]] const String &GetProcessString() const;
 	[[nodiscard]] UINT32 ProcessID() const;
-
-	[[nodiscard]] UINT64 NumThreads() const;
 	BOOL CreateThread(void *StartAddr, void *ThreadData);
-
-	[[nodiscard]] UINT64 NumInactiveThreads() const;
-	Thread* ActivateThread();
-	void DeactivateThread(Thread *T);
 
 	[[nodiscard]] ProcessState MyState() const;
 	void SetState(ProcessState State);
-
-	[[nodiscard]] static UINT64 DefaultThreadStackSize();
-
-	VOID WipeVisited();
-
-
 
 private:
 	UINT32 PID;
@@ -71,9 +59,6 @@ private:
 	
 	ProcessState CurState;
 	ProcessPriority Priority;
-
-	ArrayList<Thread> Threads;
-	UINT64 InactiveTIDCount;
 
 	pantheon::Spinlock CreateThreadLock;
 };

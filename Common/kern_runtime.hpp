@@ -137,4 +137,11 @@ constexpr UINT32 ConstStrLen(const CHAR *Str)
 void SERIAL_LOG(const char *Fmt, ...);
 void SERIAL_LOG_UNSAFE(const char *Fmt, ...);
 
+namespace pantheon
+{
+
+void StopError(const char *Reason);
+
+}
+
 #endif

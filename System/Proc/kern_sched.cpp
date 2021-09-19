@@ -33,6 +33,35 @@ pantheon::Scheduler::~Scheduler()
 
 extern "C" void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New, UINT32 RegOffset);
 
+BOOL pantheon::Scheduler::PerformCpuSwitch(Thread *Old, Thread *New)
+{
+	if (Old == New)
+	{
+		return FALSE;
+	}
+
+	if (New == nullptr)
+	{
+		pantheon::CPU::HLT();
+		return FALSE;
+	}
+
+	this->CurThread = New;
+	if (Old && New)
+	{
+		pantheon::CpuContext *Prev = (Old->GetRegisters());
+		pantheon::CpuContext *Next = (New->GetRegisters());
+
+		New->RefreshTicks();
+		this->ShouldReschedule.Store(FALSE);
+		pantheon::GetGlobalScheduler()->ReleaseThread(Old);
+		cpu_switch(Prev, Next, CpuIRegOffset);
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
 /**
  * \~english @brief Changes the current thread of this core.
  * \~english @details Forcefully changes the current thread by iterating to
@@ -45,26 +74,18 @@ extern "C" void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New,
  */
 void pantheon::Scheduler::Reschedule()
 {
-	/* Don't allow interrupts while a process is getting scheduled */
-	pantheon::CPU::CLI();
+	/* Interrupts must be enabled before we can do anything. */
+	if (pantheon::CPU::ICOUNT())
+	{
+		return;
+	}
+
+	pantheon::CPU::STI();
 
 	pantheon::Thread *Old = this->CurThread;
 	pantheon::Thread *New = pantheon::GetGlobalScheduler()->AcquireThread();
 
-	this->CurThread = New;
-	pantheon::CPU::GetCoreInfo()->CurThread = this->CurThread;
-	if (Old && New && Old != New)
-	{
-		pantheon::CpuContext *Prev = &(Old->GetRegisters());
-		pantheon::CpuContext *Next = &(New->GetRegisters());
-
-		this->ShouldReschedule.Store(FALSE);
-
-		New->RefreshTicks();
-		cpu_switch(Prev, Next, CpuIRegOffset);
-		pantheon::GetGlobalScheduler()->ReleaseThread(Old);
-	}
-	pantheon::CPU::STI();
+	this->PerformCpuSwitch(Old, New);
 }
 
 pantheon::Process *pantheon::Scheduler::MyProc()
@@ -113,8 +134,6 @@ pantheon::GlobalScheduler::~GlobalScheduler()
 	/* NYI */
 }
 
-static pantheon::Spinlock ProcAccessSpinlock;
-
 /**
  * \~english @brief Creates a process, visible globally, from a name and address.
  * \~english @details A process is created, such that it can be run on any
@@ -129,32 +148,56 @@ static pantheon::Spinlock ProcAccessSpinlock;
  */
 BOOL pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *StartAddr)
 {
-	pantheon::CPU::CLI();
+	BOOL Value = FALSE;
+	
+	AccessSpinlock.Acquire();
+	UINT64 Index = this->ProcessList.Size();
 	pantheon::Process NewProc(ProcStr);
-	BOOL Val = NewProc.CreateThread(StartAddr, nullptr);
-
-	if (Val)
-	{
-		ProcAccessSpinlock.Acquire();
-		this->ProcessList.Add(NewProc);
-		ProcAccessSpinlock.Release();
-	}
-
-	pantheon::CPU::STI();
-	return Val;
+	this->ProcessList.Add(NewProc);
+	Value = this->ProcessList[Index].CreateThread(StartAddr, nullptr);
+	AccessSpinlock.Release();
+	
+	return Value;
 }
 
+BOOL pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData)
+{
+	pantheon::Thread T(Proc);
+
+	/* Attempt 128KB of stack space for now... */
+	UINT64 StackSz = 4096;
+	Optional<void*> StackSpace = BasicMalloc(StackSz);
+	if (StackSpace.GetOkay())
+	{
+		UINT64 IStartAddr = (UINT64)StartAddr;
+		UINT64 IThreadData = (UINT64)ThreadData;
+		UINT64 IStackSpace = (UINT64)StackSpace();
+		IStackSpace += StackSz;
+
+		pantheon::CpuContext *Regs = T.GetRegisters();
+		Regs->SetInitContext(IStartAddr, IThreadData, IStackSpace);
+		T.SetState(pantheon::THREAD_STATE_WAITING);
+		this->ThreadList.Add(T);
+	}
+	return StackSpace.GetOkay();
+}
+
+static pantheon::Spinlock ThreadIDLock;
+static pantheon::Spinlock ProcIDLock;
 
 VOID pantheon::GlobalScheduler::Init()
 {
+	this->ThreadList = ArrayList<Thread>();
 	this->ProcessList = ArrayList<Process>();
 	this->ProcessList.Add(pantheon::Process());
+
+	ThreadIDLock = Spinlock("threadid");
+	ProcIDLock = Spinlock("procid");
 }
 
 VOID pantheon::GlobalScheduler::CreateIdleProc(void *StartAddr)
 {
-	pantheon::CPU::CLI();
-	ProcAccessSpinlock.Acquire();
+	AccessSpinlock.Acquire();
 	for (pantheon::Process &Proc : this->ProcessList)
 	{
 		if (Proc.ProcessID() == 0)
@@ -163,9 +206,9 @@ VOID pantheon::GlobalScheduler::CreateIdleProc(void *StartAddr)
 			break;
 		}
 	}
-	ProcAccessSpinlock.Release();
-	pantheon::CPU::STI();
+	AccessSpinlock.Release();
 }
+
 
 /**
  * \~english @brief Obtains a Process which has an inactive thread, or the idle process if none available.
@@ -174,53 +217,72 @@ VOID pantheon::GlobalScheduler::CreateIdleProc(void *StartAddr)
  */
 pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 {
-	pantheon::Thread *SelectedThread = nullptr;
+	static UINT64 AcquireCounter = 0;
+	static BOOL VisitFlag = FALSE;
+	pantheon::Thread *Thr = nullptr;
 
 	/* This should be replaced with a skiplist (or linked list), 
 	 * so finding an inactive thread becomes an O(1) process.
 	 */
-	ProcAccessSpinlock.Acquire();
-	for (pantheon::Process &SelectedProc : this->ProcessList)
+	AccessSpinlock.Acquire();
+	UINT64 TListSize = this->ThreadList.Size();
+	AcquireCounter %= TListSize;
+	UINT8 OrigCount = 0;
+	while (Thr == nullptr)
 	{
-		pantheon::ProcessState PState = SelectedProc.MyState();
-		if (PState == pantheon::PROCESS_STATE_TERMINATED
-			|| PState == pantheon::PROCESS_STATE_ZOMBIE)
+		if (OrigCount == 4)
 		{
-			continue;
+			break;
 		}
-		
-		if (SelectedProc.NumInactiveThreads())
+
+		for (UINT64 Index = 0; Index < TListSize; ++Index)
 		{
-			SelectedThread = SelectedProc.ActivateThread();
-			if (SelectedThread)
+			AcquireCounter++;
+			AcquireCounter %= TListSize;
+
+			pantheon::Thread &MaybeThr = this->ThreadList[AcquireCounter];
+			if (MaybeThr.GetVisitFlag() != VisitFlag)
 			{
+				continue;
+			}
+
+			if (MaybeThr.MyState() == pantheon::THREAD_STATE_WAITING)
+			{
+				Thr = &(this->ThreadList[AcquireCounter]);
+				Thr->SetState(pantheon::THREAD_STATE_RUNNING);
+				Thr->FlipVisitFlag();
 				break;
 			}
 		}
+		OrigCount++;
+		VisitFlag = !VisitFlag;
 	}
+	AccessSpinlock.Release();
+	return Thr;
+}
 
-	if (SelectedThread == nullptr)
+UINT64 pantheon::GlobalScheduler::CountThreads(UINT64 PID)
+{
+	UINT64 Count = 0;
+	AccessSpinlock.Acquire();
+	for (const pantheon::Thread &T : this->ThreadList)
 	{
-		for (pantheon::Process &Proc : this->ProcessList)
+		if (T.MyProc()->ProcessID() == PID)
 		{
-			Proc.WipeVisited();
+			Count++;
 		}
 	}
-
-	ProcAccessSpinlock.Release();
-	return SelectedThread;
+	AccessSpinlock.Release();
+	return Count;
 }
 
 void pantheon::GlobalScheduler::ReleaseThread(Thread *T)
 {
-	ProcAccessSpinlock.Acquire();
-	T->MyProc()->DeactivateThread(T);
-	ProcAccessSpinlock.Release();
+	AccessSpinlock.Acquire();
+	T->SetState(pantheon::THREAD_STATE_WAITING);
+	AccessSpinlock.Release();
 }
 
-
-static pantheon::Spinlock ThreadIDLock;
-static pantheon::Spinlock ProcIDLock;
 static pantheon::GlobalScheduler GlobalSched;
 
 UINT32 pantheon::AcquireProcessID()
@@ -256,4 +318,25 @@ UINT64 pantheon::AcquireThreadID()
 pantheon::GlobalScheduler *pantheon::GetGlobalScheduler()
 {
 	return &GlobalSched;
+}
+
+void pantheon::AttemptReschedule()
+{
+	pantheon::CPU::CoreInfo *CoreData = pantheon::CPU::GetCoreInfo();
+	pantheon::Scheduler *CurSched = CoreData->CurSched;
+	pantheon::Thread *CurThread = CurSched->MyThread();
+
+	UINT64 RemainingTicks = 0;
+	if (CurThread)
+	{
+		CurThread->CountTick();
+		RemainingTicks = CurThread->TicksLeft();
+	}
+		
+	if (RemainingTicks == 0)
+	{
+		CurSched->SignalReschedule();
+	}
+
+	CurSched->MaybeReschedule();
 }

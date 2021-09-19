@@ -29,6 +29,8 @@ public:
 	void SignalReschedule();
 
 private:
+	BOOL PerformCpuSwitch(Thread *Old, Thread *New);
+
 	Thread *CurThread;
 	Atomic<BOOL> ShouldReschedule;
 };
@@ -43,18 +45,24 @@ public:
 	void Init();
 
 	BOOL CreateProcess(pantheon::String ProcStr, void *StartAddr);
+	BOOL CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData);
 	VOID CreateIdleProc(void *StartAddr);
 
 	Thread* AcquireThread();
+	UINT64 CountThreads(UINT64 TID);
 	void ReleaseThread(Thread *T);
 
 private:
+	Spinlock AccessSpinlock;
 	ArrayList<Process> ProcessList;
+	ArrayList<Thread> ThreadList;
 };
 
 UINT32 AcquireProcessID();
 UINT64 AcquireThreadID();
 GlobalScheduler *GetGlobalScheduler();
+
+void AttemptReschedule();
 
 }
 

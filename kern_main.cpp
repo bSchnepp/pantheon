@@ -30,9 +30,7 @@ void kern_idle(void *unused)
 	for (;;)
 	{
 		Count[TID]++;
-		pantheon::CPU::CLI();
 		SERIAL_LOG("(%hhu) %s\t%u \t\t[%ld]\n", pantheon::CPU::GetProcessorNumber(), "idle: ", Count[TID], TID);
-		pantheon::CPU::STI();
 	}
 	for (;;){}
 }
@@ -75,9 +73,9 @@ void kern_init_core()
 		/* Loop until core 0 finished kernel setup */
 	}
 
-	pantheon::CPU::STI();
 	pantheon::RearmSystemTimer(1000);
 	pantheon::CPU::GetCoreInfo()->CurSched->SignalReschedule();
+	pantheon::CPU::STI();
 	for (;;)
 	{
 		pantheon::CPU::GetCoreInfo()->CurSched->MaybeReschedule();
@@ -96,7 +94,9 @@ void kern_init(InitialBootInfo *InitBootInfo, void *initial_load_addr, void *vir
 		pantheon::GetGlobalScheduler()->Init();
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_SECOND_STAGE);
 
-		/* Create an extra idle thread to ensure rescheduling happens */
+		/* Create an extra idle thread to ensure rescheduling happens.
+		 * Without a spare thread, no scheduling ever occurs. FIXME!
+		 */
 		pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle);
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_OK);
 	}
