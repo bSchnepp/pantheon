@@ -143,6 +143,12 @@ UINT8 GetProcessorNumber();
 VOID CLI();
 VOID STI();
 
+VOID PUSHI();
+VOID POPI();
+
+VOID HLT();
+UINT64 ICOUNT();
+
 VOID PAUSE();
 
 }

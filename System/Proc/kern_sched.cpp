@@ -226,6 +226,13 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 	 */
 	AccessSpinlock.Acquire();
 	UINT64 TListSize = this->ThreadList.Size();
+
+	if (TListSize == 0)
+	{
+		AccessSpinlock.Release();
+		return Thr;		
+	}
+
 	AcquireCounter %= TListSize;
 	UINT8 OrigCount = 0;
 	while (Thr == nullptr)

@@ -4,6 +4,7 @@
 #include <arch/aarch64/ints.hpp>
 #include <arch/aarch64/thread.hpp>
 
+#include <Proc/kern_cpu.hpp>
 #include <System/Syscalls/Syscalls.hpp>
 
 void createprocess_tail()
@@ -77,4 +78,27 @@ extern "C" UINT64 svc_LogText(const CHAR *Text)
 VOID PerCoreBoardInit()
 {
 	
+}
+
+VOID pantheon::CPU::PUSHI()
+{
+	pantheon::CPU::CoreInfo *CoreInfo = pantheon::CPU::GetCoreInfo();
+	CoreInfo->NOff++;
+}
+
+VOID pantheon::CPU::POPI()
+{
+	pantheon::CPU::CoreInfo *CoreInfo = pantheon::CPU::GetCoreInfo();
+	CoreInfo->NOff--;
+}
+
+VOID pantheon::CPU::HLT()
+{
+	return;
+}
+
+UINT64 pantheon::CPU::ICOUNT()
+{
+	pantheon::CPU::CoreInfo *CoreInfo = pantheon::CPU::GetCoreInfo();
+	return CoreInfo->NOff;	
 }

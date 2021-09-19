@@ -24,17 +24,6 @@ TEST(Scheduler, CreateThreadWithProc)
 	ASSERT_EQ(T.MyProc(), &Proc);
 }
 
-TEST(Scheduler, CreateThreadWithProcCopy)
-{
-	pantheon::Process Proc("some name");
-	pantheon::Thread T(&Proc);
-	ASSERT_EQ(T.MyProc(), &Proc);
-
-	pantheon::Process Proc2 = Proc;
-	ASSERT_EQ(Proc2.GetProcessString(), Proc.GetProcessString());
-	ASSERT_EQ(Proc2.NumThreads(), Proc.NumThreads());
-}
-
 TEST(Scheduler, CreateThreadWithProcName)
 {
 	pantheon::Process Proc("./someprocess");
@@ -157,8 +146,8 @@ TEST(Scheduler, CreateThreadWithDeepCopy)
 	ASSERT_EQ(T2.MyState(), T.MyState());
 	ASSERT_EQ(T2.TicksLeft(), T.TicksLeft() + 100);
 	T.AddTicks(100);
-	T.GetRegisters()[3] = 100;
-	ASSERT_NE(T2.GetRegisters()[3], T.GetRegisters()[3]);
+	(*T.GetRegisters())[3] = 100;
+	ASSERT_NE((*T2.GetRegisters())[3], (*T.GetRegisters())[3]);
 	ASSERT_EQ(T2.TicksLeft(), T.TicksLeft());
 }
 
@@ -230,7 +219,7 @@ TEST(Scheduler, ManyThreadIDs)
 TEST(CPUCore, CoreInfoInit)
 {
 	pantheon::CPU::InitCoreInfo(0);
-	ASSERT_EQ(pantheon::CPU::GetCoreInfo()->CurThread, nullptr);
+	ASSERT_EQ(pantheon::CPU::GetCurThread(), nullptr);
 	ASSERT_NE(pantheon::CPU::GetCoreInfo()->CurSched, nullptr);
 }
 
@@ -261,15 +250,6 @@ TEST(Scheduler, ProcessFromRawString)
 	pantheon::Process Proc2(SomeRawString);
 	ASSERT_EQ(Proc.GetProcessString(), pantheon::String(SomeRawString));
 	ASSERT_NE(Proc.ProcessID(), Proc2.ProcessID());
-}
-
-TEST(Scheduler, CreateThreadHasInactive)
-{
-	pantheon::Process Proc;
-	if (Proc.CreateThread(nullptr, nullptr))
-	{
-		ASSERT_EQ(Proc.NumInactiveThreads(), 1);
-	}
 }
 
 #endif
