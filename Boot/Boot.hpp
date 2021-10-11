@@ -30,7 +30,7 @@ typedef struct InitialBootInfo
 
 InitialBootInfo *GetInitBootInfo();
 
-void AllocateMemoryArea(UINT64 StartAddr, UINT64 Size);
+UINT64 FindPage();
 void AllocatePage(UINT64 Addr);
 void FreePage(UINT64 Addr);
 

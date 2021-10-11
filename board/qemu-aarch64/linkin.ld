@@ -13,15 +13,15 @@ SECTIONS
 		*(.text.early)
 	}
 
-	. = ALIGN(4096);
+	. = ALIGN(0x1000);
 	. = ALIGN(0x800);
 	.text.exceptions :
 	{
 		*(.text.exceptions)
 	}
-	. = ALIGN(4096);
+	. = ALIGN(0x1000);
 
-	. = ALIGN(4096);
+	. = ALIGN(0x1000);
 	.text :
 	{
 		*(.text)
@@ -63,16 +63,15 @@ SECTIONS
 	kern_stack_end = .;
 	kern_stack_size = kern_stack_end - kern_stack_begin;
 
-	. = ALIGN(4096);
+	. = ALIGN(0x1000);
 	TTBR0_AREA = .;
-	. += 4096;
+	. += 0x1000;
 	TTBR1_AREA = .;
-	. += 4096;
+	. += 0x1000;
 	TTL2_AREA = .;
-	. += 4096;
+	. += 0x1000;
 	TTL3_AREA = .;
-	. += 4096;
-
+	. += 8 * 0x1000;
 	. = ALIGN(64 * 1024);
 	bss_end = .;
 	bss_size = bss_end - bss_begin;

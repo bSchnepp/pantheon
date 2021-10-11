@@ -55,6 +55,14 @@ VOID PAUSE();
 
 }
 
+namespace CPUReg
+{
+
+UINT64 R_TTBR0_EL1();
+UINT64 R_TTBR1_EL1();
+
+}
+
 }
 
 extern "C" void enable_interrupts();

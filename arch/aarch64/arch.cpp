@@ -32,6 +32,20 @@ VOID pantheon::CPU::HLT()
 	asm volatile("wfi\n");
 }
 
+UINT64 pantheon::CPUReg::R_TTBR0_EL1()
+{
+	UINT64 RetVal = 0;
+	asm volatile ("mrs %0, ttbr0_el1\n" : "=r"(RetVal) ::);
+	return RetVal;
+}
+
+UINT64 pantheon::CPUReg::R_TTBR1_EL1()
+{
+	UINT64 RetVal = 0;
+	asm volatile ("mrs %0, ttbr0_el1\n" : "=r"(RetVal) ::);
+	return RetVal;
+}
+
 BOOL pantheon::CPU::IF()
 {
 	return ((pantheon::arm::DAIFR() >> 6) & 0b111) != 0;
