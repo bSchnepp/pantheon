@@ -46,10 +46,26 @@ pantheon::Result pantheon::SVCAllocateBuffer(UINT64 Sz)
 	return (UINT64)(BasicMalloc(Sz)());
 }
 
+/**
+ * \~english @brief Creates a new thread for the given process.
+ * \~english @param Entry The entry point for the new thread
+ * \~english @param RESERVED Reserved space for future usage: will be for thread-local data. This space is reserved to ensure ABI compatibility in the future.
+ * \~english @param StackTop The top of the stack for the newly made process
+ * \~english @param Priority The priority of the new thread
+ */
+pantheon::Result pantheon::SVCCreateThread(
+	ThreadStartPtr Entry, VOID *RESERVED, 
+	void *StackTop, pantheon::ThreadPriority Priority)
+{
+	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+	return pantheon::GetGlobalScheduler()->CreateThread(Proc, (void*)Entry, RESERVED, Priority, StackTop);
+}
+
 void *syscall_table[] = 
 {
 	(void*)pantheon::SVCExitProcess, 
 	(void*)pantheon::SVCForkProcess, 
 	(void*)pantheon::SVCLogText, 
-	(void*)pantheon::SVCAllocateBuffer
+	(void*)pantheon::SVCAllocateBuffer,
+	(void*)pantheon::SVCCreateThread,
 };

@@ -45,7 +45,8 @@ public:
 	void Init();
 
 	BOOL CreateProcess(pantheon::String ProcStr, void *StartAddr);
-	BOOL CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData);
+	BOOL CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority);
+	BOOL CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority, void *StackTop);
 	VOID CreateIdleProc(void *StartAddr);
 
 	Thread* AcquireThread();

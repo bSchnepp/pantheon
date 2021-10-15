@@ -21,3 +21,9 @@ svc_AllocateBuffer:
 	mov w8, #3
 	svc #0
 	ret
+
+.globl svc_CreateThread
+svc_CreateThread:
+	mov w8, #4
+	svc #0
+	ret

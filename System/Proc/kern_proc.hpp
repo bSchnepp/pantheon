@@ -7,6 +7,8 @@
 #include <Sync/kern_atomic.hpp>
 #include <Sync/kern_spinlock.hpp>
 
+#include <Proc/kern_thread.hpp>
+
 #ifndef _KERN_PROC_HPP_
 #define _KERN_PROC_HPP_
 
@@ -49,6 +51,7 @@ public:
 	[[nodiscard]] const String &GetProcessString() const;
 	[[nodiscard]] UINT32 ProcessID() const;
 	BOOL CreateThread(void *StartAddr, void *ThreadData);
+	BOOL CreateThread(void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority);
 
 	[[nodiscard]] ProcessState MyState() const;
 	void SetState(ProcessState State);

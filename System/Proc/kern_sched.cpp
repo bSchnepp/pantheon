@@ -160,7 +160,7 @@ BOOL pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *St
 	return Value;
 }
 
-BOOL pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData)
+BOOL pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority)
 {
 	pantheon::Thread T(Proc);
 
@@ -169,17 +169,27 @@ BOOL pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *Star
 	Optional<void*> StackSpace = BasicMalloc(StackSz);
 	if (StackSpace.GetOkay())
 	{
-		UINT64 IStartAddr = (UINT64)StartAddr;
-		UINT64 IThreadData = (UINT64)ThreadData;
 		UINT64 IStackSpace = (UINT64)StackSpace();
 		IStackSpace += StackSz;
-
-		pantheon::CpuContext *Regs = T.GetRegisters();
-		Regs->SetInitContext(IStartAddr, IThreadData, IStackSpace);
-		T.SetState(pantheon::THREAD_STATE_WAITING);
-		this->ThreadList.Add(T);
+		this->CreateThread(Proc, StartAddr, ThreadData, Priority, (void*)IStackSpace);
 	}
 	return StackSpace.GetOkay();
+}
+
+BOOL pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority, void *StackTop)
+{
+	pantheon::Thread T(Proc);
+
+	UINT64 IStartAddr = (UINT64)StartAddr;
+	UINT64 IThreadData = (UINT64)ThreadData;
+	UINT64 IStackSpace = (UINT64)StackTop;
+
+	pantheon::CpuContext *Regs = T.GetRegisters();
+	Regs->SetInitContext(IStartAddr, IThreadData, IStackSpace);
+	T.SetState(pantheon::THREAD_STATE_WAITING);
+	T.SetPriority(Priority);
+	this->ThreadList.Add(T);
+	return TRUE;
 }
 
 static pantheon::Spinlock ThreadIDLock;

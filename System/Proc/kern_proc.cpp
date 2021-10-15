@@ -85,11 +85,16 @@ const pantheon::String &pantheon::Process::GetProcessString() const
 
 BOOL pantheon::Process::CreateThread(void *StartAddr, void *ThreadData)
 {
+	return this->CreateThread(StartAddr, ThreadData, pantheon::THREAD_PRIORITY_NORMAL);
+}
+
+BOOL pantheon::Process::CreateThread(void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority)
+{
 	if (this->CurState == pantheon::PROCESS_STATE_INIT)
 	{
 		this->SetState(pantheon::PROCESS_STATE_RUNNING);
 	}
-	BOOL Status = pantheon::GetGlobalScheduler()->CreateThread(this, StartAddr, ThreadData);
+	BOOL Status = pantheon::GetGlobalScheduler()->CreateThread(this, StartAddr, ThreadData, Priority);
 	return Status;
 }
 
