@@ -1,92 +1,52 @@
 #include <gtest/gtest.h>
 
-#include <System/Memory/kern_physpaging.hpp>
 #include <Common/Structures/kern_bitmap.hpp>
+
+#include <Common/Structures/kern_slab.hpp>
 
 #ifndef STRUCT_TESTS_HPP_
 #define STRUCT_TESTS_HPP_
 
-TEST(Bitmap, BasicInit)
+typedef struct SEntry
 {
-	pantheon::Bitmap B(16);
-	for (UINT64 Index = 0; Index < 16; ++Index)
+	UINT64 Item;
+	UINT64 Item2;
+}SEntry;
+
+TEST(SlabAlloc, BasicSlabCache)
+{
+	void *Area = malloc(sizeof(SEntry) * 128);
+	pantheon::mm::SlabCache<SEntry> Entries(Area, 128);
+	for (UINT8 Index = 0; Index < 128; Index++)
 	{
-		ASSERT_FALSE(B.Get(Index));
+		ASSERT_NE(Entries.Allocate(), nullptr);
 	}
+	ASSERT_EQ(Entries.Allocate(), nullptr);
 }
 
-TEST(Bitmap, BasicInitByte)
+TEST(SlabAlloc, BasicSlabEmpty)
 {
-	pantheon::Bitmap B(16);
-	for (UINT64 Index = 0; Index < 16 / 8; ++Index)
-	{
-		ASSERT_EQ(B.GetByte(Index), 0);
-	}
-}
+	void *Area = malloc(sizeof(SEntry) * 128);
+	SEntry *AreaAreas[128];
 
-TEST(Bitmap, BasicFill)
-{
-	pantheon::Bitmap B(16);
-	for (UINT64 Index = 0; Index < 16; ++Index)
+	pantheon::mm::SlabCache<SEntry> Entries(Area, 128);
+	for (auto &AreaA : AreaAreas)
 	{
-		B.Set(Index, TRUE);
+		AreaA = (SEntry*)Entries.Allocate();
+		ASSERT_NE(AreaA, nullptr);
 	}
-	for (UINT64 Index = 0; Index < 16; ++Index)
+
+	ASSERT_EQ(Entries.Allocate(), nullptr);
+	for (auto &AreaA : AreaAreas)
 	{
-		ASSERT_TRUE(B.Get(Index));
+		Entries.Deallocate(AreaA);
+		ASSERT_NE(AreaA, nullptr);
 	}
-}
 
-TEST(Bitmap, EveryOtherFill)
-{
-	pantheon::Bitmap B(16);
-	for (UINT64 Index = 0; Index < 16; ++Index)
+	for (auto &AreaA : AreaAreas)
 	{
-		if (Index % 2)
-		{
-			B.Set(Index, TRUE);
-		}
-	}
-	for (UINT64 Index = 0; Index < 16; ++Index)
-	{
-		if (Index % 2)
-		{
-			ASSERT_TRUE(B.Get(Index));
-		}
-		else
-		{
-			ASSERT_FALSE(B.Get(Index));
-		}
-	}
-}
-
-TEST(Bitmap, CorrectSize)
-{
-	pantheon::Bitmap B(16);
-	ASSERT_EQ(B.GetSizeBytes(), 16);
-	ASSERT_EQ(B.GetSizeBits(), 16 * 8);
-}
-
-TEST(PMMAllocator, BasicInit)
-{
-	pantheon::PhyPageManager Manager(0, 1);
-	ASSERT_EQ(Manager.FindFreeAddress()(), 0);
-}
-
-TEST(PMMAllocator, ClaimAddresses)
-{
-	pantheon::PhyPageManager Manager(0, 20);
-	for (UINT64 Index = 0; Index < 16; ++Index)
-	{
-		Optional<UINT64> Addr = Manager.FindFreeAddress();
-		ASSERT_TRUE(Addr.GetOkay());
-		Manager.ClaimAddress(Addr.GetValue());
-	}
-	Optional<UINT64> Addr = Manager.FindFreeAddress();
-
-	if (Addr.GetOkay())
-	{
-		ASSERT_EQ(Addr.GetValue(), 16 * 4096);
+		AreaA = (SEntry*)Entries.Allocate();
+		ASSERT_NE(AreaA, nullptr);
 	}
 }
 

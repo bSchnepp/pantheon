@@ -7,19 +7,36 @@
 namespace pantheon::mm
 {
 
-
 typedef void (*AllocFn)(UINT64);
 typedef void (*DeallocFn)(UINT64);
+
+template<typename T>
+struct SlabNext
+{
+	SlabNext<T> *Next;
+};
 
 template<typename T>
 class SlabCache
 {
 public:
-	SlabCache(VOID *Area)
+	static_assert(sizeof(T) >= sizeof(SlabNext<T>));
+
+	SlabCache(VOID *Area, UINT16 Count = 64)
 	{
-		this->Used = 0;
-		this->Bitmask = 0;
-		this->Area = Area;
+		this->Area = reinterpret_cast<T*>(Area);
+		this->Size = Count;
+
+		UINT64 BaseAddr = (UINT64)Area;
+		UINT16 Index = 0;
+		for (Index = 0; Index < Count - 1; Index++)
+		{
+			SlabNext<T>* Current = reinterpret_cast<SlabNext<T>*>(BaseAddr + (sizeof(T) * Index));
+			SlabNext<T>* Next = reinterpret_cast<SlabNext<T>*>(BaseAddr + (sizeof(T) * (Index + 1)));
+			Current->Next = Next;
+		}
+		SlabNext<T>* Last = reinterpret_cast<SlabNext<T>*>(BaseAddr + (sizeof(T) * Index));
+		this->FreeList = reinterpret_cast<SlabNext<T>*>(this->Area);
 	}
 
 	~SlabCache()
@@ -30,9 +47,9 @@ public:
 	BOOL InRange(T *Ptr)
 	{
 		/* Check if this is in range */
-		UINT64 PtrRaw = static_cast<UINT64>(Ptr);
-		UINT64 Base = static_cast<UINT64>(this->Area);
-		UINT64 Max = Base + (64 * sizeof(T));
+		UINT64 PtrRaw = reinterpret_cast<UINT64>(Ptr);
+		UINT64 Base = reinterpret_cast<UINT64>(this->Area);
+		UINT64 Max = Base + (this->Size * sizeof(T));
 		if (PtrRaw < Base || PtrRaw > Max)
 		{
 			return FALSE;
@@ -42,20 +59,12 @@ public:
 
 	T *Allocate()
 	{
-		/* TODO: O(1) allocation with free list */
-		UINT64 Count = 0;
-		UINT64 CurMask = this->Bitmask;
-		while (CurMask & 0x01 != 0)
+		if (this->FreeList != nullptr)
 		{
-			CurMask >>= 1;
-			Count++;
+			T* NewArea = reinterpret_cast<T*>(this->FreeList);
+			this->FreeList = this->FreeList->Next;
+			return NewArea;
 		}
-
-		if (Count < 64)
-		{
-			return &(this->Area[Count]);
-		}
-
 		return nullptr;
 	}
 
@@ -67,23 +76,25 @@ public:
 		}
 
 		/* Mark the area as deallocated iff it's actually valid. */
-		for (UINT8 Area = 0; Area < 64; ++Area)
+		for (UINT16 Area = 0; Area < this->Size; ++Area)
 		{
+			UINT64 Base = (UINT64)this->Area;
 			UINT64 BasePtr = Base + (Area * sizeof(T));
-			if (BasePtr == PtrRaw)
+			if (BasePtr == (UINT64)Ptr)
 			{
-				this->Bitmask &= ~(1 << Area);
+				SlabNext<T> *Next = reinterpret_cast<SlabNext<T>*>(Ptr);
+				Next->Next = FreeList;
+				this->FreeList = Next;
 				return;
 			}
 		}
 	}
 
-	[[nodiscard]] BOOL Empty() const { return (this->Bitmask) == 0; }
-	[[nodiscard]] BOOL Full() const { return (~this->Bitmask) == 0; }
+	[[nodiscard]] BOOL Full() const { return this->FreeList != nullptr; }
 
 private:
-	UINT8 Used;
-	UINT64 Bitmask;
+	UINT16 Size;
+	SlabNext<T> *FreeList;
 	T *Area;
 };
 
@@ -129,7 +140,6 @@ public:
 				Current->Current->Deallocate(Value);
 			}
 		}
-		return nullptr;
 	}
 
 private:

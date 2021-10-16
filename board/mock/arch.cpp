@@ -75,6 +75,21 @@ extern "C" UINT64 svc_LogText(const CHAR *Text)
 	return pantheon::SVCLogText(Text);
 }
 
+#include <stdlib.h>
+
+extern "C" void *svc_AllocateBuffer(UINT64 Sz)
+{
+	return malloc(Sz);
+}
+
+extern "C" void svc_CreateThread(void *Entry, VOID *Reserved, void *StackTop, pantheon::ThreadPriority Priority)
+{
+	PANTHEON_UNUSED(Entry);
+	PANTHEON_UNUSED(Reserved);
+	PANTHEON_UNUSED(StackTop);
+	PANTHEON_UNUSED(Priority);
+}
+
 VOID PerCoreBoardInit()
 {
 	
