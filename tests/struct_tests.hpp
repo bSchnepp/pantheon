@@ -17,11 +17,14 @@ TEST(SlabAlloc, BasicSlabCache)
 {
 	void *Area = malloc(sizeof(SEntry) * 128);
 	pantheon::mm::SlabCache<SEntry> Entries(Area, 128);
+	ASSERT_TRUE(Entries.Empty());
 	for (UINT8 Index = 0; Index < 128; Index++)
 	{
 		ASSERT_NE(Entries.Allocate(), nullptr);
 	}
 	ASSERT_EQ(Entries.Allocate(), nullptr);
+	ASSERT_TRUE(Entries.Full());
+	free(Area);
 }
 
 TEST(SlabAlloc, BasicSlabEmpty)
@@ -30,6 +33,7 @@ TEST(SlabAlloc, BasicSlabEmpty)
 	SEntry *AreaAreas[128];
 
 	pantheon::mm::SlabCache<SEntry> Entries(Area, 128);
+	ASSERT_EQ(Entries.SpaceLeft(), 128);
 	for (auto &AreaA : AreaAreas)
 	{
 		AreaA = (SEntry*)Entries.Allocate();
@@ -37,6 +41,7 @@ TEST(SlabAlloc, BasicSlabEmpty)
 	}
 
 	ASSERT_EQ(Entries.Allocate(), nullptr);
+	ASSERT_EQ(Entries.SpaceLeft(), 0);
 	for (auto &AreaA : AreaAreas)
 	{
 		Entries.Deallocate(AreaA);
@@ -48,6 +53,26 @@ TEST(SlabAlloc, BasicSlabEmpty)
 		AreaA = (SEntry*)Entries.Allocate();
 		ASSERT_NE(AreaA, nullptr);
 	}
+	free(Area);
+}
+
+TEST(SlabAlloc, SlabDeallocInvalid)
+{
+	constexpr UINT8 Size = 1;
+	void *Area = malloc(sizeof(SEntry) * Size);
+	pantheon::mm::SlabCache<SEntry> Entries(Area, Size);
+
+	SEntry *First = Entries.Allocate();
+
+	ASSERT_EQ(Entries.Allocate(), nullptr);
+
+	char *Invalid = ((char*)First) + 0x02;
+	Entries.Deallocate((SEntry*)Invalid);
+
+	ASSERT_EQ(Entries.Allocate(), nullptr);
+	Entries.Deallocate(First);
+	ASSERT_NE(Entries.Allocate(), nullptr);
+	free(Area);
 }
 
 #endif

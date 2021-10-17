@@ -26,6 +26,8 @@ public:
 	{
 		this->Area = reinterpret_cast<T*>(Area);
 		this->Size = Count;
+		this->Used = 0;
+		this->FreeList = nullptr;
 
 		UINT64 BaseAddr = (UINT64)Area;
 		UINT16 Index = 0;
@@ -36,6 +38,7 @@ public:
 			Current->Next = Next;
 		}
 		SlabNext<T>* Last = reinterpret_cast<SlabNext<T>*>(BaseAddr + (sizeof(T) * Index));
+		Last->Next = nullptr;
 		this->FreeList = reinterpret_cast<SlabNext<T>*>(this->Area);
 	}
 
@@ -61,8 +64,18 @@ public:
 	{
 		if (this->FreeList != nullptr)
 		{
-			T* NewArea = reinterpret_cast<T*>(this->FreeList);
-			this->FreeList = this->FreeList->Next;
+			/* Note this causes a warning, that Next may be
+			 * undefined. Intuition says this is wrong, since
+			 * the free list can only be manipulated by Allocate
+			 * or Deallocate (and if it's smashed in memory,
+			 * we have bigger problems), so it's always either
+			 * valid or nullptr. We should fuzz this.
+			 */
+			SlabNext<T> *Current = this->FreeList;
+			SlabNext<T> *Next = Current->Next;
+			T* NewArea = reinterpret_cast<T*>(Current);
+			this->FreeList = Next;
+			this->Used++;
 			return NewArea;
 		}
 		return nullptr;
@@ -85,14 +98,18 @@ public:
 				SlabNext<T> *Next = reinterpret_cast<SlabNext<T>*>(Ptr);
 				Next->Next = FreeList;
 				this->FreeList = Next;
+				this->Used--;
 				return;
 			}
 		}
 	}
 
-	[[nodiscard]] BOOL Full() const { return this->FreeList != nullptr; }
+	[[nodiscard]] BOOL SpaceLeft() const { return this->Size - Used; }
+	[[nodiscard]] BOOL Empty() const { return this->SpaceLeft() == this->Size; }
+	[[nodiscard]] BOOL Full() const { return this->FreeList == nullptr; }
 
 private:
+	UINT16 Used;
 	UINT16 Size;
 	SlabNext<T> *FreeList;
 	T *Area;
