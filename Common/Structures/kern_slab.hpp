@@ -8,7 +8,7 @@ namespace pantheon::mm
 {
 
 typedef void (*AllocFn)(UINT64);
-typedef void (*DeallocFn)(UINT64);
+typedef void (*DeallocFn)(void*);
 
 template<typename T>
 struct SlabNext
@@ -76,6 +76,7 @@ public:
 			T* NewArea = reinterpret_cast<T*>(Current);
 			this->FreeList = Next;
 			this->Used++;
+			*NewArea = T();
 			return NewArea;
 		}
 		return nullptr;

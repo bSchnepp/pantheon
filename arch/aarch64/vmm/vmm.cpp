@@ -1,6 +1,8 @@
 #include <kern_runtime.hpp>
 #include <kern_datatypes.hpp>
 
+#include <Common/Structures/kern_slab.hpp>
+
 #include "vmm.hpp"
 
 
@@ -32,6 +34,105 @@ static pantheon::vmm::PageTableEntry *GetL3PageTableEntry(const pantheon::vmm::P
 	return L3Entry;
 }
 
+static pantheon::vmm::PageTableEntry *GetL3OrCreatePageTableEntry(pantheon::vmm::PageTableEntry &Entry, UINT64 VAddr, pantheon::vmm::PageTableEntry &Permissions, pantheon::mm::SlabCache<pantheon::vmm::PageTable> &PageAllocator)
+{
+	UINT64 Tables[4] = {0, 0, 0, 0};
+	Tables[3] = (VAddr >> 12) & 0b111111111;
+	Tables[2] = (VAddr >> 21) & 0b111111111;
+	Tables[1] = (VAddr >> 30) & 0b111111111;
+	Tables[0] = (VAddr >> 39) & 0b111111111;
+
+	if (Entry.IsMapped() == FALSE)
+	{
+		pantheon::vmm::PageTable *NewTable = PageAllocator.Allocate();
+		Entry.SetRawAttributes(Permissions.GetRawAttributes());
+		Entry.SetMapped(TRUE);
+		Entry.SetBlock(FALSE);
+		Entry.SetPhysicalAddressArea((pantheon::vmm::PhysicalAddress)NewTable);		
+	}
+
+	pantheon::vmm::PageTableEntry *L1 = reinterpret_cast<pantheon::vmm::PageTableEntry*>(pantheon::vmm::PhysicalToVirtualAddress(Entry.GetPhysicalAddressArea()));
+
+	pantheon::vmm::PageTableEntry *L1Entry = &(L1[Tables[1]]);
+	if (L1Entry->IsMapped() == FALSE)
+	{
+		pantheon::vmm::PageTable *NewTable = PageAllocator.Allocate();
+		L1Entry->SetRawAttributes(Permissions.GetRawAttributes());
+		L1Entry->SetMapped(TRUE);
+		L1Entry->SetBlock(FALSE);
+		L1Entry->SetPhysicalAddressArea((pantheon::vmm::PhysicalAddress)NewTable);
+	}
+
+	pantheon::vmm::PageTableEntry *L2 = reinterpret_cast<pantheon::vmm::PageTableEntry*>(pantheon::vmm::PhysicalToVirtualAddress(L1Entry->GetPhysicalAddressArea()));
+	pantheon::vmm::PageTableEntry *L2Entry = &(L2[Tables[2]]);
+	if (L2Entry->IsMapped() == FALSE)
+	{
+		pantheon::vmm::PageTable *NewTable = PageAllocator.Allocate();
+		L2Entry->SetRawAttributes(Permissions.GetRawAttributes());
+		L2Entry->SetMapped(TRUE);
+		L2Entry->SetBlock(FALSE);
+		L2Entry->SetPhysicalAddressArea((pantheon::vmm::PhysicalAddress)NewTable);
+	}
+
+	pantheon::vmm::PageTableEntry *L3 = reinterpret_cast<pantheon::vmm::PageTableEntry*>(pantheon::vmm::PhysicalToVirtualAddress(L2Entry->GetPhysicalAddressArea()));
+	pantheon::vmm::PageTableEntry *L3Entry = &(L3[Tables[3]]);
+
+	if (L3Entry->IsMapped() == FALSE)
+	{
+		pantheon::vmm::PageTable *NewTable = PageAllocator.Allocate();
+		L3Entry->SetRawAttributes(Permissions.GetRawAttributes());
+		L3Entry->SetMapped(TRUE);
+		L3Entry->SetBlock(FALSE);
+		L3Entry->SetPhysicalAddressArea((pantheon::vmm::PhysicalAddress)NewTable);
+	}
+	return L3Entry;
+}
+
+static pantheon::vmm::PageTableEntry *GetL3OrCreateInitialPageTableEntry(pantheon::vmm::PageTableEntry &Entry, UINT64 VAddr, pantheon::vmm::PageTableEntry &Permissions, pantheon::mm::SlabCache<pantheon::vmm::PageTable> &PageAllocator)
+{
+	UINT64 Tables[4] = {0, 0, 0, 0};
+	Tables[3] = (VAddr >> 12) & 0b111111111;
+	Tables[2] = (VAddr >> 21) & 0b111111111;
+	Tables[1] = (VAddr >> 30) & 0b111111111;
+	Tables[0] = (VAddr >> 39) & 0b111111111;
+
+	if (Entry.IsMapped() == FALSE)
+	{
+		pantheon::vmm::PageTable *NewTable = PageAllocator.Allocate();
+		Entry.SetRawAttributes(Permissions.GetRawAttributes());
+		Entry.SetMapped(TRUE);
+		Entry.SetBlock(FALSE);
+		Entry.SetPhysicalAddressArea((pantheon::vmm::PhysicalAddress)NewTable);		
+	}
+
+	pantheon::vmm::PageTableEntry *L1 = reinterpret_cast<pantheon::vmm::PageTableEntry*>(Entry.GetPhysicalAddressArea());
+
+	pantheon::vmm::PageTableEntry *L1Entry = &(L1[Tables[1]]);
+	if (L1Entry->IsMapped() == FALSE)
+	{
+		pantheon::vmm::PageTable *NewTable = PageAllocator.Allocate();
+		L1Entry->SetRawAttributes(Permissions.GetRawAttributes());
+		L1Entry->SetMapped(TRUE);
+		L1Entry->SetBlock(FALSE);
+		L1Entry->SetPhysicalAddressArea((pantheon::vmm::PhysicalAddress)NewTable);
+	}
+
+	pantheon::vmm::PageTableEntry *L2 = reinterpret_cast<pantheon::vmm::PageTableEntry*>(L1Entry->GetPhysicalAddressArea());
+	pantheon::vmm::PageTableEntry *L2Entry = &(L2[Tables[2]]);
+	if (L2Entry->IsMapped() == FALSE)
+	{
+		pantheon::vmm::PageTable *NewTable = PageAllocator.Allocate();
+		L2Entry->SetRawAttributes(Permissions.GetRawAttributes());
+		L2Entry->SetMapped(TRUE);
+		L2Entry->SetBlock(FALSE);
+		L2Entry->SetPhysicalAddressArea((pantheon::vmm::PhysicalAddress)NewTable);
+	}
+
+	pantheon::vmm::PageTableEntry *L3 = reinterpret_cast<pantheon::vmm::PageTableEntry*>(L2Entry->GetPhysicalAddressArea());
+	pantheon::vmm::PageTableEntry *L3Entry = &(L3[Tables[3]]);
+	return L3Entry;
+}
+
 /**
  * \~english @author Brian Schnepp
  * \~english @brief Looks up a virtual address in either top level page table provided
@@ -55,6 +156,34 @@ BOOL pantheon::vmm::WalkAddr(const pantheon::vmm::PageTableEntry &Entry, UINT64 
 BOOL pantheon::vmm::MapPages(pantheon::vmm::PageTableEntry &Entry, VirtualAddress VAddr, PhysicalAddress PAddr, pantheon::vmm::PageTableEntry &Permissions)
 {
 	pantheon::vmm::PageTableEntry *L3Entry = GetL3PageTableEntry(Entry, VAddr);
+	if (L3Entry == nullptr || L3Entry->IsMapped() == TRUE)
+	{
+		return FALSE;
+	}
+
+	/* Write in a new entry */
+	*L3Entry = Permissions;
+	L3Entry->SetPhysicalAddressArea(PAddr);
+	return TRUE;
+}
+
+BOOL pantheon::vmm::MapAndCreatePages(PageTableEntry &Entry, VirtualAddress VAddr, PhysicalAddress PAddr, PageTableEntry &Permissions, pantheon::mm::SlabCache<pantheon::vmm::PageTable> &PageAllocator)
+{
+	pantheon::vmm::PageTableEntry *L3Entry = GetL3OrCreatePageTableEntry(Entry, VAddr, Permissions, PageAllocator);
+	if (L3Entry == nullptr || L3Entry->IsMapped() == TRUE)
+	{
+		return FALSE;
+	}
+
+	/* Write in a new entry */
+	*L3Entry = Permissions;
+	L3Entry->SetPhysicalAddressArea(PAddr);
+	return TRUE;
+}
+
+BOOL pantheon::vmm::MapAndCreateInitialPages(PageTableEntry &Entry, VirtualAddress VAddr, PhysicalAddress PAddr, PageTableEntry &Permissions, pantheon::mm::SlabCache<pantheon::vmm::PageTable> &PageAllocator)
+{
+	pantheon::vmm::PageTableEntry *L3Entry = GetL3OrCreateInitialPageTableEntry(Entry, VAddr, Permissions, PageAllocator);
 	if (L3Entry == nullptr || L3Entry->IsMapped() == TRUE)
 	{
 		return FALSE;

@@ -1,6 +1,8 @@
 #include <kern_runtime.hpp>
 #include <kern_datatypes.hpp>
 
+#include <Common/Structures/kern_slab.hpp>
+
 #ifndef _AARCH64_VIRT_MEM_HPP_
 #define _AARCH64_VIRT_MEM_HPP_
 
@@ -131,7 +133,7 @@ public:
 	constexpr VOID SetKernelNoExecute(BOOL Value) { this->SetBits(53, 1, Value != 0); };
 	constexpr VOID SetUserNoExecute(BOOL Value) { this->SetBits(54, 1, Value != 0); };
 	constexpr VOID SetPagePermissions(PagePermission Val) { this->Raw &= ~PAGE_PERMISSION_KERNEL_RWX | PAGE_PERMISSION_USER_RW | PAGE_PERMISSION_USER_RX; this->Raw |= Val; }
-	constexpr VOID SetPhysicalAddressArea(PhysicalAddress Addr) { this->Raw |= (((Addr >> 12) & 0xFFFFFFFFFFFFULL) << 12); }
+	constexpr VOID SetPhysicalAddressArea(PhysicalAddress Addr) { this->Raw |= Addr & 0xFFFFFFFFFFFF000; }
 
 protected:
 	[[nodiscard]] 
@@ -140,7 +142,9 @@ protected:
 		/* Enforce offset and count can not be any more than 64 bits. */
 		Offset = ((Offset <= 64) * (Offset)) + (Offset > 64) * (64);
 		Count = ((Count <= 64) * (Count)) + (Count > 64) * (64);
-		return (this->Raw >> Offset) & ((1ULL << Count) - 1);
+		UINT64 Mask = (1ULL << Count) - 1;
+		UINT64 Shifted = (this->Raw >> Offset);
+		return Shifted & Mask;
 	}
 
 	[[nodiscard]] 
@@ -149,7 +153,8 @@ protected:
 		/* Enforce offset and count can not be any more than 64 bits. */
 		Offset = ((Offset <= 64) * (Offset)) + (Offset > 64) * (64);
 		Count = ((Count <= 64) * (Count)) + (Count > 64) * (64);
-		return (this->Raw) & (((1ULL << Count) - 1) << Offset);
+		UINT64 Mask = (1ULL << Count) - 1;
+		return (this->Raw) & ((Mask << Offset) & Mask);
 	}
 
 	constexpr VOID SetBits(UINT64 Offset, UINT64 Count, UINT64 Value)
@@ -177,6 +182,12 @@ private:
 	PageTableEntryRaw Raw;
 };
 
+typedef struct PageTable
+{
+	pantheon::vmm::PageTableEntry Entries[512];
+}PageTable;
+static_assert(sizeof(PageTable) == 4096);
+
 inline VirtualAddress PhysicalToVirtualAddress(PhysicalAddress PhyAddr)
 {
 	return PhyAddr | (0b1111111111111111ULL << 48);
@@ -185,6 +196,8 @@ inline VirtualAddress PhysicalToVirtualAddress(PhysicalAddress PhyAddr)
 
 BOOL WalkAddr(const PageTableEntry &Entry, UINT64 VAddr);
 BOOL MapPages(PageTableEntry &Entry, VirtualAddress VAddr, PhysicalAddress PAddr, PageTableEntry &Permissions);
+BOOL MapAndCreatePages(PageTableEntry &Entry, VirtualAddress VAddr, PhysicalAddress PAddr, PageTableEntry &Permissions, pantheon::mm::SlabCache<PageTable> &PageAllocator);
+BOOL MapAndCreateInitialPages(PageTableEntry &Entry, VirtualAddress VAddr, PhysicalAddress PAddr, PageTableEntry &Permissions, pantheon::mm::SlabCache<PageTable> &PageAllocator);
 BOOL UnmapPages(PageTableEntry &Entry, VirtualAddress VAddr);
 VOID EnablePaging();
 

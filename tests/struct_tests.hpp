@@ -1,7 +1,8 @@
+#include <list>
+
 #include <gtest/gtest.h>
 
 #include <Common/Structures/kern_bitmap.hpp>
-
 #include <Common/Structures/kern_slab.hpp>
 
 #ifndef STRUCT_TESTS_HPP_
@@ -72,6 +73,41 @@ TEST(SlabAlloc, SlabDeallocInvalid)
 	ASSERT_EQ(Entries.Allocate(), nullptr);
 	Entries.Deallocate(First);
 	ASSERT_NE(Entries.Allocate(), nullptr);
+	free(Area);
+}
+
+typedef struct Page
+{
+	char Content[4096];
+}Page;
+
+
+TEST(SlabAlloc, SlabUseBigStruct)
+{
+	constexpr UINT16 Size = 512;
+	void *Area = malloc(sizeof(Page) * Size);
+	pantheon::mm::SlabCache<Page> Entries(Area, Size);
+
+	std::list<Page*> Items;
+
+	for (UINT16 Index = 0; Index < Size; ++Index)
+	{
+		Page *Item = Entries.Allocate();
+		memset(Item, Size, 0xDD);
+		Items.push_back(Item);
+	}
+
+	for (Page *Item : Items)
+	{
+		Entries.Deallocate(Item);
+	}
+
+	ASSERT_EQ(Entries.SpaceLeft(), Size);
+
+	for (UINT16 Index = 0; Index < Size; ++Index)
+	{
+		ASSERT_NE(Entries.Allocate(), nullptr);
+	}
 	free(Area);
 }
 

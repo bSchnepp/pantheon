@@ -54,6 +54,16 @@ extern "C" void *memcpy(void *dest, const void * src, unsigned long int n)
 	return AsCharDst;
 }
 
+extern "C" void *memset(void *dest, int v, unsigned long int n)
+{
+	unsigned char *AsCharDst = (unsigned char*)(dest);
+	for (unsigned int Index = 0; Index < n; ++Index)
+	{
+		AsCharDst[Index] = (unsigned char)v;
+	}
+	return AsCharDst;
+}
+
 }
 #endif
 
