@@ -81,6 +81,11 @@ VOID pantheon::CPU::POPI()
 	}
 }
 
+VOID pantheon::CPU::LIDT(void *Table)
+{
+	pantheon::arm::LoadInterruptTable(Table);
+}
+
 UINT64 pantheon::CPU::ICOUNT()
 {
 	pantheon::CPU::CoreInfo *CoreInfo = pantheon::CPU::GetCoreInfo();

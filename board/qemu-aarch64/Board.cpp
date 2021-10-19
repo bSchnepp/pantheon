@@ -37,8 +37,6 @@ void WriteString(const CHAR *String)
 	}
 }
 
-extern char interrupt_table[];
-
 void BoardInit()
 {
 	/* FIXME: Handle paging for all the devices as needed. */
@@ -53,8 +51,6 @@ void BoardInit()
 
 VOID PerCoreBoardInit()
 {
-	pantheon::arm::LoadInterruptTable(&interrupt_table);
-
 	/* HACK: this only works on qemu aarch64 virt... */
 	const static UINT32 TimerIRQ = 30;
 	pantheon::arm::GICSetConfig(TimerIRQ, 2);

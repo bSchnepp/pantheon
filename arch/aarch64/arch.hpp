@@ -52,6 +52,7 @@ VOID POPI();
 UINT64 ICOUNT();
 
 VOID PAUSE();
+VOID LIDT(void *IDT);
 
 }
 

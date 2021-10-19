@@ -361,11 +361,7 @@ void PrintDTB(fdt_header *dtb)
  * in a nice way which guarantees the same layout.
  */
 
-extern UINT64 TTBR0_AREA;
-extern UINT64 TTBR1_AREA;
-extern UINT64 TTL2_AREA;
-extern UINT64 TTL3_AREA;
-
+static UINT64 KernBegin = 0x00;
 static pantheon::Atomic<BOOL> PageTablesCreated = FALSE;
 
 
@@ -381,11 +377,9 @@ static void SetupPageTables()
 	 * 	- Add the number of pages to handle there.
 	 */
 
-	UINT64 NumTables = 4096;
+	constexpr UINT64 NumTables = 8192;
 	MemArea = Align<UINT64>(MemArea, 4096ULL);
 	pantheon::mm::SlabCache<pantheon::vmm::PageTable> InitialPageTables((void*)MemArea, NumTables);
-	MemArea += NumTables * sizeof(pantheon::vmm::PageTable);
-	MemArea = Align<UINT64>(MemArea, 4096ULL);
 
 	/* We'll need two top level page tables. */
 	TTBR0 = InitialPageTables.Allocate();
@@ -403,12 +397,26 @@ static void SetupPageTables()
 	Entry.SetPagePermissions(pantheon::vmm::PAGE_PERMISSION_KERNEL_RWX);
 	Entry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
 
-	for (UINT64 BaseAddr = (UINT64)&kern_begin; BaseAddr <= MemArea; BaseAddr += 4096)
+	/* Begin writing the actual page tables... */
+	for (UINT64 BaseAddr = KernBegin; BaseAddr <= MemArea; BaseAddr += 4096)
 	{
 		pantheon::vmm::MapAndCreateInitialPages(TTBR0->Entries[0], BaseAddr, BaseAddr, Entry, InitialPageTables);
 	}
 
-	/* Begin writing the actual page tables... */
+
+	MemArea += (NumTables - InitialPageTables.SpaceLeft()) * sizeof(pantheon::vmm::PageTable);
+	MemArea = Align<UINT64>(MemArea, 4096ULL);
+
+	/* Make sure we're mapping the page tables too. */
+	for (UINT64 BaseAddr = KernBegin; BaseAddr <= MemArea; BaseAddr += 4096)
+	{
+		pantheon::vmm::MapAndCreateInitialPages(TTBR0->Entries[0], BaseAddr, BaseAddr, Entry, InitialPageTables);
+	}
+
+	for (UINT64 BaseAddr = MemArea; BaseAddr < MemArea + ((NumTables - InitialPageTables.SpaceLeft()) * 4096); BaseAddr += 4096)
+	{
+		pantheon::vmm::MapAndCreateInitialPages(TTBR0->Entries[0], BaseAddr, BaseAddr, Entry, InitialPageTables);
+	}
 
 	/* 
 	 * TODO:
@@ -428,9 +436,6 @@ static void InstallPageTables()
 
 	}
 
-	pantheon::vmm::PageTableEntry *TTBR0 = reinterpret_cast<pantheon::vmm::PageTableEntry*>(&TTBR0_AREA);
-	pantheon::vmm::PageTableEntry *TTBR1 = reinterpret_cast<pantheon::vmm::PageTableEntry*>(&TTBR1_AREA);
-
 	pantheon::vmm::PageTableEntry Entry;
 	Entry.SetMapped(TRUE);
 
@@ -445,11 +450,13 @@ static void InstallPageTables()
 
 	pantheon::arm::WriteMAIR_EL1(Attribs);
 	pantheon::arm::WriteTCR_EL1(pantheon::arm::DefaultTCRAttributes());
+}
 
-	/* And to enable paging: We need to do a short little dance to make
-	 * the MMU turn on, and make sure the previous instructions completed.
-	 * Call pantheon::vmm::EnablePaging() when this works.
-	 */
+static void SetupCore()
+{
+	InstallPageTables();
+	
+	/* Run pantheon::vmm::EnablePaging() here */
 }
 
 extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, void *virt_load_addr)
@@ -458,7 +465,8 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 	PANTHEON_UNUSED(virt_load_addr);
 
 	pantheon::CPU::CLI();
-	if (pantheon::CPU::GetProcessorNumber() == 0)
+	UINT8 ProcNo = pantheon::CPU::GetProcessorNumber();
+	if (ProcNo == 0)
 	{
 		UINT64 InitAddr = (UINT64)initial_load_addr;
 		UINT64 KernSize = (UINT64)&kern_end - (UINT64)&kern_begin;
@@ -473,6 +481,8 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 		 */
 		InitializeMemory(dtb);
 
+		/* Ensure the appropriate page tables are made */
+		KernBegin = InitAddr;
 		SetupPageTables();
 
 		for (UINT64 Start = InitAddr; 
@@ -482,20 +492,17 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 			AllocatePage(Start);
 		}
 
-		/* Page tables should be set up here. */
-		SetupPageTables();
-		InstallPageTables();
-
+	}
+	SetupCore();
+	
+	if (ProcNo == 0)
+	{
 		/* At this point, paging should be set up so the kernel
 		 * gets the page tables expected...
 		 */
 		BoardInit();
 		Initialize(dtb);
-		PrintDTB(dtb);
-	}
-	else
-	{
-		InstallPageTables();	
+		PrintDTB(dtb);		
 	}
 	return GetInitBootInfo();
 }

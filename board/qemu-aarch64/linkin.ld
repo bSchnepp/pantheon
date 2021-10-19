@@ -5,7 +5,7 @@ SECTIONS
 	/* aarch64 load address */
 	. = 0x80000 + 0x40000000;
 
-	. = ALIGN(64 * 1024);
+	. = ALIGN(0x1000);
 	TEXT_AREA = .;
 	kern_begin = .;
 	.text.early :
@@ -26,26 +26,29 @@ SECTIONS
 	{
 		*(.text)
 	}
-	. = ALIGN(64 * 1024);
+	. = ALIGN(0x1000);
+	TEXT_END = .;
 
 
-	. = ALIGN(64 * 1024);
+	. = ALIGN(0x1000);
 	RODATA_AREA = .;
 	.rodata :
 	{
 		*(.rodata*)
 	}
-	. = ALIGN(64 * 1024);
+	. = ALIGN(0x1000);
+	RODATA_END = .;
 
-	. = ALIGN(64 * 1024);
+	. = ALIGN(0x1000);
 	DATA_AREA = .;
 	.data :
 	{
 		*(.data*)
 	}
-	. = ALIGN(64 * 1024);
+	. = ALIGN(0x1000);
+	DATA_END = .;
 
-	. = ALIGN(64 * 1024);
+	. = ALIGN(0x1000);
 	BSS_AREA = .;
 	bss_begin = .;
 	.bss :
@@ -64,21 +67,13 @@ SECTIONS
 	kern_stack_size = kern_stack_end - kern_stack_begin;
 
 	. = ALIGN(0x1000);
-	TTBR0_AREA = .;
-	. += 0x1000;
-	TTBR1_AREA = .;
-	. += 0x1000;
-	TTL2_AREA = .;
-	. += 0x1000;
-	TTL3_AREA = .;
-	. += 8 * 0x1000;
-	. = ALIGN(64 * 1024);
 	bss_end = .;
 	bss_size = bss_end - bss_begin;
 
 	. += 0x1000;	/* Add extra space just in case... */
 	. = ALIGN(64 * 1024);
 	kern_end = .;
+	BSS_END = .;
 
 	/DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
 	

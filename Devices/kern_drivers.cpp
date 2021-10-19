@@ -134,7 +134,10 @@ void FiniDriver(const CHAR *DriverName, UINT64 Address)
 /* HACK: This should be put in a better place.. */
 extern VOID PerCoreBoardInit();
 
+extern char interrupt_table[];
+
 void PerCoreInit()
 {
+	pantheon::CPU::LIDT(interrupt_table);
 	PerCoreBoardInit();
 }
