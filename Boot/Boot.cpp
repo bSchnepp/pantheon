@@ -26,7 +26,13 @@ UINT64 kern_end = (UINT64)(&Area + 50000);
 #endif
 
 static InitialBootInfo InitBootInfo;
-static UINT64 MemArea;
+static UINT64 MemArea = 0x00;
+static UINT64 KernSize = 0x00;
+static UINT64 KernBegin = 0x00;
+static UINT64 KernEnd = 0x00;
+static pantheon::Atomic<BOOL> PageTablesCreated = FALSE;
+static pantheon::vmm::PageTable *TTBR0 = nullptr;
+static pantheon::vmm::PageTable *TTBR1 = nullptr;
 
 InitialBootInfo *GetInitBootInfo()
 {
@@ -38,12 +44,12 @@ void AllocateMemoryArea(UINT64 StartAddr, UINT64 Size);
 void AllocateMemoryArea(UINT64 StartAddr, UINT64 Size)
 {
 	/* If it's less than 4 pages, don't even bother. */
-	if (Size < 4 * 4096)
+	if (Size < 4 * pantheon::vmm::BlockSize::L4BlockSize)
 	{
 		return;
 	}
 
-	UINT64 ToBitmapPageSize = Size / (8 * 4096);
+	UINT64 ToBitmapPageSize = Size / (8 * pantheon::vmm::BlockSize::L4BlockSize);
 	InitBootInfo.InitMemoryAreas[InitBootInfo.NumMemoryAreas].BaseAddress = (UINT64)StartAddr;
 	InitBootInfo.InitMemoryAreas[InitBootInfo.NumMemoryAreas].Map = pantheon::RawBitmap((UINT8*)MemArea, ToBitmapPageSize);
 	MemArea += ToBitmapPageSize;
@@ -58,14 +64,14 @@ void AllocatePage(UINT64 Addr)
 		InitialMemoryArea &InitMemArea = InitBootInfo.InitMemoryAreas[InitArea];
 
 		UINT64 MinAddr = InitMemArea.BaseAddress;
-		UINT64 MaxAddr = MinAddr + InitMemArea.Map.GetSizeBytes() * 4096 * 8;
+		UINT64 MaxAddr = MinAddr + InitMemArea.Map.GetSizeBytes() * pantheon::vmm::BlockSize::L4BlockSize * 8;
 
 		if (Addr < MinAddr || Addr > MaxAddr)
 		{
 			continue;
 		}
 
-		UINT64 Offset = (Addr - MinAddr) / (4096);
+		UINT64 Offset = (Addr - MinAddr) / (pantheon::vmm::BlockSize::L4BlockSize);
 		InitMemArea.Map.Set(Offset, TRUE);
 	}
 }
@@ -78,14 +84,14 @@ void FreePage(UINT64 Addr)
 		InitialMemoryArea &InitMemArea = InitBootInfo.InitMemoryAreas[InitArea];
 
 		UINT64 MinAddr = InitMemArea.BaseAddress;
-		UINT64 MaxAddr = MinAddr + InitMemArea.Map.GetSizeBytes() * 4096 * 8;
+		UINT64 MaxAddr = MinAddr + InitMemArea.Map.GetSizeBytes() * pantheon::vmm::BlockSize::L4BlockSize * 8;
 
 		if (Addr < MinAddr || Addr > MaxAddr)
 		{
 			continue;
 		}
 
-		UINT64 Offset = (Addr - MinAddr) / (4096);
+		UINT64 Offset = (Addr - MinAddr) / (pantheon::vmm::BlockSize::L4BlockSize);
 		InitMemArea.Map.Set(Offset, FALSE);
 	}
 }
@@ -100,7 +106,7 @@ UINT64 FindPage()
 		{
 			if (InitMemArea.Map.Get(Bit))
 			{
-				return InitMemArea.BaseAddress + (4096 * Bit);
+				return InitMemArea.BaseAddress + (pantheon::vmm::BlockSize::L4BlockSize * Bit);
 			}
 		}
 	}
@@ -354,20 +360,6 @@ void PrintDTB(fdt_header *dtb)
 	SERIAL_LOG("%s\n", "finished going through dtb");
 }
 
-/* There is most certainly a better way to deal with 16MB of identity mapping.
- * Ideally, we could set up a small allocator that doesn't have it's memory 
- * reclaimed, and avoid the hard 16MB requirement entirely. We could even
- * just map all of physical memory first, and then remap the higher half stuff
- * in a nice way which guarantees the same layout.
- */
-
-static UINT64 KernBegin = 0x00;
-static pantheon::Atomic<BOOL> PageTablesCreated = FALSE;
-
-
-pantheon::vmm::PageTable *TTBR0 = nullptr;
-pantheon::vmm::PageTable *TTBR1 = nullptr;
-
 static void SetupPageTables()
 {
 	/* As long as we're done after InitializeMemory, we're free to use
@@ -378,8 +370,8 @@ static void SetupPageTables()
 	 */
 
 	constexpr UINT64 NumTables = 8192;
-	MemArea = Align<UINT64>(MemArea, 4096ULL);
-	pantheon::mm::SlabCache<pantheon::vmm::PageTable> InitialPageTables((void*)MemArea, NumTables);
+	MemArea = Align<UINT64>(MemArea, pantheon::vmm::BlockSize::L4BlockSize);
+	pantheon::vmm::PageAllocator InitialPageTables((void*)MemArea, NumTables);
 
 	/* We'll need two top level page tables. */
 	TTBR0 = InitialPageTables.Allocate();
@@ -398,25 +390,14 @@ static void SetupPageTables()
 	Entry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
 
 	/* Begin writing the actual page tables... */
-	for (UINT64 BaseAddr = KernBegin; BaseAddr <= MemArea; BaseAddr += 4096)
-	{
-		pantheon::vmm::MapAndCreateInitialPages(TTBR0->Entries[0], BaseAddr, BaseAddr, Entry, InitialPageTables);
-	}
+	InitialPageTables.Map(TTBR0, KernBegin, KernBegin, KernSize, Entry);
 
-
-	MemArea += (NumTables - InitialPageTables.SpaceLeft()) * sizeof(pantheon::vmm::PageTable);
-	MemArea = Align<UINT64>(MemArea, 4096ULL);
+	/* We need the PMM area as well. */
+	UINT64 KernEndAreaAmt = Align<UINT64>(MemArea - KernEnd, pantheon::vmm::BlockSize::L4BlockSize);
+	InitialPageTables.Map(TTBR0, KernEnd, KernEnd, KernEndAreaAmt, Entry);
 
 	/* Make sure we're mapping the page tables too. */
-	for (UINT64 BaseAddr = KernBegin; BaseAddr <= MemArea; BaseAddr += 4096)
-	{
-		pantheon::vmm::MapAndCreateInitialPages(TTBR0->Entries[0], BaseAddr, BaseAddr, Entry, InitialPageTables);
-	}
-
-	for (UINT64 BaseAddr = MemArea; BaseAddr < MemArea + ((NumTables - InitialPageTables.SpaceLeft()) * 4096); BaseAddr += 4096)
-	{
-		pantheon::vmm::MapAndCreateInitialPages(TTBR0->Entries[0], BaseAddr, BaseAddr, Entry, InitialPageTables);
-	}
+	InitialPageTables.Map(TTBR0, MemArea, MemArea, NumTables * sizeof(pantheon::vmm::PageTable), Entry);
 
 	/* 
 	 * TODO:
@@ -436,11 +417,14 @@ static void InstallPageTables()
 
 	}
 
+	UINT64 TTBR0_Val = (UINT64)TTBR0;
+	UINT64 TTBR1_Val = (UINT64)TTBR1;
+
+	write_ttbr0_el1(TTBR0_Val);
+	write_ttbr1_el1(TTBR1_Val);
+
 	pantheon::vmm::PageTableEntry Entry;
 	Entry.SetMapped(TRUE);
-
-	write_ttbr0_el1((UINT64)TTBR0 | Entry.GetRawAttributes());
-	write_ttbr1_el1((UINT64)TTBR1 | Entry.GetRawAttributes());
 
 	pantheon::arm::MAIRAttributes Attribs = 0;
 	Attribs |= pantheon::arm::AttributeToSlot(0x00, 0);
@@ -450,12 +434,14 @@ static void InstallPageTables()
 
 	pantheon::arm::WriteMAIR_EL1(Attribs);
 	pantheon::arm::WriteTCR_EL1(pantheon::arm::DefaultTCRAttributes());
+
+
 }
 
 static void SetupCore()
 {
 	InstallPageTables();
-	
+	pantheon::vmm::InvalidateTLB();
 	/* Run pantheon::vmm::EnablePaging() here */
 }
 
@@ -469,8 +455,12 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 	if (ProcNo == 0)
 	{
 		UINT64 InitAddr = (UINT64)initial_load_addr;
-		UINT64 KernSize = (UINT64)&kern_end - (UINT64)&kern_begin;
-		MemArea = InitAddr + KernSize + 4096;
+
+		KernBegin = InitAddr;
+		KernSize = (UINT64)&kern_end - (UINT64)&kern_begin;
+		KernEnd = KernBegin + KernSize;
+
+		MemArea = InitAddr + KernSize + pantheon::vmm::BlockSize::L4BlockSize;
 
 		/* The DTB is handled in 3 passes:
 		 * The first initializes memory areas, so the physical
@@ -482,12 +472,11 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 		InitializeMemory(dtb);
 
 		/* Ensure the appropriate page tables are made */
-		KernBegin = InitAddr;
 		SetupPageTables();
 
 		for (UINT64 Start = InitAddr; 
-			Start <= Align<UINT64>(MemArea, 4096UL);
-			Start += 4096)
+			Start <= Align<UINT64>(MemArea, pantheon::vmm::BlockSize::L4BlockSize);
+			Start += pantheon::vmm::BlockSize::L4BlockSize)
 		{
 			AllocatePage(Start);
 		}

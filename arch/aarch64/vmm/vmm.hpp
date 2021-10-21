@@ -1,3 +1,4 @@
+#include <kern.h>
 #include <kern_runtime.hpp>
 #include <kern_datatypes.hpp>
 
@@ -11,9 +12,10 @@ namespace pantheon::vmm
 
 namespace BlockSize
 {
-	constexpr UINT64 L1BlockSize = (1 * 1024 * 1024 * 1024);
-	constexpr UINT64 L2BlockSize = (2 * 1024 * 1024);
-	constexpr UINT64 L3BlockSize = (4 * 1024);
+	constexpr UINT64 L1BlockSize = (512ULL * 1024ULL * 1024ULL * 1024ULL);
+	constexpr UINT64 L2BlockSize = (1ULL * 1024ULL * 1024ULL * 1024ULL);
+	constexpr UINT64 L3BlockSize = (2ULL * 1024ULL * 1024ULL);
+	constexpr UINT64 L4BlockSize = (4ULL * 1024ULL);
 }
 
 typedef enum PageAccessor : UINT64
@@ -98,7 +100,8 @@ public:
 	~PageTableEntry(){};
 
 	[[nodiscard]] constexpr BOOL IsMapped() const { return this->GetBits(0, 1) != 0; }
-	[[nodiscard]] constexpr BOOL IsBlock() const { return this->GetBits(1, 1) != 0; }
+	[[nodiscard]] constexpr BOOL IsBlock() const { return this->GetBits(1, 1) == 0; }
+	[[nodiscard]] constexpr BOOL IsTable() const { return this->GetBits(1, 1) != 0; }
 	[[nodiscard]] constexpr MAIREntry GetMAIREntry() const { return static_cast<MAIREntry>(this->GetMaskedBits(2, 3)); };
 	[[nodiscard]] constexpr BOOL IsNonSecure() const { return this->GetBits(5, 1) != 0; }
 	[[nodiscard]] constexpr BOOL IsUserAccessible() const { return this->GetBits(6, 1) != 0; }
@@ -123,7 +126,8 @@ public:
 	}
 
 	constexpr VOID SetMapped(BOOL Value) { this->SetBits(0, 1, Value == 1); }
-	constexpr VOID SetBlock(BOOL Value) { this->SetBits(1, 1, Value == 1); }
+	constexpr VOID SetBlock(BOOL Value) { this->SetBits(1, 1, Value == 0); }
+	constexpr VOID SetTable(BOOL Value) { this->SetBits(1, 1, Value == 1); }
 	constexpr VOID SetMAIREntry(MAIREntry Value) { this->SetBitsRaw(2, 3, Value); }
 	constexpr VOID SetNonSecure(BOOL Value) { this->SetBits(5, 1, Value != 0); }
 	constexpr VOID SetUserAccessible(BOOL Value) { this->SetBits(6, 1, Value != 0); }
@@ -193,15 +197,51 @@ inline VirtualAddress PhysicalToVirtualAddress(PhysicalAddress PhyAddr)
 	return PhyAddr | (0b1111111111111111ULL << 48);
 }
 
+inline PhysicalAddress VirtualToPhysicalAddress(PageTable *RootTable, VirtualAddress Addr)
+{
+	/* TODO: traverse page table */
+	PANTHEON_UNUSED(RootTable);
+	return Addr;
+}
 
-BOOL WalkAddr(const PageTableEntry &Entry, UINT64 VAddr);
-BOOL MapPages(PageTableEntry &Entry, VirtualAddress VAddr, PhysicalAddress PAddr, PageTableEntry &Permissions);
-BOOL MapAndCreatePages(PageTableEntry &Entry, VirtualAddress VAddr, PhysicalAddress PAddr, PageTableEntry &Permissions, pantheon::mm::SlabCache<PageTable> &PageAllocator);
-BOOL MapAndCreateInitialPages(PageTableEntry &Entry, VirtualAddress VAddr, PhysicalAddress PAddr, PageTableEntry &Permissions, pantheon::mm::SlabCache<PageTable> &PageAllocator);
-BOOL UnmapPages(PageTableEntry &Entry, VirtualAddress VAddr);
+VOID InvalidateTLB();
 VOID EnablePaging();
 
 static_assert(sizeof(PageTableEntry) == sizeof(PageTableEntryRaw));
+
+class PageAllocator
+{
+public:
+	PageAllocator(VOID *Area, UINT64 Pages)
+	{
+		this->Allocator = pantheon::mm::SlabCache<pantheon::vmm::PageTable>(Area, Pages);
+	}
+	
+	~PageAllocator()
+	{
+
+	}
+
+	pantheon::vmm::PageTable *Allocate()
+	{
+		return this->Allocator.Allocate();
+	}
+
+	[[nodiscard]] UINT64 SpaceLeft() const
+	{
+		return this->Allocator.SpaceLeft();
+	}
+
+	[[nodiscard]] UINT64 SpaceUsed() const
+	{
+		return this->Allocator.SlabCount() - this->SpaceLeft();
+	}
+
+	void Map(pantheon::vmm::PageTable *TTBR, pantheon::vmm::VirtualAddress VirtAddr, pantheon::vmm::PhysicalAddress PhysAddr, UINT64 Size, const pantheon::vmm::PageTableEntry &Permissions);
+
+private:
+	pantheon::mm::SlabCache<pantheon::vmm::PageTable> Allocator;
+};
 
 }
 

@@ -6,220 +6,148 @@
 #include "vmm.hpp"
 
 
-static pantheon::vmm::PageTableEntry *GetL3PageTableEntry(const pantheon::vmm::PageTableEntry &Entry, UINT64 VAddr)
+UINT64 VirtAddrToLevel1Index(pantheon::vmm::VirtualAddress VAddr)
 {
-	UINT64 Tables[4] = {0, 0, 0, 0};
-	Tables[3] = (VAddr >> 12) & 0b111111111;
-	Tables[2] = (VAddr >> 21) & 0b111111111;
-	Tables[1] = (VAddr >> 30) & 0b111111111;
-	Tables[0] = (VAddr >> 39) & 0b111111111;
-
-	pantheon::vmm::PageTableEntry *L1 = reinterpret_cast<pantheon::vmm::PageTableEntry*>(pantheon::vmm::PhysicalToVirtualAddress(Entry.GetPhysicalAddressArea()));
-
-	pantheon::vmm::PageTableEntry *L1Entry = &(L1[Tables[1]]);
-	if (L1Entry->IsMapped() == FALSE)
-	{
-		return nullptr;
-	}
-
-	pantheon::vmm::PageTableEntry *L2 = reinterpret_cast<pantheon::vmm::PageTableEntry*>(pantheon::vmm::PhysicalToVirtualAddress(L1Entry->GetPhysicalAddressArea()));
-	pantheon::vmm::PageTableEntry *L2Entry = &(L2[Tables[2]]);
-	if (L2Entry->IsMapped() == FALSE)
-	{
-		return nullptr;
-	}
-
-	pantheon::vmm::PageTableEntry *L3 = reinterpret_cast<pantheon::vmm::PageTableEntry*>(pantheon::vmm::PhysicalToVirtualAddress(L2Entry->GetPhysicalAddressArea()));
-	pantheon::vmm::PageTableEntry *L3Entry = &(L3[Tables[3]]);
-	return L3Entry;
+	return (VAddr >> 38) & 0b111111111;
 }
 
-static pantheon::vmm::PageTableEntry *GetL3OrCreatePageTableEntry(pantheon::vmm::PageTableEntry &Entry, UINT64 VAddr, pantheon::vmm::PageTableEntry &Permissions, pantheon::mm::SlabCache<pantheon::vmm::PageTable> &PageAllocator)
+UINT64 VirtAddrToLevel2Index(pantheon::vmm::VirtualAddress VAddr)
 {
-	UINT64 Tables[4] = {0, 0, 0, 0};
-	Tables[3] = (VAddr >> 12) & 0b111111111;
-	Tables[2] = (VAddr >> 21) & 0b111111111;
-	Tables[1] = (VAddr >> 30) & 0b111111111;
-	Tables[0] = (VAddr >> 39) & 0b111111111;
-
-	if (Entry.IsMapped() == FALSE)
-	{
-		pantheon::vmm::PageTable *NewTable = PageAllocator.Allocate();
-		Entry.SetRawAttributes(Permissions.GetRawAttributes());
-		Entry.SetMapped(TRUE);
-		Entry.SetBlock(FALSE);
-		Entry.SetPhysicalAddressArea((pantheon::vmm::PhysicalAddress)NewTable);		
-	}
-
-	pantheon::vmm::PageTableEntry *L1 = reinterpret_cast<pantheon::vmm::PageTableEntry*>(pantheon::vmm::PhysicalToVirtualAddress(Entry.GetPhysicalAddressArea()));
-
-	pantheon::vmm::PageTableEntry *L1Entry = &(L1[Tables[1]]);
-	if (L1Entry->IsMapped() == FALSE)
-	{
-		pantheon::vmm::PageTable *NewTable = PageAllocator.Allocate();
-		L1Entry->SetRawAttributes(Permissions.GetRawAttributes());
-		L1Entry->SetMapped(TRUE);
-		L1Entry->SetBlock(FALSE);
-		L1Entry->SetPhysicalAddressArea((pantheon::vmm::PhysicalAddress)NewTable);
-	}
-
-	pantheon::vmm::PageTableEntry *L2 = reinterpret_cast<pantheon::vmm::PageTableEntry*>(pantheon::vmm::PhysicalToVirtualAddress(L1Entry->GetPhysicalAddressArea()));
-	pantheon::vmm::PageTableEntry *L2Entry = &(L2[Tables[2]]);
-	if (L2Entry->IsMapped() == FALSE)
-	{
-		pantheon::vmm::PageTable *NewTable = PageAllocator.Allocate();
-		L2Entry->SetRawAttributes(Permissions.GetRawAttributes());
-		L2Entry->SetMapped(TRUE);
-		L2Entry->SetBlock(FALSE);
-		L2Entry->SetPhysicalAddressArea((pantheon::vmm::PhysicalAddress)NewTable);
-	}
-
-	pantheon::vmm::PageTableEntry *L3 = reinterpret_cast<pantheon::vmm::PageTableEntry*>(pantheon::vmm::PhysicalToVirtualAddress(L2Entry->GetPhysicalAddressArea()));
-	pantheon::vmm::PageTableEntry *L3Entry = &(L3[Tables[3]]);
-
-	if (L3Entry->IsMapped() == FALSE)
-	{
-		pantheon::vmm::PageTable *NewTable = PageAllocator.Allocate();
-		L3Entry->SetRawAttributes(Permissions.GetRawAttributes());
-		L3Entry->SetMapped(TRUE);
-		L3Entry->SetBlock(FALSE);
-		L3Entry->SetPhysicalAddressArea((pantheon::vmm::PhysicalAddress)NewTable);
-	}
-	return L3Entry;
+	return (VAddr >> 29) & 0b111111111;
 }
 
-static pantheon::vmm::PageTableEntry *GetL3OrCreateInitialPageTableEntry(pantheon::vmm::PageTableEntry &Entry, UINT64 VAddr, pantheon::vmm::PageTableEntry &Permissions, pantheon::mm::SlabCache<pantheon::vmm::PageTable> &PageAllocator)
+UINT64 VirtAddrToLevel3Index(pantheon::vmm::VirtualAddress VAddr)
 {
-	UINT64 Tables[4] = {0, 0, 0, 0};
-	Tables[3] = (VAddr >> 12) & 0b111111111;
-	Tables[2] = (VAddr >> 21) & 0b111111111;
-	Tables[1] = (VAddr >> 30) & 0b111111111;
-	Tables[0] = (VAddr >> 39) & 0b111111111;
-
-	if (Entry.IsMapped() == FALSE)
-	{
-		pantheon::vmm::PageTable *NewTable = PageAllocator.Allocate();
-		Entry.SetRawAttributes(Permissions.GetRawAttributes());
-		Entry.SetMapped(TRUE);
-		Entry.SetBlock(FALSE);
-		Entry.SetPhysicalAddressArea((pantheon::vmm::PhysicalAddress)NewTable);		
-	}
-
-	pantheon::vmm::PageTableEntry *L1 = reinterpret_cast<pantheon::vmm::PageTableEntry*>(Entry.GetPhysicalAddressArea());
-
-	pantheon::vmm::PageTableEntry *L1Entry = &(L1[Tables[1]]);
-	if (L1Entry->IsMapped() == FALSE)
-	{
-		pantheon::vmm::PageTable *NewTable = PageAllocator.Allocate();
-		L1Entry->SetRawAttributes(Permissions.GetRawAttributes());
-		L1Entry->SetMapped(TRUE);
-		L1Entry->SetBlock(FALSE);
-		L1Entry->SetPhysicalAddressArea((pantheon::vmm::PhysicalAddress)NewTable);
-	}
-
-	pantheon::vmm::PageTableEntry *L2 = reinterpret_cast<pantheon::vmm::PageTableEntry*>(L1Entry->GetPhysicalAddressArea());
-	pantheon::vmm::PageTableEntry *L2Entry = &(L2[Tables[2]]);
-	if (L2Entry->IsMapped() == FALSE)
-	{
-		pantheon::vmm::PageTable *NewTable = PageAllocator.Allocate();
-		L2Entry->SetRawAttributes(Permissions.GetRawAttributes());
-		L2Entry->SetMapped(TRUE);
-		L2Entry->SetBlock(FALSE);
-		L2Entry->SetPhysicalAddressArea((pantheon::vmm::PhysicalAddress)NewTable);
-	}
-
-	pantheon::vmm::PageTableEntry *L3 = reinterpret_cast<pantheon::vmm::PageTableEntry*>(L2Entry->GetPhysicalAddressArea());
-	pantheon::vmm::PageTableEntry *L3Entry = &(L3[Tables[3]]);
-	return L3Entry;
+	return (VAddr >> 20) & 0b111111111;
 }
 
-/**
- * \~english @author Brian Schnepp
- * \~english @brief Looks up a virtual address in either top level page table provided
- * \~english @param Entry The highest level page table entry to look through
- * \~english @param VAddr The virtual address to look up
- * \~english @param Kernel A flag for if the VAddr should be in the TTBR0 or TTBR1 register
- * \~english @details The page table entry supplied is assumed to be the top level page table.
- * In pantheon, only 4Kb pages are used and are strictly presumed to be using 2 sets of 3-level paging for TTBR0 and TTBR1.
- */
-BOOL pantheon::vmm::WalkAddr(const pantheon::vmm::PageTableEntry &Entry, UINT64 VAddr)
+UINT64 VirtAddrToLevel4Index(pantheon::vmm::VirtualAddress VAddr)
 {
-	pantheon::vmm::PageTableEntry *L3Entry = GetL3PageTableEntry(Entry, VAddr);
-	if (L3Entry == nullptr || L3Entry->IsMapped() == FALSE)
-	{
-		return FALSE;
-	}
-
-	return TRUE;
+	return (VAddr >> 11) & 0b111111111;
 }
 
-BOOL pantheon::vmm::MapPages(pantheon::vmm::PageTableEntry &Entry, VirtualAddress VAddr, PhysicalAddress PAddr, pantheon::vmm::PageTableEntry &Permissions)
+VOID pantheon::vmm::PageAllocator::Map(pantheon::vmm::PageTable *TTBR, VirtualAddress VirtAddr, pantheon::vmm::PhysicalAddress PhysAddr, UINT64 Size, const pantheon::vmm::PageTableEntry &Permissions)
 {
-	pantheon::vmm::PageTableEntry *L3Entry = GetL3PageTableEntry(Entry, VAddr);
-	if (L3Entry == nullptr || L3Entry->IsMapped() == TRUE)
-	{
-		return FALSE;
-	}
 
-	/* Write in a new entry */
-	*L3Entry = Permissions;
-	L3Entry->SetPhysicalAddressArea(PAddr);
-	return TRUE;
+	/* Assert that Size is a multiple of the page size. If not, round anyway. */
+	Size = Align<UINT64>(Size, pantheon::vmm::BlockSize::L4BlockSize);
+
+	/* Make sure VirtAddr and PhysAddr are aligned to the page size too. */
+	VirtAddr &= ~(pantheon::vmm::BlockSize::L4BlockSize);
+	PhysAddr &= ~(pantheon::vmm::BlockSize::L4BlockSize);
+
+	/* Start mapping everything */
+	if (TTBR == nullptr)
+	{
+		return;
+	}
+		
+	while (Size > 0)
+	{
+		/* Can we find the L1 table? */
+		UINT8 L1Index = VirtAddrToLevel1Index(VirtAddr);
+		pantheon::vmm::PageTableEntry *L1Entry = &(TTBR->Entries[L1Index]);
+
+		if (L1Entry->IsMapped() == FALSE)
+		{
+			/* Allocate a new L1, and write it in. */
+			pantheon::vmm::PageTable *Table = Allocator.Allocate();
+			L1Entry->SetPhysicalAddressArea(VirtualToPhysicalAddress(TTBR, (UINT64)Table));
+			L1Entry->SetMapped(TRUE);
+		}
+
+		/* We can't have L1 blocks, so don't try to fit it in.
+		 * 512GB pages are a little silly anyway for now.
+		 */
+
+		/* TODO: We need to handle virtual addresses!!! These pointers are physical memory pointers. */
+		UINT8 L2Index = VirtAddrToLevel2Index(VirtAddr);
+		pantheon::vmm::PageTable *L2 = (pantheon::vmm::PageTable*)(L1Entry->GetPhysicalAddressArea());
+		pantheon::vmm::PageTableEntry *L2Entry = &(L2->Entries[L2Index]);
+
+		/* We have a (greedy) opportunity to save page tables. Try making this a block if we can. */
+		if (Size >= pantheon::vmm::BlockSize::L2BlockSize && ((PhysAddr & ~(pantheon::vmm::BlockSize::L2BlockSize - 1)) == PhysAddr))
+		{
+			L2Entry->SetPhysicalAddressArea(PhysAddr);
+			Size -= pantheon::vmm::BlockSize::L2BlockSize;
+			PhysAddr += pantheon::vmm::BlockSize::L2BlockSize;
+			VirtAddr += pantheon::vmm::BlockSize::L2BlockSize;
+			L2Entry->SetBlock(TRUE);
+			L2Entry->SetMapped(TRUE);
+			continue;
+		}
+
+		if (L2Entry->IsMapped() == FALSE)
+		{
+			/* Allocate a new L2, and write it in. */
+			pantheon::vmm::PageTable *Table = Allocator.Allocate();
+			L2Entry->SetPhysicalAddressArea(VirtualToPhysicalAddress(TTBR, (UINT64)Table));
+			L2Entry->SetMapped(TRUE);				
+		}
+
+		UINT8 L3Index = VirtAddrToLevel3Index(VirtAddr);
+		pantheon::vmm::PageTable *L3 = (pantheon::vmm::PageTable*)(L2Entry->GetPhysicalAddressArea());
+		pantheon::vmm::PageTableEntry *L3Entry = &(L3->Entries[L3Index]);
+
+		/* We have a (greedy) opportunity to save page tables. Try making this a block if we can. */
+		if (Size >= pantheon::vmm::BlockSize::L3BlockSize && ((PhysAddr & ~(pantheon::vmm::BlockSize::L3BlockSize - 1)) == PhysAddr))
+		{
+			L3Entry->SetPhysicalAddressArea(PhysAddr);
+			Size -= pantheon::vmm::BlockSize::L3BlockSize;
+			PhysAddr += pantheon::vmm::BlockSize::L3BlockSize;
+			VirtAddr += pantheon::vmm::BlockSize::L3BlockSize;
+			L3Entry->SetBlock(TRUE);
+			L3Entry->SetMapped(TRUE);
+			continue;
+		}
+
+		if (L3Entry->IsMapped() == FALSE)
+		{
+			/* Allocate a new L3, and write it in. */
+			pantheon::vmm::PageTable *Table = Allocator.Allocate();
+			L3Entry->SetPhysicalAddressArea(VirtualToPhysicalAddress(TTBR, (UINT64)Table));
+			L3Entry->SetMapped(TRUE);				
+		}
+
+		UINT8 L4Index = VirtAddrToLevel4Index(VirtAddr);
+		pantheon::vmm::PageTable *L4 = (pantheon::vmm::PageTable*)(L3Entry->GetPhysicalAddressArea());
+		pantheon::vmm::PageTableEntry *L4Entry = &(L4->Entries[L4Index]);
+
+		/* We can't make a "bigger" chunk from L4: L4 is already the smallest size. */
+
+		if (L4Entry->IsMapped() == FALSE)
+		{
+			/* Allocate a new L4, and write it in. */
+			L4Entry->SetRawAttributes(Permissions.GetRawAttributes());
+			L4Entry->SetPhysicalAddressArea(PhysAddr);
+			L4Entry->SetBlock(TRUE);
+			L4Entry->SetMapped(TRUE);
+		}
+
+		Size -= pantheon::vmm::BlockSize::L4BlockSize;
+		PhysAddr += pantheon::vmm::BlockSize::L4BlockSize;
+		VirtAddr += pantheon::vmm::BlockSize::L4BlockSize;
+
+	}
 }
 
-BOOL pantheon::vmm::MapAndCreatePages(PageTableEntry &Entry, VirtualAddress VAddr, PhysicalAddress PAddr, PageTableEntry &Permissions, pantheon::mm::SlabCache<pantheon::vmm::PageTable> &PageAllocator)
+VOID pantheon::vmm::InvalidateTLB()
 {
-	pantheon::vmm::PageTableEntry *L3Entry = GetL3OrCreatePageTableEntry(Entry, VAddr, Permissions, PageAllocator);
-	if (L3Entry == nullptr || L3Entry->IsMapped() == TRUE)
-	{
-		return FALSE;
-	}
-
-	/* Write in a new entry */
-	*L3Entry = Permissions;
-	L3Entry->SetPhysicalAddressArea(PAddr);
-	return TRUE;
-}
-
-BOOL pantheon::vmm::MapAndCreateInitialPages(PageTableEntry &Entry, VirtualAddress VAddr, PhysicalAddress PAddr, PageTableEntry &Permissions, pantheon::mm::SlabCache<pantheon::vmm::PageTable> &PageAllocator)
-{
-	pantheon::vmm::PageTableEntry *L3Entry = GetL3OrCreateInitialPageTableEntry(Entry, VAddr, Permissions, PageAllocator);
-	if (L3Entry == nullptr || L3Entry->IsMapped() == TRUE)
-	{
-		return FALSE;
-	}
-
-	/* Write in a new entry */
-	*L3Entry = Permissions;
-	L3Entry->SetPhysicalAddressArea(PAddr);
-	return TRUE;
-}
-
-BOOL pantheon::vmm::UnmapPages(pantheon::vmm::PageTableEntry &Entry, VirtualAddress VAddr)
-{
-	pantheon::vmm::PageTableEntry *L3Entry = GetL3PageTableEntry(Entry, VAddr);
-	if (L3Entry == nullptr || L3Entry->IsMapped() == TRUE)
-	{
-		return FALSE;
-	}
-
-	/* Clear the entry */
-	L3Entry->SetRawAttributes(0);
-	return TRUE;
+	/* Smash the TLB: we don't want invalid entries left around. */
+	asm volatile(
+		"isb\n"
+		"tlbi vmalle1\n"
+		"dsb ish\n"
+		"dsb sy\n"
+		"isb\n");
 }
 
 VOID pantheon::vmm::EnablePaging()
 {
-	/* Smash the TLB: we don't want invalid entries left around. */
-	asm volatile(
-		"dsb ishst\n"
-		"tlbi alle1\n"
-		"dsb ish\n"
-		"isb\n");
-
 	UINT64 SCTLRVal = 0x00;
+	asm volatile("mrs %0, sctlr_el1" : "=r"(SCTLRVal));
+
 	asm volatile(
-		"mrs %0, sctlr_el1\n"
 		"orr %0, %0, #1\n"
 		"isb\n" 
 		"msr sctlr_el1, %0\n"
