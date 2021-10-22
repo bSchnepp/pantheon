@@ -350,7 +350,7 @@ public:
 		return this->Allocator.SlabCount() - this->SpaceLeft();
 	}
 
-	void Map(pantheon::vmm::PageTable *TTBR, pantheon::vmm::VirtualAddress VirtAddr, pantheon::vmm::PhysicalAddress PhysAddr, UINT64 Size, const pantheon::vmm::PageTableEntry &Permissions);
+	BOOL Map(pantheon::vmm::PageTable *TTBR, pantheon::vmm::VirtualAddress VirtAddr, pantheon::vmm::PhysicalAddress PhysAddr, UINT64 Size, const pantheon::vmm::PageTableEntry &Permissions);
 
 private:
 	pantheon::mm::SlabCache<pantheon::vmm::PageTable> Allocator;

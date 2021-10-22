@@ -8,25 +8,25 @@
 
 UINT64 VirtAddrToLevel1Index(pantheon::vmm::VirtualAddress VAddr)
 {
-	return (VAddr >> 38) & 0b111111111;
+	return (VAddr >> 39) & 0b111111111;
 }
 
 UINT64 VirtAddrToLevel2Index(pantheon::vmm::VirtualAddress VAddr)
 {
-	return (VAddr >> 29) & 0b111111111;
+	return (VAddr >> 30) & 0b111111111;
 }
 
 UINT64 VirtAddrToLevel3Index(pantheon::vmm::VirtualAddress VAddr)
 {
-	return (VAddr >> 20) & 0b111111111;
+	return (VAddr >> 21) & 0b111111111;
 }
 
 UINT64 VirtAddrToLevel4Index(pantheon::vmm::VirtualAddress VAddr)
 {
-	return (VAddr >> 11) & 0b111111111;
+	return (VAddr >> 12) & 0b111111111;
 }
 
-VOID pantheon::vmm::PageAllocator::Map(pantheon::vmm::PageTable *TTBR, VirtualAddress VirtAddr, pantheon::vmm::PhysicalAddress PhysAddr, UINT64 Size, const pantheon::vmm::PageTableEntry &Permissions)
+BOOL pantheon::vmm::PageAllocator::Map(pantheon::vmm::PageTable *TTBR, VirtualAddress VirtAddr, pantheon::vmm::PhysicalAddress PhysAddr, UINT64 Size, const pantheon::vmm::PageTableEntry &Permissions)
 {
 
 	/* Assert that Size is a multiple of the page size. If not, round anyway. */
@@ -39,7 +39,7 @@ VOID pantheon::vmm::PageAllocator::Map(pantheon::vmm::PageTable *TTBR, VirtualAd
 	/* Start mapping everything */
 	if (TTBR == nullptr)
 	{
-		return;
+		return FALSE;
 	}
 		
 	while (Size > 0)
@@ -68,6 +68,7 @@ VOID pantheon::vmm::PageAllocator::Map(pantheon::vmm::PageTable *TTBR, VirtualAd
 		/* We have a (greedy) opportunity to save page tables. Try making this a block if we can. */
 		if (Size >= pantheon::vmm::BlockSize::L2BlockSize && ((PhysAddr & ~(pantheon::vmm::BlockSize::L2BlockSize - 1)) == PhysAddr))
 		{
+			L2Entry->SetRawAttributes(Permissions.GetRawAttributes());
 			L2Entry->SetPhysicalAddressArea(PhysAddr);
 			Size -= pantheon::vmm::BlockSize::L2BlockSize;
 			PhysAddr += pantheon::vmm::BlockSize::L2BlockSize;
@@ -92,6 +93,7 @@ VOID pantheon::vmm::PageAllocator::Map(pantheon::vmm::PageTable *TTBR, VirtualAd
 		/* We have a (greedy) opportunity to save page tables. Try making this a block if we can. */
 		if (Size >= pantheon::vmm::BlockSize::L3BlockSize && ((PhysAddr & ~(pantheon::vmm::BlockSize::L3BlockSize - 1)) == PhysAddr))
 		{
+			L3Entry->SetRawAttributes(Permissions.GetRawAttributes());
 			L3Entry->SetPhysicalAddressArea(PhysAddr);
 			Size -= pantheon::vmm::BlockSize::L3BlockSize;
 			PhysAddr += pantheon::vmm::BlockSize::L3BlockSize;
@@ -129,6 +131,7 @@ VOID pantheon::vmm::PageAllocator::Map(pantheon::vmm::PageTable *TTBR, VirtualAd
 		VirtAddr += pantheon::vmm::BlockSize::L4BlockSize;
 
 	}
+	return TRUE;
 }
 
 VOID pantheon::vmm::InvalidateTLB()
