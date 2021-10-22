@@ -5,30 +5,16 @@
 
 #include "vmm.hpp"
 
-
-UINT64 VirtAddrToLevel1Index(pantheon::vmm::VirtualAddress VAddr)
+static UINT64 VirtAddrToPageTableIndex(pantheon::vmm::VirtualAddress VAddr, UINT8 Level)
 {
-	return (VAddr >> 39) & 0b111111111;
-}
-
-UINT64 VirtAddrToLevel2Index(pantheon::vmm::VirtualAddress VAddr)
-{
-	return (VAddr >> 30) & 0b111111111;
-}
-
-UINT64 VirtAddrToLevel3Index(pantheon::vmm::VirtualAddress VAddr)
-{
-	return (VAddr >> 21) & 0b111111111;
-}
-
-UINT64 VirtAddrToLevel4Index(pantheon::vmm::VirtualAddress VAddr)
-{
-	return (VAddr >> 12) & 0b111111111;
+	/* Only valid for 1, 2, 3, or 4. */
+	Level = (Level > 4) ? 4 : Level;
+	Level = (Level < 1) ? 1 : Level;
+	return (VAddr >> (39 - (9 * (Level - 1)))) & 0b111111111;
 }
 
 BOOL pantheon::vmm::PageAllocator::Map(pantheon::vmm::PageTable *TTBR, VirtualAddress VirtAddr, pantheon::vmm::PhysicalAddress PhysAddr, UINT64 Size, const pantheon::vmm::PageTableEntry &Permissions)
 {
-
 	/* Assert that Size is a multiple of the page size. If not, round anyway. */
 	Size = Align<UINT64>(Size, pantheon::vmm::BlockSize::L4BlockSize);
 
@@ -36,16 +22,17 @@ BOOL pantheon::vmm::PageAllocator::Map(pantheon::vmm::PageTable *TTBR, VirtualAd
 	VirtAddr &= ~(pantheon::vmm::BlockSize::L4BlockSize);
 	PhysAddr &= ~(pantheon::vmm::BlockSize::L4BlockSize);
 
-	/* Start mapping everything */
+	/* We don't have panic yet, so for now just return false. */
 	if (TTBR == nullptr)
 	{
 		return FALSE;
 	}
-		
+
+	/* Start mapping everything */
 	while (Size > 0)
 	{
 		/* Can we find the L1 table? */
-		UINT8 L1Index = VirtAddrToLevel1Index(VirtAddr);
+		UINT8 L1Index = VirtAddrToPageTableIndex(VirtAddr, 1);
 		pantheon::vmm::PageTableEntry *L1Entry = &(TTBR->Entries[L1Index]);
 
 		if (L1Entry->IsMapped() == FALSE)
@@ -61,12 +48,16 @@ BOOL pantheon::vmm::PageAllocator::Map(pantheon::vmm::PageTable *TTBR, VirtualAd
 		 */
 
 		/* TODO: We need to handle virtual addresses!!! These pointers are physical memory pointers. */
-		UINT8 L2Index = VirtAddrToLevel2Index(VirtAddr);
+		UINT8 L2Index = VirtAddrToPageTableIndex(VirtAddr, 2);
 		pantheon::vmm::PageTable *L2 = (pantheon::vmm::PageTable*)(L1Entry->GetPhysicalAddressArea());
 		pantheon::vmm::PageTableEntry *L2Entry = &(L2->Entries[L2Index]);
 
+
+		namespace BlockSize = pantheon::vmm::BlockSize;
 		/* We have a (greedy) opportunity to save page tables. Try making this a block if we can. */
-		if (Size >= pantheon::vmm::BlockSize::L2BlockSize && ((PhysAddr & ~(pantheon::vmm::BlockSize::L2BlockSize - 1)) == PhysAddr))
+		if (Size >= BlockSize::L2BlockSize 
+			&& IsAligned<UINT64>(VirtAddr, BlockSize::L2BlockSize)
+			&& IsAligned<UINT64>(PhysAddr, BlockSize::L2BlockSize))
 		{
 			L2Entry->SetRawAttributes(Permissions.GetRawAttributes());
 			L2Entry->SetPhysicalAddressArea(PhysAddr);
@@ -86,12 +77,14 @@ BOOL pantheon::vmm::PageAllocator::Map(pantheon::vmm::PageTable *TTBR, VirtualAd
 			L2Entry->SetMapped(TRUE);				
 		}
 
-		UINT8 L3Index = VirtAddrToLevel3Index(VirtAddr);
+		UINT8 L3Index = VirtAddrToPageTableIndex(VirtAddr, 3);
 		pantheon::vmm::PageTable *L3 = (pantheon::vmm::PageTable*)(L2Entry->GetPhysicalAddressArea());
 		pantheon::vmm::PageTableEntry *L3Entry = &(L3->Entries[L3Index]);
 
 		/* We have a (greedy) opportunity to save page tables. Try making this a block if we can. */
-		if (Size >= pantheon::vmm::BlockSize::L3BlockSize && ((PhysAddr & ~(pantheon::vmm::BlockSize::L3BlockSize - 1)) == PhysAddr))
+		if (Size >= pantheon::vmm::BlockSize::L3BlockSize
+			&& IsAligned<UINT64>(VirtAddr, BlockSize::L3BlockSize)
+			&& IsAligned<UINT64>(PhysAddr, BlockSize::L3BlockSize))
 		{
 			L3Entry->SetRawAttributes(Permissions.GetRawAttributes());
 			L3Entry->SetPhysicalAddressArea(PhysAddr);
@@ -111,7 +104,7 @@ BOOL pantheon::vmm::PageAllocator::Map(pantheon::vmm::PageTable *TTBR, VirtualAd
 			L3Entry->SetMapped(TRUE);				
 		}
 
-		UINT8 L4Index = VirtAddrToLevel4Index(VirtAddr);
+		UINT8 L4Index = VirtAddrToPageTableIndex(VirtAddr, 4);
 		pantheon::vmm::PageTable *L4 = (pantheon::vmm::PageTable*)(L3Entry->GetPhysicalAddressArea());
 		pantheon::vmm::PageTableEntry *L4Entry = &(L4->Entries[L4Index]);
 

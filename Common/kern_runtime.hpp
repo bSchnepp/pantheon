@@ -112,6 +112,12 @@ constexpr T Align(T Amt, T Align)
 	return ~(Align - 1) & (((Amt) + (Align - 1)));
 }
 
+template<typename T>
+constexpr BOOL IsAligned(T Val, T AlignVal)
+{
+	return Align(Val, AlignVal) == Val;
+}
+
 Optional<void*> BasicMalloc(UINT64 Amt);
 void BasicFree(void *Addr);
 
