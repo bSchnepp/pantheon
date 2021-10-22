@@ -129,7 +129,7 @@ template<typename T>
 struct CacheList
 {
 	SlabCache<T> *Current;
-	SlabCache<T> *Next;
+	CacheList<T> *Next;
 };
 
 template<typename T>

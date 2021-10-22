@@ -99,17 +99,78 @@ public:
 	constexpr explicit PageTableEntry(const PageTableEntry &Other, UINT64 Attr) noexcept : Raw(Other.Raw | Attr){}
 	~PageTableEntry(){};
 
+	/**
+	 * \~english @brief Determines if this page table entry is valid or not
+	 * \~english @author Brian Schnepp
+	 * \~english @return TRUE if valid, FALSE otherwise.
+	 */
 	[[nodiscard]] constexpr BOOL IsMapped() const { return this->GetBits(0, 1) != 0; }
+
+	/**
+	 * \~english @brief Determines if this page table entry is a block or not.
+	 * \~english @details A block entry is the final level of the page table: 
+	 * this entry controls all the physical memory assigned to it directly. 
+	 * Normally, this is a 4KB page table, but this could be a larger size, 
+	 * such as 2MB or 1GB, depending on how the page tables were allocated.
+	 * \~english @author Brian Schnepp
+	 * \~english @return TRUE if a block, FALSE otherwise.
+	 */
 	[[nodiscard]] constexpr BOOL IsBlock() const { return this->GetBits(1, 1) == 0; }
+
+	/**
+	 * \~english @brief Determines if this page table entry is a table or not.
+	 * \~english @details A table entry is a non-final level of the page table: 
+	 * this entry will have each of it's elements point to either more tables, or blocks.
+	 * In essence, this flag is equivalent to a "walk further" flag. If set, then
+	 * traversing the page tables will need to look through another table.
+	 * \~english @author Brian Schnepp
+	 * \~english @return TRUE if a table, FALSE otherwise.
+	 */
 	[[nodiscard]] constexpr BOOL IsTable() const { return this->GetBits(1, 1) != 0; }
+
+	/**
+	 * \~english @brief Obtains the index of the MAIR to use for this entry
+	 * \~english @details The Memory Attribute Indirect Register controls 
+	 * information on the utilization of this memory area. This would handle, 
+	 * for example, if this is a device MMIO area, cacheable, etc.
+	 * This parameter only makes sense on block entries: for tables, this
+	 * is presumed always 0.
+	 * \~english @author Brian Schnepp
+	 * \~english @return The entry in the MAIR register that this entry uses
+	 */
 	[[nodiscard]] constexpr MAIREntry GetMAIREntry() const { return static_cast<MAIREntry>(this->GetMaskedBits(2, 3)); };
 	[[nodiscard]] constexpr BOOL IsNonSecure() const { return this->GetBits(5, 1) != 0; }
+
+	/**
+	 * \~english @brief Checks if this entry is accessible to userspace
+	 * \~english @author Brian Schnepp
+	 * \~english @return TRUE if user-accessible, false otherwise.
+	 */
 	[[nodiscard]] constexpr BOOL IsUserAccessible() const { return this->GetBits(6, 1) != 0; }
+
+	/**
+	 * \~english @brief Checks if this entry is read-only, or read-write to usermode
+	 * \~english @author Brian Schnepp
+	 * \~english @return TRUE if user-accessible, false otherwise.
+	 */
 	[[nodiscard]] constexpr BOOL IsUserReadOnly() const { return this->GetBits(7, 1) != 0; }
 	[[nodiscard]] constexpr PageSharableType GetSharable() const { return static_cast<PageSharableType>(this->GetMaskedBits(8, 2)); };
 	[[nodiscard]] constexpr PageAccessed GetAccessor() const { return static_cast<PageAccessed>(this->GetMaskedBits(10, 1)); };
+
+	/**
+	 * \~english @brief Obtains the value of the Execute Never bit for the kernel at this level
+	 * \~english @author Brian Schnepp
+	 * \~english @return TRUE if not executable, false otherwise.
+	 */
 	[[nodiscard]] constexpr BOOL IsKernelNoExecute() const { return this->GetBits(53, 1) != 0; };
+
+	/**
+	 * \~english @brief Obtains the value of the Execute Never bit for user code at this level
+	 * \~english @author Brian Schnepp
+	 * \~english @return TRUE if not executable, false otherwise.
+	 */
 	[[nodiscard]] constexpr BOOL IsUserNoExecute() const { return this->GetBits(54, 1) != 0; };
+
 	[[nodiscard]] constexpr PhysicalAddress GetPhysicalAddressArea() const { return static_cast<PhysicalAddress>(this->GetMaskedBits(12, 48)); };
 	[[nodiscard]] constexpr UINT64 GetRawAttributes() const { return this->Raw; }
 	[[nodiscard]] constexpr PagePermissionRaw GetReadPermission() { return static_cast<PagePermissionRaw>(this->GetMaskedBits(6, 2)); }
@@ -125,16 +186,68 @@ public:
 		return *this;
 	}
 
+	/**
+	 * \~english @brief Marks this page table entry as being valid or not
+	 * \~english @param Value The value to set: TRUE for mapped, FALSE for not.
+	 * \~english @author Brian Schnepp
+	 */
 	constexpr VOID SetMapped(BOOL Value) { this->SetBits(0, 1, Value == 1); }
+
+	/**
+	 * \~english @brief Marks this page table entry as being a block or not
+	 * \~english @param Value The value to set: TRUE for block, FALSE for not.
+	 * \~english @author Brian Schnepp
+	 * @see IsBlock
+	 * @see IsTable
+	 */
 	constexpr VOID SetBlock(BOOL Value) { this->SetBits(1, 1, Value == 0); }
+
+	/**
+	 * \~english @brief Marks this page table entry as being a table or not
+	 * \~english @param Value The value to set: TRUE for table, FALSE for not.
+	 * \~english @author Brian Schnepp
+	 * @see IsBlock
+	 * @see IsTable
+	 */
 	constexpr VOID SetTable(BOOL Value) { this->SetBits(1, 1, Value == 1); }
+
+	/**
+	 * \~english @brief Sets the MAIR index for this block entry. Must be a block entry.
+	 * \~english @param Value The index into the MAIR to use
+	 * \~english @author Brian Schnepp
+	 * @see GetMAIREntry
+	 */
 	constexpr VOID SetMAIREntry(MAIREntry Value) { this->SetBitsRaw(2, 3, Value); }
 	constexpr VOID SetNonSecure(BOOL Value) { this->SetBits(5, 1, Value != 0); }
+
+	/**
+	 * \~english @brief Sets this block as being accessible to userspace or not
+	 * \~english @param Value TRUE for being accessible to userspace, false otherwise
+	 * \~english @author Brian Schnepp
+	 */
 	constexpr VOID SetUserAccessible(BOOL Value) { this->SetBits(6, 1, Value != 0); }
+
+	/**
+	 * \~english @brief Sets this block as being read-only or read-write in userspace
+	 * \~english @param Value TRUE for being read-only in userspace, false otherwise
+	 * \~english @author Brian Schnepp
+	 */
 	constexpr VOID SetUserReadOnly(BOOL Value) { this->SetBits(7, 1, Value != 0); }
 	constexpr VOID SetSharable(PageSharableType Value) { this->SetBitsRaw(8, 2, Value); }
 	constexpr VOID SetAccessor(PageAccessed Value) { this->SetBitsRaw(10, 1, Value); };
+
+	/**
+	 * \~english @brief Sets this block as not being executable in kernel space
+	 * \~english @param Value TRUE for not-executable in kernel space, FALSE otherwise
+	 * \~english @author Brian Schnepp
+	 */
 	constexpr VOID SetKernelNoExecute(BOOL Value) { this->SetBits(53, 1, Value != 0); };
+
+	/**
+	 * \~english @brief Sets this block as not being executable in userspace
+	 * \~english @param Value TRUE for not-executable in userspace, FALSE otherwise
+	 * \~english @author Brian Schnepp
+	 */
 	constexpr VOID SetUserNoExecute(BOOL Value) { this->SetBits(54, 1, Value != 0); };
 	constexpr VOID SetPagePermissions(PagePermission Val) { this->Raw &= ~PAGE_PERMISSION_KERNEL_RWX | PAGE_PERMISSION_USER_RW | PAGE_PERMISSION_USER_RX; this->Raw |= Val; }
 	constexpr VOID SetPhysicalAddressArea(PhysicalAddress Addr) { this->Raw |= Addr & 0xFFFFFFFFFFFF000; }
