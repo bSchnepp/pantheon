@@ -377,16 +377,18 @@ static void SetupPageTables()
 	TTBR0 = InitialPageTables.Allocate();
 	TTBR1 = InitialPageTables.Allocate();
 
+	ClearBuffer((CHAR*)TTBR1, sizeof(pantheon::vmm::PageTable));
+
 	/* Let's go ahead and map in everything in the lower table as-is. */
 	pantheon::vmm::PageTableEntry Entry;
 	Entry.SetBlock(TRUE);
 	Entry.SetMapped(TRUE);
 	Entry.SetUserNoExecute(TRUE);
 	Entry.SetKernelNoExecute(FALSE);
-	Entry.SetUserAccessible(FALSE);
-	Entry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_OUTER);
+	Entry.SetUserAccessible(TRUE);
+	Entry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
 	Entry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
-	Entry.SetPagePermissions(pantheon::vmm::PAGE_PERMISSION_KERNEL_RWX);
+	Entry.SetPagePermissions(pantheon::vmm::PAGE_PERMISSION_KERNEL_RWX | pantheon::vmm::PAGE_PERMISSION_USER_RX);
 	Entry.SetMAIREntry(pantheon::vmm::MAIREntry_0);
 
 	/* Begin writing the actual page tables... */
@@ -445,7 +447,7 @@ static void SetupCore()
 {
 	InstallPageTables();
 	pantheon::vmm::InvalidateTLB();
-	/* Run pantheon::vmm::EnablePaging() here */
+	pantheon::vmm::EnablePaging();
 }
 
 extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, void *virt_load_addr)

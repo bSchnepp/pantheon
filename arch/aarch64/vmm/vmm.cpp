@@ -37,7 +37,7 @@ static UINT64 VirtAddrToPageTableIndex(pantheon::vmm::VirtualAddress VAddr, UINT
 			break;
 		}
 	}
-	return (VAddr >> Shift) & 0b111111111;
+	return (VAddr >> Shift) & 0x1FF;
 }
 
 static void CreateBlock(pantheon::vmm::PageTableEntry *Entry, const pantheon::vmm::PageTableEntry &Permissions, pantheon::vmm::PhysicalAddress Address)
@@ -53,6 +53,7 @@ static void CreateTable(pantheon::vmm::PageTableEntry *Entry, pantheon::vmm::Pag
 {
 	pantheon::vmm::PageTable *Table = Allocator.Allocate();
 	Entry->SetPhysicalAddressArea(VirtualToPhysicalAddress(TTBR, (UINT64)Table));
+	Entry->SetTable(TRUE);
 	Entry->SetMapped(TRUE);
 	pantheon::Sync::DSBISH();
 }
@@ -147,6 +148,7 @@ BOOL pantheon::vmm::PageAllocator::Map(pantheon::vmm::PageTable *TTBR, VirtualAd
 		{
 			/* Allocate a new L3, and write it in. */
 			CreateBlock(L3Entry, Permissions, PhysAddr);
+			L3Entry->SetTable(TRUE);	/* We need this to be 1??? */
 		}
 
 		Size -= pantheon::vmm::BlockSize::L3BlockSize;
@@ -183,22 +185,16 @@ VOID pantheon::vmm::EnablePaging()
 	SCTLRVal |= 0xC00800;
 
 	/* Remove things not desired: thse will probably be helpful later, but not now. */
-	SCTLRVal &= ~pantheon::vmm::SCTLR_EE;
-	SCTLRVal &= ~pantheon::vmm::SCTLR_E0E;
-	SCTLRVal &= ~pantheon::vmm::SCTLR_WXN;
-	SCTLRVal &= ~pantheon::vmm::SCTLR_I;
-	SCTLRVal &= ~pantheon::vmm::SCTLR_SA0;
-	SCTLRVal &= ~pantheon::vmm::SCTLR_SA;
-	SCTLRVal &= ~pantheon::vmm::SCTLR_C;
-	SCTLRVal &= ~pantheon::vmm::SCTLR_A;
+	SCTLRVal &= ~(pantheon::vmm::SCTLR_EE | pantheon::vmm::SCTLR_E0E);
+	SCTLRVal &= ~(pantheon::vmm::SCTLR_WXN | pantheon::vmm::SCTLR_I);
+	SCTLRVal &= ~(pantheon::vmm::SCTLR_SA0 | pantheon::vmm::SCTLR_SA);
+	SCTLRVal &= ~(pantheon::vmm::SCTLR_C | pantheon::vmm::SCTLR_A);
 
 	/* The MMU should be enabled though. */
 	SCTLRVal |= pantheon::vmm::SCTLR_M;
 
 	asm volatile(
 		"msr sctlr_el1, %0\n"
-		: "=r"(SCTLRVal)::);
-	
-	pantheon::Sync::DSBSY();
-	
+		"dsb sy"
+		: "=r"(SCTLRVal):: "memory");	
 }

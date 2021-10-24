@@ -15,7 +15,7 @@ namespace BlockSize
 	constexpr UINT64 L0BlockSize = (512ULL * 1024ULL * 1024ULL * 1024ULL);
 	constexpr UINT64 L1BlockSize = (1ULL * 1024ULL * 1024ULL * 1024ULL);
 	constexpr UINT64 L2BlockSize = (2ULL * 1024ULL * 1024ULL);
-	constexpr UINT64 L3BlockSize = (4ULL * 1024ULL);
+	constexpr UINT64 L3BlockSize = (4 * 1024ULL);
 }
 
 typedef enum PageAccessor : UINT64
@@ -268,7 +268,7 @@ public:
 	 * @see IsBlock
 	 * @see IsTable
 	 */
-	constexpr VOID SetBlock(BOOL Value) { this->SetBits(1, 1, Value == 0); }
+	constexpr VOID SetBlock(BOOL Value) { this->SetBits(1, 1, !(Value == 0)); }
 
 	/**
 	 * \~english @brief Marks this page table entry as being a table or not
@@ -317,7 +317,7 @@ public:
 	 * \~english @author Brian Schnepp
 	 */
 	constexpr VOID SetUserNoExecute(BOOL Value) { this->SetBits(54, 1, Value != 0); };
-	constexpr VOID SetPagePermissions(PagePermission Val) { this->Raw &= ~PAGE_PERMISSION_KERNEL_RWX | PAGE_PERMISSION_USER_RW | PAGE_PERMISSION_USER_RX; this->Raw |= Val; }
+	constexpr VOID SetPagePermissions(UINT64 Val) { this->Raw &= ~PAGE_PERMISSION_KERNEL_RWX | PAGE_PERMISSION_USER_RW | PAGE_PERMISSION_USER_RX; this->Raw |= Val; }
 	constexpr VOID SetPhysicalAddressArea(PhysicalAddress Addr) { this->Raw |= Addr & 0xFFFFFFFFFFFF000; }
 
 protected:
