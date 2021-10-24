@@ -4,6 +4,8 @@
 #ifndef _KERN_RUNTIME_HPP_
 #define _KERN_RUNTIME_HPP_
 
+#define FORCE_INLINE inline __attribute__((always_inline))
+
 VOID WriteMMIOU64(UINT64 Addr, UINT64 Value);
 VOID WriteMMIOU32(UINT64 Addr, UINT32 Value);
 VOID WriteMMIOU16(UINT64 Addr, UINT16 Value);

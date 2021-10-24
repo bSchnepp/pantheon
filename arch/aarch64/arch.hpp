@@ -18,17 +18,17 @@ namespace pantheon
 typedef pantheon::arm::CpuContext CpuContext;
 typedef pantheon::arm::TrapFrame TrapFrame;
 
-inline VOID RearmSystemTimer(UINT64 Freq)
+FORCE_INLINE VOID RearmSystemTimer(UINT64 Freq)
 {
 	pantheon::arm::RearmSystemTimer(Freq);
 }
 
-inline VOID DisableSystemTimer()
+FORCE_INLINE VOID DisableSystemTimer()
 {
 	pantheon::arm::DisableSystemTimer();
 }
 
-inline VOID RearmSystemTimer()
+FORCE_INLINE VOID RearmSystemTimer()
 {
 	pantheon::arm::RearmSystemTimer();
 }
@@ -62,6 +62,24 @@ namespace CPUReg
 UINT64 R_TTBR0_EL1();
 UINT64 R_TTBR1_EL1();
 
+}
+
+namespace Sync
+{
+	FORCE_INLINE void DSBISH()
+	{
+		asm volatile("dsb ish\n");
+	}
+
+	FORCE_INLINE void DSBSY()
+	{
+		asm volatile("dsb sy\n");
+	}
+
+	FORCE_INLINE void ISB()
+	{
+		asm volatile("isb\n");
+	}
 }
 
 }

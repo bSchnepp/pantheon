@@ -12,10 +12,10 @@ namespace pantheon::vmm
 
 namespace BlockSize
 {
-	constexpr UINT64 L1BlockSize = (512ULL * 1024ULL * 1024ULL * 1024ULL);
-	constexpr UINT64 L2BlockSize = (1ULL * 1024ULL * 1024ULL * 1024ULL);
-	constexpr UINT64 L3BlockSize = (2ULL * 1024ULL * 1024ULL);
-	constexpr UINT64 L4BlockSize = (4ULL * 1024ULL);
+	constexpr UINT64 L0BlockSize = (512ULL * 1024ULL * 1024ULL * 1024ULL);
+	constexpr UINT64 L1BlockSize = (1ULL * 1024ULL * 1024ULL * 1024ULL);
+	constexpr UINT64 L2BlockSize = (2ULL * 1024ULL * 1024ULL);
+	constexpr UINT64 L3BlockSize = (4ULL * 1024ULL);
 }
 
 typedef enum PageAccessor : UINT64
@@ -82,6 +82,74 @@ typedef enum MAIREntry
 	MAIREntry_6 = (0b110ULL << 2),
 	MAIREntry_7 = (0b111ULL << 2),
 }MAIREntry;
+
+typedef enum SCTLRFlags : UINT64
+{
+	SCTLR_M = (1ULL << 0),
+	SCTLR_A = (1ULL << 1),
+	SCTLR_C = (1ULL << 2),
+	SCTLR_SA = (1ULL << 3),
+	SCTLR_SA0 = (1ULL << 4),
+	SCTLR_CP15BEN = (1ULL << 5),
+	SCTLR_nAA = (1ULL << 6),
+	SCTLR_ITD = (1ULL << 7),
+	SCTLR_SED = (1ULL << 8),
+	SCTLR_UMA = (1ULL << 9),
+	SCTLR_EnRCTX = (1ULL << 10),
+	SCTLR_EOS = (1ULL << 11),
+	SCTLR_I = (1ULL << 12),
+	SCTLR_EnDB = (1ULL << 13),
+	SCTLR_DZE = (1ULL << 14),
+	SCTLR_UCT = (1ULL << 15),
+	SCTLR_nTWI = (1ULL << 16),
+	SCTLR_RES0 = (1ULL << 17),
+	SCTLR_nTWE = (1ULL << 18),
+	SCTLR_WXN = (1ULL << 19),
+	SCTLR_TSCXT = (1ULL << 20),
+	SCTLR_IESB = (1ULL << 21),
+	SCTLR_EIS = (1ULL << 22),
+	SCTLR_SPAN = (1ULL << 23),
+	SCTLR_E0E = (1ULL << 24),
+	SCTLR_EE = (1ULL << 25),
+	SCTLR_UCI = (1ULL << 26),
+	SCTLR_EnDA = (1ULL << 27),
+	SCTLR_nTLSMD = (1ULL << 28),
+	SCTLR_LSMAOE = (1ULL << 29),
+	SCTLR_EnIB = (1ULL << 30),
+	SCTLR_EnIA = (1ULL << 31),
+	SCTLR_CMOW = (1ULL << 32),
+	SCTLR_MSCEn = (1ULL << 33),
+	SCTLR_RES1 = (1ULL << 34),
+	SCTLR_BT0 = (1ULL << 35),
+	SCTLR_BT1 = (1ULL << 36),
+	SCTLR_ITFSB = (1ULL << 37),
+	SCTLR_ATA0 = (1ULL << 42),
+	SCTLR_ATA = (1ULL << 43),
+	SCTLR_DSSBS = (1ULL << 44),
+	SCTLR_TWEDEn = (1ULL << 45),
+	SCTLR_EnASR = (1ULL << 54),
+	SCTLR_EnAS0 = (1ULL << 55),
+	SCTLR_EnALS = (1ULL << 56),
+	SCTLR_EPAN = (1ULL << 57),
+	SCTLR_NMI = (1ULL << 61),
+	SCTLR_SPINTMASK = (1ULL << 62),
+	SCTLR_TIDCP = (1ULL << 63),
+}SCTLRFlags;
+
+typedef enum SCTLRBitfields : UINT64
+{
+	SCTLR_TAG_CHECK_FAULT_EL0_IGNORE = (0b00ULL << 38),
+	SCTLR_TAG_CHECK_FAULT_EL0_SYNC = (0b01ULL << 38),
+	SCTLR_TAG_CHECK_FAULT_EL0_ASYNC = (0b10ULL << 38),
+	SCTLR_TAG_CHECK_FAULT_EL0_SYNC_READ_ASYNC_WRITE = (0b11ULL << 38),
+
+	SCTLR_TAG_CHECK_FAULT_EL1_IGNORE = (0b00ULL << 40),
+	SCTLR_TAG_CHECK_FAULT_EL1_SYNC = (0b01ULL << 40),
+	SCTLR_TAG_CHECK_FAULT_EL1_ASYNC = (0b10ULL << 40),
+	SCTLR_TAG_CHECK_FAULT_EL1_SYNC_READ_ASYNC_WRITE = (0b11ULL << 40),
+
+	/* TWEDEL is a 4-bit number, so this can't be encoded nicely. */
+}SCTLRBitfields;
 
 typedef UINT64 PageTableEntryRaw;
 typedef UINT64 PhysicalAddress;
@@ -305,12 +373,12 @@ typedef struct PageTable
 }PageTable;
 static_assert(sizeof(PageTable) == 4096);
 
-inline VirtualAddress PhysicalToVirtualAddress(PhysicalAddress PhyAddr)
+FORCE_INLINE VirtualAddress PhysicalToVirtualAddress(PhysicalAddress PhyAddr)
 {
 	return PhyAddr | (0b1111111111111111ULL << 48);
 }
 
-inline PhysicalAddress VirtualToPhysicalAddress(PageTable *RootTable, VirtualAddress Addr)
+FORCE_INLINE PhysicalAddress VirtualToPhysicalAddress(PageTable *RootTable, VirtualAddress Addr)
 {
 	/* TODO: traverse page table */
 	PANTHEON_UNUSED(RootTable);
