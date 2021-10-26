@@ -68,17 +68,17 @@ namespace Sync
 {
 	FORCE_INLINE void DSBISH()
 	{
-		asm volatile("dsb ish\n");
+		asm volatile("dsb ish\n" ::: "memory");
 	}
 
 	FORCE_INLINE void DSBSY()
 	{
-		asm volatile("dsb sy\n");
+		asm volatile("dsb sy\n" ::: "memory");
 	}
 
 	FORCE_INLINE void ISB()
 	{
-		asm volatile("isb\n");
+		asm volatile("isb\n" ::: "memory");
 	}
 }
 

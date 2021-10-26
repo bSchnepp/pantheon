@@ -13,6 +13,7 @@
 typedef struct InitialMemoryArea
 {
 	UINT64 BaseAddress;
+	UINT64 Size;
 	pantheon::RawBitmap Map;
 }InitialMemoryArea;
 
@@ -22,7 +23,7 @@ typedef struct InitialBootInfo
 	UINT64 LoadedVirtAddr;
 
 	/* Assume a hard maximum of 64 memory regions. */	
-	UINT64 NumMemoryAreas;
+	UINT8 NumMemoryAreas;
 	InitialMemoryArea InitMemoryAreas[64];
 
 	PagingInfo PageInfo;

@@ -10,33 +10,7 @@ static UINT64 VirtAddrToPageTableIndex(pantheon::vmm::VirtualAddress VAddr, UINT
 {
 	/* Only valid for 0, 1, 2, or 3. */
 	Level = (Level > 3) ? 3 : Level;
-	UINT8 Shift = 0;
-	switch (Level)
-	{
-		case 0:
-		{
-			Shift = 39;
-			break;
-		}
-
-		case 1:
-		{
-			Shift = 30;
-			break;
-		}
-
-		case 2:
-		{
-			Shift = 21;
-			break;
-		}
-
-		case 3:
-		{
-			Shift = 12;
-			break;
-		}
-	}
+	UINT8 Shift = 12 + (9 * (3 - Level));
 	return (VAddr >> Shift) & 0x1FF;
 }
 
@@ -70,6 +44,8 @@ BOOL pantheon::vmm::PageAllocator::Map(pantheon::vmm::PageTable *TTBR, VirtualAd
 	/* We don't have panic yet, so for now just return false. */
 	if (TTBR == nullptr)
 	{
+		pantheon::Sync::DSBISH();
+		pantheon::Sync::ISB();
 		return FALSE;
 	}
 
@@ -156,6 +132,8 @@ BOOL pantheon::vmm::PageAllocator::Map(pantheon::vmm::PageTable *TTBR, VirtualAd
 		VirtAddr += BlockSize::L3BlockSize;
 
 	}
+	pantheon::Sync::DSBISH();
+	pantheon::Sync::ISB();
 	return TRUE;
 }
 
@@ -167,18 +145,16 @@ VOID pantheon::vmm::InvalidateTLB()
 		"tlbi vmalle1\n"
 		"dsb ish\n"
 		"dsb sy\n"
-		"isb\n");
+		"isb\n" ::: "memory");
 }
 
 VOID pantheon::vmm::EnablePaging()
 {
 	UINT64 SCTLRVal = 0x00;
-
-	pantheon::Sync::DSBSY();
-	pantheon::Sync::ISB();
 	asm volatile(
+		"isb\n"
 		"mrs %0, sctlr_el1\n"
-		: "=r"(SCTLRVal)
+		: "=r"(SCTLRVal) :: "memory"
 	);
 
 	/* These bits are architecturally required to be set. */
@@ -195,6 +171,7 @@ VOID pantheon::vmm::EnablePaging()
 
 	asm volatile(
 		"msr sctlr_el1, %0\n"
+		"isb\n"
 		"dsb sy"
 		: "=r"(SCTLRVal):: "memory");	
 }

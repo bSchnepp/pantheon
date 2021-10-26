@@ -13,7 +13,7 @@ void WriteString(const CHAR *String)
 
 }
 
-void BoardInit()
+void BoardInit(pantheon::vmm::PageAllocator &PageAllocator)
 {
-
+	PANTHEON_UNUSED(PageAllocator);
 }
