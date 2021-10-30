@@ -75,6 +75,27 @@ SECTIONS
 	kern_end = .;
 	BSS_END = .;
 
-	/DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }
-	
+	USER_BEGIN = .;
+	.user.text : 
+	{
+		build/Userland* (.text)
+	}
+
+	.user.rodata : 
+	{
+		build/Userland* (.rodata)
+	}
+
+	.user.data : 
+	{
+		build/Userland* (.data)
+	}
+
+	.user.bss : 
+	{
+		build/Userland* (.bss)
+	}
+	USER_END = .;
+
+	/DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }	
 }

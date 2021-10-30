@@ -56,13 +56,13 @@ extern "C" void BoardInit(pantheon::vmm::PageAllocator &PageAllocator)
 	DeviceMMIOEntry.SetPagePermissions(pantheon::vmm::PAGE_PERMISSION_KERNEL_RW);
 	DeviceMMIOEntry.SetMAIREntry(pantheon::vmm::MAIREntry_0);
 
-	PageAllocator.Map(TTBR0, DEVICE_TYPE_UART, DEVICE_TYPE_UART, pantheon::vmm::BlockSize::L2BlockSize, DeviceMMIOEntry);
+	PageAllocator.Map(TTBR0, DEVICE_TYPE_UART, DEVICE_TYPE_UART, pantheon::vmm::BlockSize::L3BlockSize, DeviceMMIOEntry);
 	pantheon::pl011::PL011Init(DEVICE_TYPE_UART, 0);
 
-	PageAllocator.Map(TTBR0, DEVICE_TYPE_GIC_DIST, DEVICE_TYPE_GIC_DIST, pantheon::vmm::BlockSize::L2BlockSize, DeviceMMIOEntry);
+	PageAllocator.Map(TTBR0, DEVICE_TYPE_GIC_DIST, DEVICE_TYPE_GIC_DIST, pantheon::vmm::BlockSize::L3BlockSize, DeviceMMIOEntry);
 	pantheon::arm::GICSetMMIOAddr(pantheon::arm::GIC_CLASS_DISTRIBUTOR, DEVICE_TYPE_GIC_DIST);
 
-	PageAllocator.Map(TTBR0, DEVICE_TYPE_GIC_CPU, DEVICE_TYPE_GIC_CPU, pantheon::vmm::BlockSize::L2BlockSize, DeviceMMIOEntry);
+	PageAllocator.Map(TTBR0, DEVICE_TYPE_GIC_CPU, DEVICE_TYPE_GIC_CPU, pantheon::vmm::BlockSize::L3BlockSize, DeviceMMIOEntry);
 	pantheon::arm::GICSetMMIOAddr(pantheon::arm::GIC_CLASS_CPU_INTERFACE, DEVICE_TYPE_GIC_CPU);
 
 	pantheon::arm::GICInit();
