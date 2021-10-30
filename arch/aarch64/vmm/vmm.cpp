@@ -154,6 +154,8 @@ VOID pantheon::vmm::EnablePaging()
 	asm volatile(
 		"isb\n"
 		"mrs %0, sctlr_el1\n"
+		"isb\n"
+		"dsb sy"
 		: "=r"(SCTLRVal) :: "memory"
 	);
 
@@ -161,17 +163,22 @@ VOID pantheon::vmm::EnablePaging()
 	SCTLRVal |= 0xC00800;
 
 	/* Remove things not desired: thse will probably be helpful later, but not now. */
-	SCTLRVal &= ~(pantheon::vmm::SCTLR_EE | pantheon::vmm::SCTLR_E0E);
-	SCTLRVal &= ~(pantheon::vmm::SCTLR_WXN | pantheon::vmm::SCTLR_I);
-	SCTLRVal &= ~(pantheon::vmm::SCTLR_SA0 | pantheon::vmm::SCTLR_SA);
-	SCTLRVal &= ~(pantheon::vmm::SCTLR_C | pantheon::vmm::SCTLR_A);
+	UINT64 DisableValues = 0;
+	DisableValues |= (pantheon::vmm::SCTLR_EE | pantheon::vmm::SCTLR_E0E);
+	DisableValues |= (pantheon::vmm::SCTLR_WXN | pantheon::vmm::SCTLR_I);
+	DisableValues |= (pantheon::vmm::SCTLR_SA0 | pantheon::vmm::SCTLR_SA);
+	DisableValues |= (pantheon::vmm::SCTLR_C | pantheon::vmm::SCTLR_A);
+
+	SCTLRVal &= ~DisableValues;
 
 	/* The MMU should be enabled though. */
 	SCTLRVal |= pantheon::vmm::SCTLR_M;
 
 	asm volatile(
+		"isb\n"		
 		"msr sctlr_el1, %0\n"
 		"isb\n"
 		"dsb sy"
-		: "=r"(SCTLRVal):: "memory");	
+		:: "r"(SCTLRVal): "memory");
+
 }

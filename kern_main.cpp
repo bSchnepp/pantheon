@@ -55,7 +55,14 @@ void kern_init_core()
 	pantheon::CPU::InitCoreInfo(CpuNo);
 	PerCoreInit();
 
-	SERIAL_LOG("Pantheon booted with core %hhu\n", CpuNo);
+	volatile UINT64 SCTLRVal = 0;
+	asm volatile(
+		"mrs %0, sctlr_el1\n"
+		"isb\n"
+		"dsb sy"
+		: "=r"(SCTLRVal):: "memory");
+
+	SERIAL_LOG("Pantheon booted with core %hhu, and paging is %x\n", CpuNo, SCTLRVal & 0x01);
 
 	/* Ensure there is always at least the idle proc for this core. */
 	pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle);
