@@ -56,6 +56,8 @@ public:
 	[[nodiscard]] ProcessState MyState() const;
 	void SetState(ProcessState State);
 
+	void MapPages(pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, pantheon::vmm::PageTableEntry *PageAttributes, UINT64 NumPages);
+
 private:
 	UINT32 PID;
 	String ProcessCommand;
@@ -63,7 +65,8 @@ private:
 	ProcessState CurState;
 	ProcessPriority Priority;
 
-	pantheon::Spinlock CreateThreadLock;
+	pantheon::Spinlock ProcessLock;
+	pantheon::vmm::PageTable *MemoryMap;
 };
 
 }

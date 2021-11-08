@@ -33,6 +33,7 @@ public:
 	SlabCache(VOID *Area, UINT16 Count = 64)
 	{
 		this->Area = reinterpret_cast<T*>(Area);
+		ClearBuffer((char*)this->Area, Count * sizeof(T));
 		this->Size = Count;
 		this->Used = 0;
 		this->FreeList = nullptr;

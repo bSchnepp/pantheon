@@ -19,11 +19,16 @@
 #ifndef ONLY_TESTING
 extern "C" CHAR *kern_begin;
 extern "C" CHAR *kern_end;
+extern "C" CHAR *USER_BEGIN;
+extern "C" CHAR *USER_END;
 #else
 static UINT8 Area[50000];
 UINT64 kern_begin = (UINT64)&Area;
 UINT64 kern_end = (UINT64)(&Area + 50000);
+static UINT64 USER_BEGIN = 0;
+static UINT64 USER_END = 0;
 #endif
+
 
 static InitialBootInfo InitBootInfo;
 static UINT64 MemArea = 0x00;
@@ -374,7 +379,7 @@ static void SetupPageTables()
 	 * 	- Add the number of pages to handle there.
 	 */
 
-	constexpr UINT64 NumTables = 8192;
+	constexpr UINT64 NumTables = 24 * 1024;
 	MemArea = Align<UINT64>(MemArea, pantheon::vmm::BlockSize::L3BlockSize);
 	InitialPageTables = pantheon::vmm::PageAllocator((void*)MemArea, NumTables);
 
@@ -388,9 +393,20 @@ static void SetupPageTables()
 	pantheon::vmm::PageTableEntry Entry;
 	Entry.SetBlock(TRUE);
 	Entry.SetMapped(TRUE);
-	Entry.SetUserNoExecute(TRUE);
+	Entry.SetUserNoExecute(FALSE);
 	Entry.SetKernelNoExecute(FALSE);
-	Entry.SetPagePermissions(pantheon::vmm::PAGE_PERMISSION_KERNEL_RWX);
+
+	/* For now, allow anything since we don't have a real userland yet.
+	 * We'll need to create page allocators for userland at some point,
+	 * but for now let everything share the same address space.
+	 */
+	UINT64 PagePermission = 0;
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_KERN;
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_EXECUTE_KERN; 
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_USER;
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_EXECUTE_USER;
+	Entry.SetPagePermissions(PagePermission);
+
 	Entry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
 	Entry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
 	Entry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
@@ -407,13 +423,24 @@ static void SetupPageTables()
 		InitialPageTables.Map(TTBR0, BaseAddr, BaseAddr, Size, Entry);
 	}
 
+
+	pantheon::vmm::PageTableEntry UEntry(Entry);
+	UEntry.SetUserAccessible(TRUE);
+	UEntry.SetPagePermissions(pantheon::vmm::PAGE_PERMISSION_KERNEL_RW | pantheon::vmm::PAGE_PERMISSION_USER_RX);
+
+	UINT64 UAddrBegin = (UINT64)&USER_BEGIN;
+	UINT64 UAddrEnd = (UINT64)&USER_END;
+	UINT64 UAddrSize = UAddrEnd - UAddrBegin;
+	InitialPageTables.Reprotect(TTBR0, UAddrBegin, UAddrSize, UEntry);
+
 	/* 
 	 * TODO:
+	 * 0. Utilize TTBR1 for a higher-half mapping, and then
 	 * 1. The page table area gets marked as RW.
 	 * 2. Remap kernel text as R-X.
 	 * 3. Remap kernel rodata as RW-
 	 * 4. Remap kernel rwdata as RW-
-	 * 5. Reprotect rodata as R--
+	 * 5. Reprotect rodata as R-- after running constructors for kernel objects
 	 */
 	PageTablesCreated.Store(TRUE);
 }

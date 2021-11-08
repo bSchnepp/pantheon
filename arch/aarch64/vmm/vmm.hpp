@@ -326,7 +326,7 @@ public:
 		this->Raw |= Val;
 	}
 	
-	constexpr VOID SetPhysicalAddressArea(PhysicalAddress Addr) { this->Raw |= Addr & 0xFFFFFFFFFFFF000; }
+	constexpr VOID SetPhysicalAddressArea(PhysicalAddress Addr) { this->SetBitsRaw(12, 48-12, 0); this->Raw |= Addr & 0xFFFFFFFFFFFF000; }
 
 protected:
 	[[nodiscard]] 
@@ -429,6 +429,7 @@ public:
 	}
 
 	BOOL Map(pantheon::vmm::PageTable *TTBR, pantheon::vmm::VirtualAddress VirtAddr, pantheon::vmm::PhysicalAddress PhysAddr, UINT64 Size, const pantheon::vmm::PageTableEntry &Permissions);
+	BOOL Reprotect(pantheon::vmm::PageTable *TTBR, pantheon::vmm::VirtualAddress VirtAddr, UINT64 Size, const pantheon::vmm::PageTableEntry &Permissions);
 
 private:
 	pantheon::mm::SlabCache<pantheon::vmm::PageTable> Allocator;

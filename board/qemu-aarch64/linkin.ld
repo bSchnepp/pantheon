@@ -6,20 +6,44 @@ SECTIONS
 	. = 0x80000 + 0x40000000;
 
 	. = ALIGN(0x1000);
-	TEXT_AREA = .;
-	kern_begin = .;
 	.text.early :
 	{
 		*(.text.early)
 	}
 
+	. = ALIGN(4 * 1024);
+	USER_BEGIN = .;
+	.user.text : 
+	{
+		Userland/libUserland.a*(*.text*)
+	}
+
+	.user.rodata : 
+	{
+		Userland/libUserland.a*(*.rodata*)
+	}
+
+	.user.data : 
+	{
+		Userland/libUserland.a*(*.data*)
+	}
+
+	.user.bss : 
+	{
+		Userland/libUserland.a*(*.bss*)
+	}
+	USER_END = .;
+
 	. = ALIGN(0x1000);
 	. = ALIGN(0x800);
+	TEXT_AREA = .;
+	kern_begin = .;	
 	.text.exceptions :
 	{
 		*(.text.exceptions)
 	}
 	. = ALIGN(0x1000);
+
 
 	. = ALIGN(0x1000);
 	.text :
@@ -28,7 +52,6 @@ SECTIONS
 	}
 	. = ALIGN(0x1000);
 	TEXT_END = .;
-
 
 	. = ALIGN(0x1000);
 	RODATA_AREA = .;
@@ -74,28 +97,6 @@ SECTIONS
 	. = ALIGN(64 * 1024);
 	kern_end = .;
 	BSS_END = .;
-
-	USER_BEGIN = .;
-	.user.text : 
-	{
-		build/Userland* (.text)
-	}
-
-	.user.rodata : 
-	{
-		build/Userland* (.rodata)
-	}
-
-	.user.data : 
-	{
-		build/Userland* (.data)
-	}
-
-	.user.bss : 
-	{
-		build/Userland* (.bss)
-	}
-	USER_END = .;
 
 	/DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }	
 }

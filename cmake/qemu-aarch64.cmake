@@ -1,4 +1,4 @@
-# Assume x86_64 and not EFI for now.
+# Assume aarch64 and not EFI for now.
 
 SET(CMAKE_SYSTEM_NAME Generic)
 SET(CMAKE_SYSTEM_PROCESSOR aarch64)

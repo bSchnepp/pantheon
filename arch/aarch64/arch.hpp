@@ -62,6 +62,9 @@ namespace CPUReg
 UINT64 R_TTBR0_EL1();
 UINT64 R_TTBR1_EL1();
 
+VOID W_TTBR0_EL1(UINT64);
+VOID W_TTBR1_EL1(UINT64);
+
 }
 
 namespace Sync
