@@ -6,7 +6,7 @@
 #include "vmm.hpp"
 #include <arch.hpp>
 
-static UINT64 VirtAddrToPageTableIndex(pantheon::vmm::VirtualAddress VAddr, UINT8 Level)
+static UINT16 VirtAddrToPageTableIndex(pantheon::vmm::VirtualAddress VAddr, UINT8 Level)
 {
 	/* Only valid for 0, 1, 2, or 3. */
 	Level = (Level > 3) ? 3 : Level;
@@ -100,7 +100,7 @@ BOOL pantheon::vmm::PageAllocator::Map(pantheon::vmm::PageTable *TTBR, VirtualAd
 	while (Size > 0)
 	{
 		/* Can we find the L0 table? */
-		UINT8 L0Index = VirtAddrToPageTableIndex(VirtAddr, 0);
+		UINT16 L0Index = VirtAddrToPageTableIndex(VirtAddr, 0);
 		pantheon::vmm::PageTableEntry *L0Entry = &(TTBR->Entries[L0Index]);
 
 		if (L0Entry->IsMapped() == FALSE)
@@ -115,7 +115,7 @@ BOOL pantheon::vmm::PageAllocator::Map(pantheon::vmm::PageTable *TTBR, VirtualAd
 		 */
 
 		/* TODO: We need to handle virtual addresses!!! These pointers are physical memory pointers. */
-		UINT8 L1Index = VirtAddrToPageTableIndex(VirtAddr, 1);
+		UINT16 L1Index = VirtAddrToPageTableIndex(VirtAddr, 1);
 		pantheon::vmm::PageTable *L1 = (pantheon::vmm::PageTable*)(L0Entry->GetPhysicalAddressArea());
 		pantheon::vmm::PageTableEntry *L1Entry = &(L1->Entries[L1Index]);
 
@@ -133,7 +133,7 @@ BOOL pantheon::vmm::PageAllocator::Map(pantheon::vmm::PageTable *TTBR, VirtualAd
 			CreateTable(L1Entry, TTBR, this->Allocator);		
 		}
 
-		UINT8 L2Index = VirtAddrToPageTableIndex(VirtAddr, 2);
+		UINT16 L2Index = VirtAddrToPageTableIndex(VirtAddr, 2);
 		pantheon::vmm::PageTable *L2 = (pantheon::vmm::PageTable*)(L1Entry->GetPhysicalAddressArea());
 		pantheon::vmm::PageTableEntry *L2Entry = &(L2->Entries[L2Index]);
 
@@ -149,7 +149,7 @@ BOOL pantheon::vmm::PageAllocator::Map(pantheon::vmm::PageTable *TTBR, VirtualAd
 			CreateTable(L2Entry, TTBR, this->Allocator);
 		}
 
-		UINT8 L3Index = VirtAddrToPageTableIndex(VirtAddr, 3);
+		UINT16 L3Index = VirtAddrToPageTableIndex(VirtAddr, 3);
 		pantheon::vmm::PageTable *L3 = (pantheon::vmm::PageTable*)(L2Entry->GetPhysicalAddressArea());
 		pantheon::vmm::PageTableEntry *L3Entry = &(L3->Entries[L3Index]);
 
@@ -190,7 +190,7 @@ BOOL pantheon::vmm::PageAllocator::Reprotect(pantheon::vmm::PageTable *TTBR, pan
 	}
 
 	/* What indices might we have to look up? */
-	UINT8 L0Index = VirtAddrToPageTableIndex(VirtAddr, 0);
+	UINT16 L0Index = VirtAddrToPageTableIndex(VirtAddr, 0);
 	namespace BlockSize = pantheon::vmm::BlockSize;
 
 	/* Start mapping everything */
@@ -204,7 +204,7 @@ BOOL pantheon::vmm::PageAllocator::Reprotect(pantheon::vmm::PageTable *TTBR, pan
 		}
 
 		/* TODO: We need to handle virtual addresses!!! These pointers are physical memory pointers. */
-		UINT8 L1Index = VirtAddrToPageTableIndex(VirtAddr, 1);
+		UINT16 L1Index = VirtAddrToPageTableIndex(VirtAddr, 1);
 		pantheon::vmm::PageTable *L1 = (pantheon::vmm::PageTable*)(L0Entry->GetPhysicalAddressArea());
 		pantheon::vmm::PageTableEntry *L1Entry = &(L1->Entries[L1Index]);
 
@@ -256,7 +256,7 @@ BOOL pantheon::vmm::PageAllocator::Reprotect(pantheon::vmm::PageTable *TTBR, pan
 
 
 		/* TODO: We need to handle virtual addresses!!! These pointers are physical memory pointers. */
-		UINT8 L2Index = VirtAddrToPageTableIndex(VirtAddr, 2);
+		UINT16 L2Index = VirtAddrToPageTableIndex(VirtAddr, 2);
 		pantheon::vmm::PageTable *L2 = (pantheon::vmm::PageTable*)(L1Entry->GetPhysicalAddressArea());
 		pantheon::vmm::PageTableEntry *L2Entry = &(L2->Entries[L2Index]);
 
@@ -304,7 +304,7 @@ BOOL pantheon::vmm::PageAllocator::Reprotect(pantheon::vmm::PageTable *TTBR, pan
 		/* Otherwise, we need to walk down the table further. */
 
 		/* TODO: We need to handle virtual addresses!!! These pointers are physical memory pointers. */
-		UINT8 L3Index = VirtAddrToPageTableIndex(VirtAddr, 3);
+		UINT16 L3Index = VirtAddrToPageTableIndex(VirtAddr, 3);
 		pantheon::vmm::PageTable *L3 = (pantheon::vmm::PageTable*)(L2Entry->GetPhysicalAddressArea());
 		pantheon::vmm::PageTableEntry *L3Entry = &(L3->Entries[L3Index]);
 
