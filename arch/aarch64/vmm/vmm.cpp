@@ -244,12 +244,7 @@ BOOL pantheon::vmm::PageAllocator::Reprotect(pantheon::vmm::PageTable *TTBR, pan
 
 			pantheon::Sync::DSBISH();
 			pantheon::Sync::ISB();
-
-			/* One of these failed. */
-			if (Status == FALSE)
-			{
-				goto fail;
-			}
+			return Status;
 		}
 
 		/* Otherwise, we need to walk down the table further. */
@@ -290,15 +285,12 @@ BOOL pantheon::vmm::PageAllocator::Reprotect(pantheon::vmm::PageTable *TTBR, pan
 			L2Entry->SetRawAttributes(0x00);
 
 			/* Now remap these areas... */
-			BOOL Status = this->Map(TTBR, VirtMasked, PhysAddr, Diff, OldEntry);
+			BOOL Status = TRUE;
+			Status &= this->Map(TTBR, VirtMasked, PhysAddr, Diff, OldEntry);
 			Status &= this->Map(TTBR, VirtAddr, PhysAddr + Diff, Size, Permissions);
 			Status &= this->Map(TTBR, VirtAddr + Size, PhysAddr + Diff + Size, BlockSize::L2BlockSize - Size - Diff, OldEntry);
 
-			/* One of these failed. */
-			if (Status == FALSE)
-			{
-				goto fail;
-			}
+			return Status;
 		}
 
 		/* Otherwise, we need to walk down the table further. */
@@ -308,7 +300,7 @@ BOOL pantheon::vmm::PageAllocator::Reprotect(pantheon::vmm::PageTable *TTBR, pan
 		pantheon::vmm::PageTable *L3 = (pantheon::vmm::PageTable*)(L2Entry->GetPhysicalAddressArea());
 		pantheon::vmm::PageTableEntry *L3Entry = &(L3->Entries[L3Index]);
 
-		if (L3Entry)
+		if (L3)
 		{
 			if (L3Entry->IsMapped() == FALSE)
 			{
@@ -327,7 +319,7 @@ BOOL pantheon::vmm::PageAllocator::Reprotect(pantheon::vmm::PageTable *TTBR, pan
 		}
 		
 		Size -= BlockSize::L3BlockSize;
-		VirtAddr += BlockSize::L3BlockSize;			
+		VirtAddr += BlockSize::L3BlockSize;
 	}
 	pantheon::Sync::DSBISH();
 	pantheon::Sync::ISB();

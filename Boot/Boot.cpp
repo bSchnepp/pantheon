@@ -426,7 +426,11 @@ static void SetupPageTables()
 
 	pantheon::vmm::PageTableEntry UEntry(Entry);
 	UEntry.SetUserAccessible(TRUE);
-	UEntry.SetPagePermissions(pantheon::vmm::PAGE_PERMISSION_KERNEL_RW | pantheon::vmm::PAGE_PERMISSION_USER_RX);
+	UEntry.SetKernelNoExecute(TRUE);
+	UEntry.SetUserAccessible(FALSE);
+	UEntry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
+	UEntry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
+	UEntry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
 
 	UINT64 UAddrBegin = (UINT64)&USER_BEGIN;
 	UINT64 UAddrEnd = (UINT64)&USER_END;
