@@ -3,8 +3,7 @@
 
 #include <arch/aarch64/ints.hpp>
 #include <arch/aarch64/thread.hpp>
-
-#include "vmm/vmm.hpp"
+#include <arch/aarch64/vmm/vmm.hpp>
 
 typedef struct PagingInfo
 {

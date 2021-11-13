@@ -31,6 +31,8 @@ typedef struct InitialBootInfo
 
 InitialBootInfo *GetInitBootInfo();
 
+pantheon::vmm::PageAllocator *BaseAllocator();
+
 UINT64 FindPage();
 void AllocatePage(UINT64 Addr);
 void FreePage(UINT64 Addr);

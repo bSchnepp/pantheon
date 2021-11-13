@@ -85,8 +85,8 @@ BOOL pantheon::vmm::PageAllocator::Map(pantheon::vmm::PageTable *TTBR, VirtualAd
 	Size = Align<UINT64>(Size, pantheon::vmm::BlockSize::L3BlockSize);
 
 	/* Make sure VirtAddr and PhysAddr are aligned to the page size too. */
-	VirtAddr &= ~(pantheon::vmm::BlockSize::L3BlockSize);
-	PhysAddr &= ~(pantheon::vmm::BlockSize::L3BlockSize);
+	VirtAddr &= ~(pantheon::vmm::BlockSize::L3BlockSize - 1);
+	PhysAddr &= ~(pantheon::vmm::BlockSize::L3BlockSize - 1);
 
 	/* We don't have panic yet, so for now just return false. */
 	if (TTBR == nullptr)
@@ -179,7 +179,7 @@ BOOL pantheon::vmm::PageAllocator::Reprotect(pantheon::vmm::PageTable *TTBR, pan
 	Size = Align<UINT64>(Size, pantheon::vmm::BlockSize::L3BlockSize);
 
 	/* Make sure VirtAddr and PhysAddr are aligned to the page size too. */
-	VirtAddr &= ~(pantheon::vmm::BlockSize::L3BlockSize);
+	VirtAddr &= ~(pantheon::vmm::BlockSize::L3BlockSize - 1);
 
 	/* We don't have panic yet, so for now just return false. */
 	pantheon::Sync::DSBISH();
@@ -218,10 +218,13 @@ BOOL pantheon::vmm::PageAllocator::Reprotect(pantheon::vmm::PageTable *TTBR, pan
 		if (L1Entry->IsBlock())
 		{
 			/* We'll need to split this block up. */
-			pantheon::vmm::PhysicalAddress PhysAddr = L1Entry->GetPhysicalAddressArea();
 
 			UINT64 VirtMasked = VirtAddr & ~(BlockSize::L1BlockSize - 1);
-			UINT64 Diff = VirtAddr - VirtMasked;
+			UINT64 Diff = VirtAddr & (BlockSize::L1BlockSize - 1);
+
+			/* These names are to reflect the above. */
+			pantheon::vmm::PhysicalAddress PhysMasked = L1Entry->GetPhysicalAddressArea();
+			pantheon::vmm::PhysicalAddress PhysAddr = PhysMasked + Diff; 
 
 			/* We now have some different sized area to worry about:
 			 * 1. A mapping using the old permissions, from PhysAddr, to PhysAddr + Diff
@@ -238,9 +241,9 @@ BOOL pantheon::vmm::PageAllocator::Reprotect(pantheon::vmm::PageTable *TTBR, pan
 
 			/* Now remap these areas... */
 			BOOL Status = TRUE;
-			Status &= this->Map(TTBR, VirtMasked, PhysAddr, Diff, OldEntry);
-			Status &= this->Map(TTBR, VirtAddr, PhysAddr + Diff, Size, Permissions);
-			Status &= this->Map(TTBR, VirtAddr + Size, PhysAddr + Diff + Size, BlockSize::L1BlockSize - Size - Diff, OldEntry);
+			Status &= this->Map(TTBR, VirtMasked, PhysMasked, Diff, OldEntry);
+			Status &= this->Map(TTBR, VirtAddr, PhysAddr, Size, Permissions);
+			Status &= this->Map(TTBR, VirtAddr + Size, PhysAddr + Size, BlockSize::L1BlockSize - Size - Diff, OldEntry);
 
 			pantheon::Sync::DSBISH();
 			pantheon::Sync::ISB();

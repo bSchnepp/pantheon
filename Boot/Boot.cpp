@@ -393,7 +393,7 @@ static void SetupPageTables()
 	pantheon::vmm::PageTableEntry Entry;
 	Entry.SetBlock(TRUE);
 	Entry.SetMapped(TRUE);
-	Entry.SetUserNoExecute(FALSE);
+	Entry.SetUserNoExecute(TRUE);
 	Entry.SetKernelNoExecute(FALSE);
 
 	/* For now, allow anything since we don't have a real userland yet.
@@ -425,9 +425,8 @@ static void SetupPageTables()
 
 
 	pantheon::vmm::PageTableEntry UEntry(Entry);
-	UEntry.SetUserAccessible(TRUE);
+	UEntry.SetPagePermissions(0b01 << 6);
 	UEntry.SetKernelNoExecute(TRUE);
-	UEntry.SetUserAccessible(FALSE);
 	UEntry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
 	UEntry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
 	UEntry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
@@ -447,6 +446,11 @@ static void SetupPageTables()
 	 * 5. Reprotect rodata as R-- after running constructors for kernel objects
 	 */
 	PageTablesCreated.Store(TRUE);
+}
+
+pantheon::vmm::PageAllocator *BaseAllocator()
+{
+	return &InitialPageTables;
 }
 
 static void InstallPageTables()
