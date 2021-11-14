@@ -4,6 +4,8 @@
 #ifndef _KERN_RUNTIME_HPP_
 #define _KERN_RUNTIME_HPP_
 
+#define FORCE_INLINE inline __attribute__((always_inline))
+
 VOID WriteMMIOU64(UINT64 Addr, UINT64 Value);
 VOID WriteMMIOU32(UINT64 Addr, UINT32 Value);
 VOID WriteMMIOU16(UINT64 Addr, UINT16 Value);
@@ -110,6 +112,12 @@ template<typename T>
 constexpr T Align(T Amt, T Align)
 {
 	return ~(Align - 1) & (((Amt) + (Align - 1)));
+}
+
+template<typename T>
+constexpr BOOL IsAligned(T Val, T AlignVal)
+{
+	return Align(Val, AlignVal) == Val;
 }
 
 Optional<void*> BasicMalloc(UINT64 Amt);

@@ -1,9 +1,11 @@
 #include <kern_datatypes.hpp>
 #include <Sync/kern_spinlock.hpp>
 
-#include "kern_proc.hpp"
-#include "kern_sched.hpp"
-#include "kern_thread.hpp"
+#include <System/Proc/kern_proc.hpp>
+#include <System/Proc/kern_sched.hpp>
+#include <System/Proc/kern_thread.hpp>
+
+#include <Common/Structures/kern_slab.hpp>
 
 
 pantheon::Process::Process()
@@ -12,6 +14,9 @@ pantheon::Process::Process()
 	this->Priority = pantheon::PROCESS_PRIORITY_VERYLOW;
 	this->ProcessCommand = "idle";
 	this->PID = 0;
+
+	this->MemoryMap = nullptr;
+	
 }
 
 pantheon::Process::Process(const char *CommandString)
@@ -20,6 +25,9 @@ pantheon::Process::Process(const char *CommandString)
 	this->CurState = pantheon::PROCESS_STATE_INIT;
 	this->Priority = pantheon::PROCESS_PRIORITY_NORMAL;
 	this->PID = pantheon::AcquireProcessID();
+	
+	this->MemoryMap = nullptr;
+	
 }
 
 pantheon::Process::Process(pantheon::String &CommandString)
@@ -28,6 +36,9 @@ pantheon::Process::Process(pantheon::String &CommandString)
 	this->Priority = pantheon::PROCESS_PRIORITY_NORMAL;
 	this->ProcessCommand = CommandString;
 	this->PID = pantheon::AcquireProcessID();
+	
+	this->MemoryMap = nullptr;
+	
 }
 
 pantheon::Process::Process(const Process &Other) noexcept
@@ -36,6 +47,7 @@ pantheon::Process::Process(const Process &Other) noexcept
 	this->PID = Other.PID;
 	this->Priority = Other.Priority;
 	this->ProcessCommand = Other.ProcessCommand;
+	this->MemoryMap = Other.MemoryMap;
 }
 
 pantheon::Process::Process(Process &&Other) noexcept
@@ -44,6 +56,8 @@ pantheon::Process::Process(Process &&Other) noexcept
 	this->PID = Other.PID;
 	this->Priority = Other.Priority;
 	this->ProcessCommand = Other.ProcessCommand;
+	this->MemoryMap = Other.MemoryMap;
+	ClearBuffer((CHAR*)&Other, sizeof(Process));	
 }
 
 pantheon::Process::~Process()
@@ -61,6 +75,7 @@ pantheon::Process &pantheon::Process::operator=(const pantheon::Process &Other)
 	this->PID = Other.PID;
 	this->Priority = Other.Priority;
 	this->ProcessCommand = Other.ProcessCommand;
+	this->MemoryMap = Other.MemoryMap;
 	return *this;
 }
 
@@ -74,6 +89,8 @@ pantheon::Process &pantheon::Process::operator=(pantheon::Process &&Other) noexc
 	this->PID = Other.PID;
 	this->Priority = Other.Priority;
 	this->ProcessCommand = Other.ProcessCommand;
+	this->MemoryMap = Other.MemoryMap;
+	ClearBuffer((CHAR*)&Other, sizeof(Process));
 	return *this;
 }
 

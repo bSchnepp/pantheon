@@ -64,6 +64,11 @@ _hang:
 
 asm_kern_init_core:
 	mov sp, x0
+
+	ldr x2, =_cpu_start
+	bl BootInit
+	mov x0, x0 /* No-op, but to clarify x0 needs to be preserved. */
+		
 	bl kern_init_core
 	b _hang
 

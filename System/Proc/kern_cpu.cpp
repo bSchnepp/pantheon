@@ -1,6 +1,9 @@
 #include "kern_cpu.hpp"
 #include <kern_datatypes.hpp>
 
+#include <Boot/Boot.hpp>
+#include <PhyMemory/kern_alloc.hpp>
+
 static pantheon::GlobalScheduler GlobalSched;
 
 /* Pantheon can have up to 256 processors in theory.
@@ -64,15 +67,22 @@ pantheon::TrapFrame *pantheon::CPU::GetCurFrame()
 extern "C" VOID drop_usermode(UINT64 PC, UINT64 PSTATE, UINT64 SP);
 BOOL pantheon::CPU::DropToUsermode(UINT64 PC)
 {
-	UINT64 StackLoc = 12 * 1024;
-	Optional<void*> StackArea = BasicMalloc(StackLoc);
-	if (!StackArea.GetOkay())
-	{
-		return FALSE;
-	}
-	void *StackAreaAddr = StackArea();
-	StackLoc += ((UINT64)StackAreaAddr);
-	drop_usermode(PC, 0, StackLoc);
+	pantheon::vmm::PageTableEntry UEntry;
+	UEntry.SetPagePermissions(0b01 << 6);
+	UEntry.SetKernelNoExecute(TRUE);
+	UEntry.SetUserNoExecute(TRUE);
+	UEntry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
+	UEntry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
+	UEntry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
+
+	UINT64 StackArea = pantheon::PageAllocator::Alloc();
+
+	/* TODO: actually get this process' TTBR0 */
+	pantheon::vmm::PageTable *PT = (pantheon::vmm::PageTable *)pantheon::CPUReg::R_TTBR0_EL1();
+	BaseAllocator()->Reprotect(PT, StackArea, pantheon::vmm::BlockSize::L3BlockSize, UEntry);
+
+	StackArea += pantheon::vmm::BlockSize::L3BlockSize;
+	drop_usermode(PC, 0, StackArea);
 	return TRUE;
 }
 

@@ -42,8 +42,18 @@ UINT64 pantheon::CPUReg::R_TTBR0_EL1()
 UINT64 pantheon::CPUReg::R_TTBR1_EL1()
 {
 	UINT64 RetVal = 0;
-	asm volatile ("mrs %0, ttbr0_el1\n" : "=r"(RetVal) ::);
+	asm volatile ("mrs %0, ttbr1_el1\n" : "=r"(RetVal) ::);
 	return RetVal;
+}
+
+VOID pantheon::CPUReg::W_TTBR0_EL1(UINT64 Val)
+{
+	asm volatile ("msr ttbr0_el1, %0\n" :: "r"(Val) :);
+}
+
+VOID pantheon::CPUReg::W_TTBR1_EL1(UINT64 Val)
+{
+	asm volatile ("msr ttbr1_el1, %0\n" :: "r"(Val) :);
 }
 
 BOOL pantheon::CPU::IF()
@@ -79,6 +89,11 @@ VOID pantheon::CPU::POPI()
 	{
 		pantheon::CPU::STI();
 	}
+}
+
+VOID pantheon::CPU::LIDT(void *Table)
+{
+	pantheon::arm::LoadInterruptTable(Table);
 }
 
 UINT64 pantheon::CPU::ICOUNT()

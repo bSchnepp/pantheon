@@ -1,12 +1,23 @@
 #include <stddef.h>
 
+#include <arch.hpp>
 #include <kern_datatypes.hpp>
 #include <Sync/kern_spinlock.hpp>
 
-#include "kern_cpu.hpp"
-#include "kern_proc.hpp"
-#include "kern_sched.hpp"
-#include "kern_thread.hpp"
+#include <System/Proc/kern_cpu.hpp>
+#include <System/Proc/kern_proc.hpp>
+#include <System/Proc/kern_sched.hpp>
+#include <System/Proc/kern_thread.hpp>
+
+#include <Common/PhyMemory/kern_alloc.hpp>
+
+#ifndef ONLY_TESTING
+extern "C" CHAR *USER_BEGIN;
+extern "C" CHAR *USER_END;
+#else
+static UINT64 USER_BEGIN = 0;
+static UINT64 USER_END = 0;
+#endif
 
 /**
  * @file Common/Proc/kern_sched.cpp
@@ -199,7 +210,9 @@ VOID pantheon::GlobalScheduler::Init()
 {
 	this->ThreadList = ArrayList<Thread>();
 	this->ProcessList = ArrayList<Process>();
-	this->ProcessList.Add(pantheon::Process());
+
+	pantheon::Process Idle;
+	this->ProcessList.Add(Idle);
 
 	ThreadIDLock = Spinlock("threadid");
 	ProcIDLock = Spinlock("procid");

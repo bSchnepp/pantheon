@@ -22,9 +22,18 @@ class SlabCache
 public:
 	static_assert(sizeof(T) >= sizeof(SlabNext<T>));
 
+	SlabCache()
+	{
+		this->Size = 0;
+		this->Used = 0;
+		this->FreeList = nullptr;
+		this->Area = nullptr;
+	}
+
 	SlabCache(VOID *Area, UINT16 Count = 64)
 	{
 		this->Area = reinterpret_cast<T*>(Area);
+		ClearBuffer((char*)this->Area, Count * sizeof(T));
 		this->Size = Count;
 		this->Used = 0;
 		this->FreeList = nullptr;
@@ -105,7 +114,8 @@ public:
 		}
 	}
 
-	[[nodiscard]] BOOL SpaceLeft() const { return this->Size - Used; }
+	[[nodiscard]] UINT16 SlabCount() const { return this->Size; }
+	[[nodiscard]] UINT16 SpaceLeft() const { return this->Size - Used; }
 	[[nodiscard]] BOOL Empty() const { return this->SpaceLeft() == this->Size; }
 	[[nodiscard]] BOOL Full() const { return this->FreeList == nullptr; }
 
@@ -120,7 +130,7 @@ template<typename T>
 struct CacheList
 {
 	SlabCache<T> *Current;
-	SlabCache<T> *Next;
+	CacheList<T> *Next;
 };
 
 template<typename T>

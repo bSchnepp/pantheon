@@ -54,6 +54,7 @@ ADD_SUBDIRECTORY(Common)
 ADD_SUBDIRECTORY(Devices)
 ADD_SUBDIRECTORY(System)
 ADD_SUBDIRECTORY(Boot)
+ADD_SUBDIRECTORY(Userland)
 
 # Also go and add in some external dependencies...
 INCLUDE_DIRECTORIES(externals/printf)
@@ -74,6 +75,7 @@ TARGET_LINK_LIBRARIES(pantheon Board)
 TARGET_LINK_LIBRARIES(pantheon Printf)
 TARGET_LINK_LIBRARIES(pantheon System)
 TARGET_LINK_LIBRARIES(pantheon Boot)
+TARGET_LINK_LIBRARIES(pantheon Userland)
 
 ADD_CUSTOM_COMMAND(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
 	COMMAND ${CMAKE_OBJCOPY} -O binary ${CMAKE_PROJECT_NAME} kernel.img)

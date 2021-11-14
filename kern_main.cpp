@@ -9,31 +9,8 @@
 
 #include <Boot/Boot.hpp>
 
-typedef void (*ThreadStartPtr)(void*);
 
-extern "C" void svc_LogText(const CHAR *Content);
-extern "C" void *svc_AllocateBuffer(UINT64 Sz);
-extern "C" void svc_CreateThread(ThreadStartPtr Entry, VOID *Reserved, void *StackTop, pantheon::ThreadPriority Priority);
-
-void spawned_thread(void *Unused)
-{
-	PANTHEON_UNUSED(Unused);
-	for (;;)
-	{
-		SERIAL_LOG("%s\n", "IN SPAWNED THREAD");
-	}
-}
-
-void user_idle()
-{
-	void *Buffer = svc_AllocateBuffer(4096);
-	svc_CreateThread(spawned_thread, nullptr, (char*)Buffer + 4096, pantheon::THREAD_PRIORITY_NORMAL);
-	for (;;)
-	{
-		svc_LogText("IN USERSPACE");
-	}
-}
-
+extern "C" void sysm_Main();
 
 /* Since we don't use the MMU at all, we need thread-unique storage, 
  * since theres no kernel-level thread-local storage. */
@@ -54,7 +31,7 @@ void kern_idle(void *unused)
 void kern_idle2(void *unused)
 {
 	PANTHEON_UNUSED(unused);
-	pantheon::CPU::DropToUsermode((UINT64)user_idle);
+	pantheon::CPU::DropToUsermode((UINT64)sysm_Main);
 	for (;;)
 	{
 		SERIAL_LOG("%s\n", "STUCK IN KERNEL SPACE");
@@ -78,7 +55,14 @@ void kern_init_core()
 	pantheon::CPU::InitCoreInfo(CpuNo);
 	PerCoreInit();
 
-	SERIAL_LOG("Pantheon booted with core %hhu\n", CpuNo);
+	volatile UINT64 SCTLRVal = 0;
+	asm volatile(
+		"mrs %0, sctlr_el1\n"
+		"isb\n"
+		"dsb sy"
+		: "=r"(SCTLRVal):: "memory");
+
+	SERIAL_LOG("Pantheon booted with core %hhu, and paging is %x\n", CpuNo, SCTLRVal & 0x01);
 
 	/* Ensure there is always at least the idle proc for this core. */
 	pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle);

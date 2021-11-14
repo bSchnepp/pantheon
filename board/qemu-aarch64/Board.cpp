@@ -5,8 +5,11 @@
 /* On qemu-virt, we definitely have a uart. */
 #include <Devices/PL011/PL011.hpp>
 
+#include <arch/aarch64/arch.hpp>
 #include <arch/aarch64/gic.hpp>
 #include <arch/aarch64/ints.hpp>
+
+#include <arch/aarch64/vmm/vmm.hpp>
 
 typedef enum DeviceToAddress
 {
@@ -37,15 +40,29 @@ void WriteString(const CHAR *String)
 	}
 }
 
-extern char interrupt_table[];
-
-void BoardInit()
+extern "C" void BoardInit(pantheon::vmm::PageAllocator &PageAllocator)
 {
 	/* FIXME: Handle paging for all the devices as needed. */
+	pantheon::vmm::PageTable *TTBR0 = (pantheon::vmm::PageTable*)pantheon::CPUReg::R_TTBR0_EL1();
+	pantheon::vmm::PageTableEntry DeviceMMIOEntry;
 
+	DeviceMMIOEntry.SetBlock(TRUE);
+	DeviceMMIOEntry.SetMapped(TRUE);
+	DeviceMMIOEntry.SetUserNoExecute(TRUE);
+	DeviceMMIOEntry.SetKernelNoExecute(FALSE);
+	DeviceMMIOEntry.SetUserAccessible(TRUE);
+	DeviceMMIOEntry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_NONE);
+	DeviceMMIOEntry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
+	DeviceMMIOEntry.SetPagePermissions(pantheon::vmm::PAGE_PERMISSION_KERNEL_RW);
+	DeviceMMIOEntry.SetMAIREntry(pantheon::vmm::MAIREntry_0);
+
+	PageAllocator.Map(TTBR0, DEVICE_TYPE_UART, DEVICE_TYPE_UART, pantheon::vmm::BlockSize::L3BlockSize, DeviceMMIOEntry);
 	pantheon::pl011::PL011Init(DEVICE_TYPE_UART, 0);
 
+	PageAllocator.Map(TTBR0, DEVICE_TYPE_GIC_DIST, DEVICE_TYPE_GIC_DIST, pantheon::vmm::BlockSize::L3BlockSize, DeviceMMIOEntry);
 	pantheon::arm::GICSetMMIOAddr(pantheon::arm::GIC_CLASS_DISTRIBUTOR, DEVICE_TYPE_GIC_DIST);
+
+	PageAllocator.Map(TTBR0, DEVICE_TYPE_GIC_CPU, DEVICE_TYPE_GIC_CPU, pantheon::vmm::BlockSize::L3BlockSize, DeviceMMIOEntry);
 	pantheon::arm::GICSetMMIOAddr(pantheon::arm::GIC_CLASS_CPU_INTERFACE, DEVICE_TYPE_GIC_CPU);
 
 	pantheon::arm::GICInit();
@@ -53,8 +70,6 @@ void BoardInit()
 
 VOID PerCoreBoardInit()
 {
-	pantheon::arm::LoadInterruptTable(&interrupt_table);
-
 	/* HACK: this only works on qemu aarch64 virt... */
 	const static UINT32 TimerIRQ = 30;
 	pantheon::arm::GICSetConfig(TimerIRQ, 2);

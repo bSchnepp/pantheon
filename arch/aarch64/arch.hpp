@@ -3,8 +3,7 @@
 
 #include <arch/aarch64/ints.hpp>
 #include <arch/aarch64/thread.hpp>
-
-#include "vmm/vmm.hpp"
+#include <arch/aarch64/vmm/vmm.hpp>
 
 typedef struct PagingInfo
 {
@@ -18,17 +17,17 @@ namespace pantheon
 typedef pantheon::arm::CpuContext CpuContext;
 typedef pantheon::arm::TrapFrame TrapFrame;
 
-inline VOID RearmSystemTimer(UINT64 Freq)
+FORCE_INLINE VOID RearmSystemTimer(UINT64 Freq)
 {
 	pantheon::arm::RearmSystemTimer(Freq);
 }
 
-inline VOID DisableSystemTimer()
+FORCE_INLINE VOID DisableSystemTimer()
 {
 	pantheon::arm::DisableSystemTimer();
 }
 
-inline VOID RearmSystemTimer()
+FORCE_INLINE VOID RearmSystemTimer()
 {
 	pantheon::arm::RearmSystemTimer();
 }
@@ -52,6 +51,7 @@ VOID POPI();
 UINT64 ICOUNT();
 
 VOID PAUSE();
+VOID LIDT(void *IDT);
 
 }
 
@@ -61,6 +61,27 @@ namespace CPUReg
 UINT64 R_TTBR0_EL1();
 UINT64 R_TTBR1_EL1();
 
+VOID W_TTBR0_EL1(UINT64);
+VOID W_TTBR1_EL1(UINT64);
+
+}
+
+namespace Sync
+{
+	FORCE_INLINE void DSBISH()
+	{
+		asm volatile("dsb ish\n" ::: "memory");
+	}
+
+	FORCE_INLINE void DSBSY()
+	{
+		asm volatile("dsb sy\n" ::: "memory");
+	}
+
+	FORCE_INLINE void ISB()
+	{
+		asm volatile("isb\n" ::: "memory");
+	}
 }
 
 }
