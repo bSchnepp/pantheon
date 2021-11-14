@@ -463,8 +463,8 @@ static void InstallPageTables()
 	UINT64 TTBR0_Val = (UINT64)TTBR0;
 	UINT64 TTBR1_Val = (UINT64)TTBR1;
 
-	write_ttbr0_el1(TTBR0_Val);
-	write_ttbr1_el1(TTBR1_Val);
+	pantheon::CPUReg::W_TTBR0_EL1(TTBR0_Val);
+	pantheon::CPUReg::W_TTBR1_EL1(TTBR1_Val);
 
 	pantheon::vmm::PageTableEntry Entry;
 	Entry.SetMapped(TRUE);
