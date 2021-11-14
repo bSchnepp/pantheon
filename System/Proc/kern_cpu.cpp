@@ -70,6 +70,7 @@ BOOL pantheon::CPU::DropToUsermode(UINT64 PC)
 	pantheon::vmm::PageTableEntry UEntry;
 	UEntry.SetPagePermissions(0b01 << 6);
 	UEntry.SetKernelNoExecute(TRUE);
+	UEntry.SetUserNoExecute(TRUE);
 	UEntry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
 	UEntry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
 	UEntry.SetMAIREntry(pantheon::vmm::MAIREntry_1);

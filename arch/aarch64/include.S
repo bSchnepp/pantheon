@@ -20,34 +20,34 @@
 	stp x26, x27, [sp, #13 * 16]
 	stp x28, x29, [sp, #14 * 16]
 	
-	/* Use x19, x20, and x21 for our use.
+	/* Use x21, x22, and x23 for our use.
 	 * The necessary pc for going back to user code is
 	 * first, then the program status register, and finally the stack
 	 * pointer.
 	 */
-	mrs x19, elr_el1
-	mrs x20, spsr_el1
+	mrs x21, elr_el1
+	mrs x22, spsr_el1
 	.if \dpl == 1
-	add x21, sp, #TRAP_SZ
+	add x23, sp, #TRAP_SZ
 	.else
-	mrs x21, sp_el0
+	mrs x23, sp_el0
 	.endif
 
 	/* Store the status registers (and x30)... */
-	stp x30, x19, [sp, #15 * 16]
-	stp x20, x21, [sp, #16 * 16]
+	stp x30, x21, [sp, #15 * 16]
+	stp x22, x23, [sp, #16 * 16]
 .endm
 
 .macro kern_exit, dpl
 	/* Registers should be unwound backwards from the order saved to. */
-	ldp x20, x21, [sp, #16 * 16]
-	ldp x30, x19, [sp, #15 * 16]
+	ldp x22, x23, [sp, #16 * 16]
+	ldp x30, x21, [sp, #15 * 16]
 
 	.if \dpl != 1
-	msr sp_el0, x19
+	msr sp_el0, x23
 	.endif
-	msr spsr_el1, x20
-	msr elr_el1, x19
+	msr spsr_el1, x22
+	msr elr_el1, x21
 
 	ldp x28, x29, [sp, #14 * 16]
 	ldp x26, x27, [sp, #13 * 16]

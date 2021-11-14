@@ -110,7 +110,7 @@ UINT64 FindPage()
 		InitialMemoryArea &InitMemArea = InitBootInfo.InitMemoryAreas[InitArea];
 		for (UINT64 Bit = 0; Bit < InitMemArea.Map.GetSizeBits(); ++Bit)
 		{
-			if (InitMemArea.Map.Get(Bit))
+			if (InitMemArea.Map.Get(Bit) == 0)
 			{
 				return InitMemArea.BaseAddress + (pantheon::vmm::BlockSize::L3BlockSize * Bit);
 			}
