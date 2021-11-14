@@ -475,11 +475,9 @@ static void InstallPageTables()
 		pantheon::arm::MAIR_ATTRIBUTE_NORMAL_INNER_NONCACHEABLE | 
 		pantheon::arm::MAIR_ATTRIBUTE_NORMAL_OUTER_NONCACHEABLE, 1);
 
-	pantheon::arm::WriteMAIR_EL1(Attribs);
-	pantheon::arm::WriteTCR_EL1(pantheon::arm::DefaultTCRAttributes());
+	pantheon::CPUReg::W_MAIR_EL1(Attribs);
+	pantheon::CPUReg::W_TCR_EL1(pantheon::arm::DefaultTCRAttributes());
 	pantheon::Sync::ISB();
-
-
 }
 
 static void SetupCore()
