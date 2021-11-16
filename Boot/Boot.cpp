@@ -379,7 +379,7 @@ static void SetupPageTables()
 	 * 	- Add the number of pages to handle there.
 	 */
 
-	constexpr UINT64 NumTables = 24 * 1024;
+	constexpr UINT64 NumTables = 8 * 1024;
 	MemArea = Align<UINT64>(MemArea, pantheon::vmm::BlockSize::L3BlockSize);
 	InitialPageTables = pantheon::vmm::PageAllocator((void*)MemArea, NumTables);
 

@@ -9,11 +9,9 @@
 #ifndef _KERN_SCHED_HPP_
 #define _KERN_SCHED_HPP_
 
-
 namespace pantheon
 {
 
-/* NOT YET IMPLEMENTED! Placeholder for CPUInfo!!!! */
 class Scheduler
 {
 
@@ -50,7 +48,7 @@ public:
 	VOID CreateIdleProc(void *StartAddr);
 
 	Thread* AcquireThread();
-	UINT64 CountThreads(UINT64 TID);
+	UINT64 CountThreads(UINT64 PID);
 	void ReleaseThread(Thread *T);
 
 private:

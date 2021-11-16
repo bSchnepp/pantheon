@@ -211,11 +211,11 @@ VOID pantheon::GlobalScheduler::Init()
 	this->ThreadList = ArrayList<Thread>();
 	this->ProcessList = ArrayList<Process>();
 
-	pantheon::Process Idle;
-	this->ProcessList.Add(Idle);
-
 	ThreadIDLock = Spinlock("threadid");
 	ProcIDLock = Spinlock("procid");
+
+	pantheon::Process Idle;
+	this->ProcessList.Add(Idle);
 }
 
 VOID pantheon::GlobalScheduler::CreateIdleProc(void *StartAddr)
