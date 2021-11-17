@@ -27,6 +27,11 @@ static UINT64 USER_END = 0;
  * \~english @author Brian Schnepp
  */
 
+static void proc_idle()
+{
+	for (;;) {}
+}
+
 /**
  * \~english @brief Initalizes an instance of a per-core scheduler.
  * \~english @author Brian Schnepp
@@ -35,6 +40,7 @@ pantheon::Scheduler::Scheduler()
 {
 	this->CurThread = nullptr;
 	this->ShouldReschedule.Store(FALSE);
+	pantheon::GetGlobalScheduler()->CreateIdleProc((void*)proc_idle);
 }
 
 pantheon::Scheduler::~Scheduler()

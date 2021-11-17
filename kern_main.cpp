@@ -64,14 +64,12 @@ void kern_init_core()
 
 	SERIAL_LOG("Pantheon booted with core %hhu, and paging is %x\n", CpuNo, SCTLRVal & 0x01);
 
-	/* Ensure there is always at least the idle proc for this core. */
-	pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle);
-	pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle2);
-
 	while (pantheon::GetKernelStatus() < pantheon::KERNEL_STATUS_OK)
 	{
 		/* Loop until core 0 finished kernel setup */
 	}
+
+	pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle);
 
 	pantheon::RearmSystemTimer(1000);
 	pantheon::CPU::GetCoreInfo()->CurSched->SignalReschedule();
@@ -97,7 +95,7 @@ void kern_init(InitialBootInfo *InitBootInfo, void *initial_load_addr, void *vir
 		/* Create an extra idle thread to ensure rescheduling happens.
 		 * Without a spare thread, no scheduling ever occurs. FIXME!
 		 */
-		pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle);
+		pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle2);
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_OK);
 	}
 	kern_init_core();
