@@ -27,7 +27,7 @@ public:
 	void SignalReschedule();
 
 private:
-	BOOL PerformCpuSwitch(Thread *Old, Thread *New);
+	VOID PerformCpuSwitch(Thread *Old, Thread *New);
 
 	Thread *CurThread;
 	Atomic<BOOL> ShouldReschedule;

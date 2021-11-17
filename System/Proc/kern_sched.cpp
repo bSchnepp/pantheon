@@ -29,7 +29,10 @@ static UINT64 USER_END = 0;
 
 static void proc_idle()
 {
-	for (;;) {}
+	for (;;) 
+	{
+		pantheon::CPU::GetCurSched()->MaybeReschedule();
+	}
 }
 
 /**
@@ -50,33 +53,15 @@ pantheon::Scheduler::~Scheduler()
 
 extern "C" void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New, UINT32 RegOffset);
 
-BOOL pantheon::Scheduler::PerformCpuSwitch(Thread *Old, Thread *New)
+VOID pantheon::Scheduler::PerformCpuSwitch(Thread *Old, Thread *New)
 {
-	if (Old == New)
-	{
-		return FALSE;
-	}
+	pantheon::CpuContext *Prev = (Old->GetRegisters());
+	pantheon::CpuContext *Next = (New->GetRegisters());
 
-	if (New == nullptr)
-	{
-		pantheon::CPU::HLT();
-		return FALSE;
-	}
-
-	this->CurThread = New;
-	if (Old && New)
-	{
-		pantheon::CpuContext *Prev = (Old->GetRegisters());
-		pantheon::CpuContext *Next = (New->GetRegisters());
-
-		New->RefreshTicks();
-		this->ShouldReschedule.Store(FALSE);
-		pantheon::GetGlobalScheduler()->ReleaseThread(Old);
-		cpu_switch(Prev, Next, CpuIRegOffset);
-		return TRUE;
-	}
-
-	return FALSE;
+	New->RefreshTicks();
+	this->ShouldReschedule.Store(FALSE);
+	pantheon::GetGlobalScheduler()->ReleaseThread(Old);
+	cpu_switch(Prev, Next, CpuIRegOffset);
 }
 
 /**
@@ -101,6 +86,23 @@ void pantheon::Scheduler::Reschedule()
 
 	pantheon::Thread *Old = this->CurThread;
 	pantheon::Thread *New = pantheon::GetGlobalScheduler()->AcquireThread();
+
+	if (Old == New)
+	{
+		return;
+	}
+
+	if (New == nullptr)
+	{
+		pantheon::CPU::HLT();
+		return;
+	}
+
+	this->CurThread = New;
+	if (Old == nullptr)
+	{
+		return;
+	}
 
 	this->PerformCpuSwitch(Old, New);
 }
