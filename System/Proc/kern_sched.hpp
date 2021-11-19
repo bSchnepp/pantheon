@@ -31,6 +31,9 @@ private:
 
 	Thread *CurThread;
 	Atomic<BOOL> ShouldReschedule;
+	Atomic<BOOL> IgnoreReschedule;
+
+	pantheon::Thread IdleThread;
 };
 
 class GlobalScheduler
@@ -50,6 +53,9 @@ public:
 	Thread* AcquireThread();
 	UINT64 CountThreads(UINT64 PID);
 	void ReleaseThread(Thread *T);
+
+	pantheon::Process *ObtainProcessByID(UINT64 PID);
+	pantheon::Thread *ObtainThreadByID(UINT64 TID);
 
 private:
 	Spinlock AccessSpinlock;

@@ -187,7 +187,10 @@ UINT64 pantheon::Thread::TicksLeft() const
  */
 VOID pantheon::Thread::CountTick()
 {
-	this->RemainingTicks--;
+	if (this->RemainingTicks)
+	{
+		this->RemainingTicks--;
+	}
 }
 
 [[nodiscard]]
@@ -309,4 +312,14 @@ void pantheon::Thread::FlipVisitFlag()
 BOOL pantheon::Thread::GetVisitFlag() const
 {
 	return this->VisitFlag;
+}
+
+VOID pantheon::Thread::Lock()
+{
+	this->ThreadLock.Acquire();
+}
+
+VOID pantheon::Thread::Unlock()
+{
+	this->ThreadLock.Release();
 }

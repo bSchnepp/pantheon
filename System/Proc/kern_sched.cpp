@@ -43,7 +43,17 @@ pantheon::Scheduler::Scheduler()
 {
 	this->CurThread = nullptr;
 	this->ShouldReschedule.Store(FALSE);
-	pantheon::GetGlobalScheduler()->CreateIdleProc((void*)proc_idle);
+	this->IgnoreReschedule.Store(FALSE);
+
+	/* hackishly create an idle thread */
+	UINT64 SP = (UINT64)((BasicMalloc(4096)())) + 4096;
+	UINT64 IP = (UINT64)proc_idle;
+	this->IdleThread = pantheon::Thread(pantheon::GetGlobalScheduler()->ObtainProcessByID(0), pantheon::THREAD_PRIORITY_NORMAL);
+	this->IdleThread.GetRegisters()->SetSP(SP);
+	this->IdleThread.GetRegisters()->SetPC(IP);
+	this->IdleThread.SetState(pantheon::THREAD_STATE_RUNNING);
+
+	this->CurThread = &this->IdleThread;
 }
 
 pantheon::Scheduler::~Scheduler()
@@ -58,7 +68,6 @@ VOID pantheon::Scheduler::PerformCpuSwitch(Thread *Old, Thread *New)
 	pantheon::CpuContext *Prev = (Old->GetRegisters());
 	pantheon::CpuContext *Next = (New->GetRegisters());
 
-	New->RefreshTicks();
 	this->ShouldReschedule.Store(FALSE);
 	pantheon::GetGlobalScheduler()->ReleaseThread(Old);
 	cpu_switch(Prev, Next, CpuIRegOffset);
@@ -76,6 +85,11 @@ VOID pantheon::Scheduler::PerformCpuSwitch(Thread *Old, Thread *New)
  */
 void pantheon::Scheduler::Reschedule()
 {
+	if (this->IgnoreReschedule.Load() == TRUE)
+	{
+		return;
+	}
+
 	/* Interrupts must be enabled before we can do anything. */
 	if (pantheon::CPU::ICOUNT())
 	{
@@ -83,7 +97,6 @@ void pantheon::Scheduler::Reschedule()
 	}
 
 	pantheon::CPU::STI();
-
 	pantheon::Thread *Old = this->CurThread;
 	pantheon::Thread *New = pantheon::GetGlobalScheduler()->AcquireThread();
 
@@ -248,54 +261,45 @@ VOID pantheon::GlobalScheduler::CreateIdleProc(void *StartAddr)
  */
 pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 {
-	static UINT64 AcquireCounter = 0;
-	static BOOL VisitFlag = FALSE;
 	pantheon::Thread *Thr = nullptr;
 
-	/* This should be replaced with a skiplist (or linked list), 
-	 * so finding an inactive thread becomes an O(1) process.
-	 */
-	AccessSpinlock.Acquire();
-	UINT64 TListSize = this->ThreadList.Size();
-
-	if (TListSize == 0)
-	{
-		AccessSpinlock.Release();
-		return Thr;		
-	}
-
-	AcquireCounter %= TListSize;
-	UINT8 OrigCount = 0;
 	while (Thr == nullptr)
 	{
-		if (OrigCount == 4)
+		UINT64 TListSize = this->ThreadList.Size();
+		if (TListSize == 0)
 		{
 			break;
 		}
 
-		for (UINT64 Index = 0; Index < TListSize; ++Index)
+		UINT64 MaxTicks = 0;
+		for (pantheon::Thread &MaybeThr : this->ThreadList)
 		{
-			AcquireCounter++;
-			AcquireCounter %= TListSize;
+			MaybeThr.Lock();
+			UINT64 TickCount = MaybeThr.TicksLeft();
+			pantheon::ThreadState State = MaybeThr.MyState();
 
-			pantheon::Thread &MaybeThr = this->ThreadList[AcquireCounter];
-			if (MaybeThr.GetVisitFlag() != VisitFlag)
+			if (State == pantheon::THREAD_STATE_WAITING && TickCount > MaxTicks)
 			{
-				continue;
-			}
-
-			if (MaybeThr.MyState() == pantheon::THREAD_STATE_WAITING)
-			{
-				Thr = &(this->ThreadList[AcquireCounter]);
+				MaxTicks = MaybeThr.TicksLeft();
+				Thr = &MaybeThr;
 				Thr->SetState(pantheon::THREAD_STATE_RUNNING);
-				Thr->FlipVisitFlag();
-				break;
 			}
+			MaybeThr.Unlock();
 		}
-		OrigCount++;
-		VisitFlag = !VisitFlag;
+
+		if (Thr)
+		{
+			break;
+		}
+		
+		/* If we didn't find one after all that, refresh everyone. */
+		for (pantheon::Thread &MaybeThr : this->ThreadList)
+		{
+			MaybeThr.Lock();
+			MaybeThr.RefreshTicks();
+			MaybeThr.Unlock();
+		}
 	}
-	AccessSpinlock.Release();
 	return Thr;
 }
 
@@ -316,9 +320,37 @@ UINT64 pantheon::GlobalScheduler::CountThreads(UINT64 PID)
 
 void pantheon::GlobalScheduler::ReleaseThread(Thread *T)
 {
-	AccessSpinlock.Acquire();
+	T->Lock();
 	T->SetState(pantheon::THREAD_STATE_WAITING);
-	AccessSpinlock.Release();
+	T->Unlock();
+}
+
+pantheon::Process *pantheon::GlobalScheduler::ObtainProcessByID(UINT64 PID)
+{
+	for (pantheon::Process &Proc : this->ProcessList)
+	{
+		/* TODO: lock Proc */
+		if (Proc.ProcessID() == PID)
+		{
+			return &Proc;
+		}
+	}
+	return nullptr;
+}
+
+pantheon::Thread *pantheon::GlobalScheduler::ObtainThreadByID(UINT64 TID)
+{
+	for (pantheon::Thread &Thr : this->ThreadList)
+	{
+		Thr.Lock();
+		if (Thr.ThreadID() == TID)
+		{
+			Thr.Unlock();
+			return &Thr;
+		}
+		Thr.Unlock();
+	}
+	return nullptr;
 }
 
 static pantheon::GlobalScheduler GlobalSched;

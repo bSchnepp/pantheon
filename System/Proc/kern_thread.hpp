@@ -73,6 +73,9 @@ public:
 
 	[[nodiscard]] void *GetTTBR0() const;
 
+	VOID Lock();
+	VOID Unlock();
+
 private:
 	pantheon::Spinlock ThreadLock;
 	UINT64 TID;
