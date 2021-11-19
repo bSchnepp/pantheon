@@ -379,7 +379,7 @@ static void SetupPageTables()
 	 * 	- Add the number of pages to handle there.
 	 */
 
-	constexpr UINT64 NumTables = 24 * 1024;
+	constexpr UINT64 NumTables = 8 * 1024;
 	MemArea = Align<UINT64>(MemArea, pantheon::vmm::BlockSize::L3BlockSize);
 	InitialPageTables = pantheon::vmm::PageAllocator((void*)MemArea, NumTables);
 
@@ -463,8 +463,8 @@ static void InstallPageTables()
 	UINT64 TTBR0_Val = (UINT64)TTBR0;
 	UINT64 TTBR1_Val = (UINT64)TTBR1;
 
-	write_ttbr0_el1(TTBR0_Val);
-	write_ttbr1_el1(TTBR1_Val);
+	pantheon::CPUReg::W_TTBR0_EL1(TTBR0_Val);
+	pantheon::CPUReg::W_TTBR1_EL1(TTBR1_Val);
 
 	pantheon::vmm::PageTableEntry Entry;
 	Entry.SetMapped(TRUE);
@@ -475,11 +475,9 @@ static void InstallPageTables()
 		pantheon::arm::MAIR_ATTRIBUTE_NORMAL_INNER_NONCACHEABLE | 
 		pantheon::arm::MAIR_ATTRIBUTE_NORMAL_OUTER_NONCACHEABLE, 1);
 
-	pantheon::arm::WriteMAIR_EL1(Attribs);
-	pantheon::arm::WriteTCR_EL1(pantheon::arm::DefaultTCRAttributes());
+	pantheon::CPUReg::W_MAIR_EL1(Attribs);
+	pantheon::CPUReg::W_TCR_EL1(pantheon::arm::DefaultTCRAttributes());
 	pantheon::Sync::ISB();
-
-
 }
 
 static void SetupCore()

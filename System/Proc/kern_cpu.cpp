@@ -76,6 +76,7 @@ BOOL pantheon::CPU::DropToUsermode(UINT64 PC)
 	UEntry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
 
 	UINT64 StackArea = pantheon::PageAllocator::Alloc();
+	pantheon::CPU::GetCurThread()->SetUserStackAddr(StackArea);
 
 	/* TODO: actually get this process' TTBR0 */
 	pantheon::vmm::PageTable *PT = (pantheon::vmm::PageTable *)pantheon::CPUReg::R_TTBR0_EL1();

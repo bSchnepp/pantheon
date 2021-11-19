@@ -5,21 +5,30 @@
 #include "kern_sched.hpp"
 #include "kern_thread.hpp"
 
+#include <Common/PhyMemory/kern_alloc.hpp>
+
 /**
  * \~english @brief Prepares a thread ready to have contents moved to it.
  * \~english @author Brian Schnepp
  */
 pantheon::Thread::Thread()
 {
+	this->ThreadLock = pantheon::Spinlock("thread_lock");
+	this->ThreadLock.Acquire();
 	this->ParentProcess = nullptr;
 	this->PreemptCount = 0;
 	this->Priority = pantheon::THREAD_PRIORITY_NORMAL;
 	this->State = pantheon::THREAD_STATE_TERMINATED;
 	this->RemainingTicks = 0;
 	this->Registers.Wipe();
-	this->StackSpace = nullptr;
+	this->KernelStackSpace = nullptr;
+	this->UserStackSpace = nullptr;
 	this->TID = 0;
 	this->VisitFlag = FALSE;
+
+	/* TODO: Create new page tables, instead of reusing old stuff. */
+	this->TTBR0 = (void*)pantheon::CPUReg::R_TTBR0_EL1();
+	this->ThreadLock.Release();
 }
 
 /**
@@ -43,9 +52,12 @@ pantheon::Thread::Thread(Process *OwningProcess)
  */
 pantheon::Thread::Thread(Process *OwningProcess, ThreadPriority Priority)
 {
+	this->ThreadLock = pantheon::Spinlock("thread_lock");
+	this->ThreadLock.Acquire();
 	this->ParentProcess = OwningProcess;
 	this->Priority = Priority;
-	this->StackSpace = nullptr;
+	this->KernelStackSpace = nullptr;
+	this->UserStackSpace = nullptr;
 
 	this->PreemptCount = 0;
 	this->RemainingTicks = 0;
@@ -56,12 +68,18 @@ pantheon::Thread::Thread(Process *OwningProcess, ThreadPriority Priority)
 	this->TID = AcquireThreadID();
 	this->VisitFlag = FALSE;
 
+	/* TODO: Create new page tables, instead of reusing old stuff. */
+	this->TTBR0 = (void*)pantheon::CPUReg::R_TTBR0_EL1();
+
 	/* 45 for NORMAL, 30 for LOW, 15 for VERYLOW, etc. */
 	this->RefreshTicks();
+	this->ThreadLock.Release();
 }
 
 pantheon::Thread::Thread(const pantheon::Thread &Other)
 {
+	this->ThreadLock = pantheon::Spinlock("thread_lock");
+	this->ThreadLock.Acquire();
 	this->ParentProcess = Other.ParentProcess;
 	this->PreemptCount = Other.PreemptCount;
 	this->Priority = Other.Priority;
@@ -69,12 +87,17 @@ pantheon::Thread::Thread(const pantheon::Thread &Other)
 	this->RemainingTicks = Other.RemainingTicks;
 	this->State = Other.State;
 	this->TID = Other.TID;
-	this->StackSpace = Other.StackSpace;
+	this->KernelStackSpace = Other.KernelStackSpace;
+	this->UserStackSpace = Other.UserStackSpace;
 	this->VisitFlag = Other.VisitFlag;
+	this->TTBR0 = (void*)Other.TTBR0;	
+	this->ThreadLock.Release();
 }
 
 pantheon::Thread::Thread(pantheon::Thread &&Other) noexcept
 {
+	this->ThreadLock = pantheon::Spinlock("thread_lock");
+	this->ThreadLock.Acquire();
 	this->ParentProcess = Other.ParentProcess;
 	this->PreemptCount = Other.PreemptCount;
 	this->Priority = Other.Priority;
@@ -82,15 +105,23 @@ pantheon::Thread::Thread(pantheon::Thread &&Other) noexcept
 	this->RemainingTicks = Other.RemainingTicks;
 	this->State = Other.State;
 	this->TID = Other.TID;
-	this->StackSpace = Other.StackSpace;
+	this->KernelStackSpace = Other.KernelStackSpace;
+	this->UserStackSpace = Other.UserStackSpace;
 	this->VisitFlag = Other.VisitFlag;
+	this->TTBR0 = (void*)Other.TTBR0;
+	this->ThreadLock.Release();
 }
 
 pantheon::Thread::~Thread()
 {
-	if (this->StackSpace)
+	if (this->KernelStackSpace)
 	{
-		BasicFree(this->StackSpace);
+		BasicFree(this->KernelStackSpace);
+	}
+
+	if (this->UserStackSpace)
+	{
+		pantheon::PageAllocator::Free((UINT64)this->UserStackSpace);
 	}
 }
 
@@ -156,13 +187,22 @@ UINT64 pantheon::Thread::TicksLeft() const
  */
 VOID pantheon::Thread::CountTick()
 {
-	this->RemainingTicks--;
+	if (this->RemainingTicks)
+	{
+		this->RemainingTicks--;
+	}
 }
 
 [[nodiscard]]
 UINT64 pantheon::Thread::ThreadID() const
 {
 	return this->TID;
+}
+
+[[nodiscard]] 
+void *pantheon::Thread::GetTTBR0() const
+{
+	return this->TTBR0;
 }
 
 /**
@@ -228,7 +268,8 @@ pantheon::Thread &pantheon::Thread::operator=(const pantheon::Thread &Other)
 	this->TID = Other.TID;
 
 	/* Is this right? */
-	this->StackSpace = Other.StackSpace;
+	this->KernelStackSpace = Other.KernelStackSpace;
+	this->UserStackSpace = Other.UserStackSpace;
 	return *this;
 }
 
@@ -245,14 +286,21 @@ pantheon::Thread &pantheon::Thread::operator=(pantheon::Thread &&Other) noexcept
 	this->RemainingTicks = Other.RemainingTicks;
 	this->State = Other.State;
 	this->TID = Other.TID;
-	this->StackSpace = Other.StackSpace;
+	this->KernelStackSpace = Other.KernelStackSpace;
+	this->UserStackSpace = Other.UserStackSpace;
 	return *this;
 }
 
-void pantheon::Thread::SetStackAddr(UINT64 Addr)
+void pantheon::Thread::SetKernelStackAddr(UINT64 Addr)
 {
 	this->Registers.SetSP(Addr);
-	this->StackSpace = reinterpret_cast<void*>((CHAR*)Addr);
+	this->KernelStackSpace = reinterpret_cast<void*>((CHAR*)Addr);
+}
+
+void pantheon::Thread::SetUserStackAddr(UINT64 Addr)
+{
+	this->Registers.SetSP(Addr);
+	this->UserStackSpace = reinterpret_cast<void*>((CHAR*)Addr);
 }
 
 void pantheon::Thread::FlipVisitFlag()
@@ -264,4 +312,14 @@ void pantheon::Thread::FlipVisitFlag()
 BOOL pantheon::Thread::GetVisitFlag() const
 {
 	return this->VisitFlag;
+}
+
+VOID pantheon::Thread::Lock()
+{
+	this->ThreadLock.Acquire();
+}
+
+VOID pantheon::Thread::Unlock()
+{
+	this->ThreadLock.Release();
 }

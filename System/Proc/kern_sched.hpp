@@ -9,11 +9,9 @@
 #ifndef _KERN_SCHED_HPP_
 #define _KERN_SCHED_HPP_
 
-
 namespace pantheon
 {
 
-/* NOT YET IMPLEMENTED! Placeholder for CPUInfo!!!! */
 class Scheduler
 {
 
@@ -29,10 +27,13 @@ public:
 	void SignalReschedule();
 
 private:
-	BOOL PerformCpuSwitch(Thread *Old, Thread *New);
+	VOID PerformCpuSwitch(Thread *Old, Thread *New);
 
 	Thread *CurThread;
 	Atomic<BOOL> ShouldReschedule;
+	Atomic<BOOL> IgnoreReschedule;
+
+	pantheon::Thread IdleThread;
 };
 
 class GlobalScheduler
@@ -50,8 +51,11 @@ public:
 	VOID CreateIdleProc(void *StartAddr);
 
 	Thread* AcquireThread();
-	UINT64 CountThreads(UINT64 TID);
+	UINT64 CountThreads(UINT64 PID);
 	void ReleaseThread(Thread *T);
+
+	pantheon::Process *ObtainProcessByID(UINT64 PID);
+	pantheon::Thread *ObtainThreadByID(UINT64 TID);
 
 private:
 	Spinlock AccessSpinlock;

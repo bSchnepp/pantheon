@@ -50,15 +50,6 @@ constexpr inline TCRAttributes DefaultTCRAttributes()
 {
 	return TCR_ATTRIBUTE_T0SZ_4LVL | TCR_ATTRIBUTE_TG0_4K | TCR_ATTRIBUTE_T1SZ_4LVL | TCR_ATTRIBUTE_TG1_4K;
 }
-
-VOID WriteMAIR_EL1(UINT64 Value);
-UINT64 ReadMAIR_EL1();
-
-VOID WriteTCR_EL1(UINT64 Value);
-UINT64 ReadTCR_EL1();
-
-
 }
-
 
 #endif

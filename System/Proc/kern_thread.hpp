@@ -14,6 +14,7 @@ namespace pantheon
 
 typedef enum ThreadState
 {
+	THREAD_STATE_DEAD,
 	THREAD_STATE_INIT,
 	THREAD_STATE_RUNNING,
 	THREAD_STATE_WAITING,
@@ -61,7 +62,8 @@ public:
 	VOID SetEntryLocation(UINT64 IP, UINT64 SP, VOID* ThreadData);
 
 	CpuContext *GetRegisters();
-	void SetStackAddr(UINT64 Addr);
+	void SetUserStackAddr(UINT64 Addr);
+	void SetKernelStackAddr(UINT64 Addr);
 
 	void FlipVisitFlag();
 	[[nodiscard]] BOOL GetVisitFlag() const;
@@ -69,7 +71,13 @@ public:
 	Thread &operator=(const Thread &Other);
 	Thread &operator=(Thread &&Other) noexcept;
 
+	[[nodiscard]] void *GetTTBR0() const;
+
+	VOID Lock();
+	VOID Unlock();
+
 private:
+	pantheon::Spinlock ThreadLock;
 	UINT64 TID;
 
 	CpuContext Registers;
@@ -81,7 +89,9 @@ private:
 	UINT64 PreemptCount;
 	UINT64 RemainingTicks;
 
-	void *StackSpace;
+	void *KernelStackSpace;
+	void *UserStackSpace;
+	void *TTBR0;
 
 	BOOL VisitFlag;
 };
