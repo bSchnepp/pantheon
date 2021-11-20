@@ -1,4 +1,4 @@
-.equ SYSCALL_AMT, 4
+.equ SYSCALL_AMT, 10
 .equ TRAP_SZ, (16*17)
 
 .macro kern_entry, dpl

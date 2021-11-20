@@ -131,3 +131,52 @@ void pantheon::Process::SetState(pantheon::ProcessState State)
 {
 	this->CurState = State;
 }
+
+UINT8 pantheon::Process::EncodeReadableEvent(pantheon::ipc::ReadableEvent *Evt)
+{
+	for (UINT8 Index = 0; Index < 64; Index++)
+	{
+		if (this->ReadableEvents[Index] == nullptr)
+		{
+			this->ReadableEvents[Index] = Evt;
+			return Index;
+		}
+	}
+	return -1;
+}
+
+UINT8 pantheon::Process::EncodeWriteableEvent(pantheon::ipc::WritableEvent *Evt)
+{
+	for (UINT8 Index = 0; Index < 64; Index++)
+	{
+		if (this->WriteableEvents[Index] == nullptr)
+		{
+			this->WriteableEvents[Index] = Evt;
+			return Index;
+		}
+	}
+	return -1;
+}
+
+pantheon::ipc::ReadableEvent *pantheon::Process::GetReadableEvent(UINT8 Handle)
+{
+	if (Handle > 64)
+	{
+		return nullptr;
+	}
+
+	/* This needs some additional checks, or better yet, wrap everything into
+	 * a generic handles table, and lookup into that. */
+	return this->ReadableEvents[Handle];
+}
+
+
+pantheon::ipc::WritableEvent *pantheon::Process::GetWritableEvent(UINT8 Handle)
+{
+	if (Handle > 64)
+	{
+		return nullptr;
+	}
+		
+	return this->WriteableEvents[Handle];
+}

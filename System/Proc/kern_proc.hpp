@@ -8,6 +8,7 @@
 #include <Sync/kern_spinlock.hpp>
 
 #include <Proc/kern_thread.hpp>
+#include <IPC/kern_event.hpp>
 
 #ifndef _KERN_PROC_HPP_
 #define _KERN_PROC_HPP_
@@ -58,6 +59,12 @@ public:
 
 	void MapPages(pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, pantheon::vmm::PageTableEntry *PageAttributes, UINT64 NumPages);
 
+	UINT8 EncodeReadableEvent(pantheon::ipc::ReadableEvent *Evt);
+	UINT8 EncodeWriteableEvent(pantheon::ipc::WritableEvent *Evt);
+
+	pantheon::ipc::ReadableEvent *GetReadableEvent(UINT8 Handle);
+	pantheon::ipc::WritableEvent *GetWritableEvent(UINT8 Handle);
+
 private:
 	UINT32 PID;
 	String ProcessCommand;
@@ -67,6 +74,9 @@ private:
 
 	pantheon::Spinlock ProcessLock;
 	pantheon::vmm::PageTable *MemoryMap;
+
+	pantheon::ipc::ReadableEvent *ReadableEvents[64];
+	pantheon::ipc::WritableEvent *WriteableEvents[64];
 };
 
 }

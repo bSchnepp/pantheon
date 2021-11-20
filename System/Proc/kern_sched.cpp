@@ -262,7 +262,7 @@ VOID pantheon::GlobalScheduler::CreateIdleProc(void *StartAddr)
 pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 {
 	pantheon::Thread *Thr = nullptr;
-
+	pantheon::CPU::PUSHI();
 	while (Thr == nullptr)
 	{
 		UINT64 TListSize = this->ThreadList.Size();
@@ -300,6 +300,7 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 			MaybeThr.Unlock();
 		}
 	}
+	pantheon::CPU::POPI();
 	return Thr;
 }
 

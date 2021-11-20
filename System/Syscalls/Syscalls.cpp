@@ -61,6 +61,107 @@ pantheon::Result pantheon::SVCCreateThread(
 	return pantheon::GetGlobalScheduler()->CreateThread(Proc, (void*)Entry, RESERVED, Priority, StackTop);
 }
 
+
+/* Note that all these signal syscalls aren't quite safe yet.
+ * Some more work needs to be done to guarantee thread safety, no use-after-free, etc.
+ */
+
+/**
+ * \~english @brief Creates a new named event.
+ * \~english @param[in] Name The name of the event to create
+ * \~english @param[out] WriteHandle The handle of the process for the write area
+ * \~english @param[out] ReadHandle The handle of the process for the read area
+ */
+pantheon::Result pantheon::SVCCreateNamedEvent(const CHAR *Name, UINT8 *ReadHandle, UINT8 *WriteHandle)
+{
+	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+	pantheon::String EvtName(Name);
+
+	pantheon::ipc::NamedEvent *Evt = pantheon::ipc::LookupEvent(EvtName);
+	if (Evt != nullptr)
+	{
+		UINT8 Write = Proc->EncodeWriteableEvent(Evt->Writable);
+		UINT8 Read = Proc->EncodeReadableEvent(Evt->Readable);
+
+		*WriteHandle = Write;
+		*ReadHandle = Read;
+		return 0;
+	}
+
+	Evt = pantheon::ipc::CreateNamedEvent(EvtName, Proc);
+	if (Evt != nullptr)
+	{
+		/* TODO: Use copyin/copyout functions to safely read/write 
+		 * to user memory */
+		UINT8 Write = Proc->EncodeWriteableEvent(Evt->Writable);
+		UINT8 Read = Proc->EncodeReadableEvent(Evt->Readable);
+
+		*WriteHandle = Write;
+		*ReadHandle = Read;
+		return 0;
+	}
+	return -1;
+}
+
+pantheon::Result pantheon::SVCSignalEvent(UINT8 WriteHandle)
+{
+	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+
+	/* TODO: Test that this handle exists. */
+	pantheon::ipc::WritableEvent *Evt = Proc->GetWritableEvent(WriteHandle);
+	
+	if (Evt)
+	{
+		Evt->Signaler = Proc;
+		Evt->Parent->Status = pantheon::ipc::EVENT_TYPE_SIGNALED;
+	}
+
+	/* TODO: wakeup every process waiting on it */
+	return 0;
+}
+
+pantheon::Result pantheon::SVCClearEvent(UINT8 WriteHandle)
+{
+	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+
+	/* TODO: Test that this handle exists. */
+	pantheon::ipc::WritableEvent *Evt = Proc->GetWritableEvent(WriteHandle);
+
+	if (Evt)
+	{
+		Evt->Parent->Readable->Clearer = Proc;
+		Evt->Parent->Status = pantheon::ipc::EVENT_TYPE_UNSIGNALED;
+	}
+	return 0;
+}
+
+pantheon::Result pantheon::SVCResetEvent(UINT8 ReadHandle)
+{
+	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+
+	/* TODO: Test that this handle exists. */
+	pantheon::ipc::ReadableEvent *Evt = Proc->GetReadableEvent(ReadHandle);
+	if (Evt)
+	{
+		Evt->Clearer = Proc;
+		Evt->Parent->Status = pantheon::ipc::EVENT_TYPE_UNSIGNALED;
+	}	
+	return 0;
+}
+
+pantheon::Result pantheon::SVCPollEvent(UINT8 Handle)
+{
+	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+
+	/* TODO: Test that this handle exists. */
+	pantheon::ipc::ReadableEvent *Evt = Proc->GetReadableEvent(Handle);
+	if (Evt)
+	{
+		return Evt->Parent->Status == pantheon::ipc::EVENT_TYPE_SIGNALED;
+	}
+	return 0;
+}
+
 void *syscall_table[] = 
 {
 	(void*)pantheon::SVCExitProcess, 
@@ -68,4 +169,9 @@ void *syscall_table[] =
 	(void*)pantheon::SVCLogText, 
 	(void*)pantheon::SVCAllocateBuffer,
 	(void*)pantheon::SVCCreateThread,
+	(void*)pantheon::SVCCreateNamedEvent,
+	(void*)pantheon::SVCSignalEvent,
+	(void*)pantheon::SVCClearEvent,
+	(void*)pantheon::SVCResetEvent,
+	(void*)pantheon::SVCPollEvent,
 };

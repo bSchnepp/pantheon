@@ -11,6 +11,7 @@
 
 
 extern "C" void sysm_Main();
+extern "C" void prgm_Main();
 
 /* Since we don't use the MMU at all, we need thread-unique storage, 
  * since theres no kernel-level thread-local storage. */
@@ -23,7 +24,6 @@ void kern_idle(void *unused)
 	for (;;)
 	{
 		Count[TID]++;
-		SERIAL_LOG("(%hhu) %s\t%u \t\t[%ld]\n", pantheon::CPU::GetProcessorNumber(), "idle: ", Count[TID], TID);
 	}
 	for (;;){}
 }
@@ -32,6 +32,16 @@ void kern_idle2(void *unused)
 {
 	PANTHEON_UNUSED(unused);
 	pantheon::CPU::DropToUsermode((UINT64)sysm_Main);
+	for (;;)
+	{
+		SERIAL_LOG("%s\n", "STUCK IN KERNEL SPACE");
+	}
+}
+
+void kern_idle3(void *unused)
+{
+	PANTHEON_UNUSED(unused);
+	pantheon::CPU::DropToUsermode((UINT64)prgm_Main);
 	for (;;)
 	{
 		SERIAL_LOG("%s\n", "STUCK IN KERNEL SPACE");
@@ -90,12 +100,15 @@ void kern_init(InitialBootInfo *InitBootInfo, void *initial_load_addr, void *vir
 	{
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);
 		pantheon::GetGlobalScheduler()->Init();
+		pantheon::ipc::InitEventSystem();
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_SECOND_STAGE);
 
 		/* Create an extra idle thread to ensure rescheduling happens.
 		 * Without a spare thread, no scheduling ever occurs. FIXME!
 		 */
 		pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle2);
+		pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle3);
+
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_OK);
 	}
 	kern_init_core();
