@@ -72,16 +72,11 @@ static void UnlinkFreeList(FreeList *Current)
 	}
 }
 
+static pantheon::Spinlock AllocLock;
 
-
-void InitBasicMemory()
+void pantheon::InitBasicMemory()
 {
-	/*  lazilly handle basic malloc memory */
-	if (InitMemoryOkay)
-	{
-		return;
-	}
-
+	AllocLock = pantheon::Spinlock("basic_malloc");
 	/* Double check this, just to be sure. */
 	GlobalFreeList = nullptr;
 
@@ -100,8 +95,6 @@ void InitBasicMemory()
 	GlobalFreeList->Prev = nullptr;
 	InitMemoryOkay = TRUE;
 }
-
-static pantheon::Spinlock AllocLock;
 
 
 void LinkFreeList(VOID *Addr)
@@ -155,10 +148,10 @@ Optional<void*> BasicMalloc(UINT64 Amt)
 	{
 		return Optional<void*>();
 	}
-	
+
 	AllocLock.Acquire();
-	InitBasicMemory();
 	UINT64 Amount = Max(Align(Amt, (sizeof(BlockHeader))), MinBlockSize);
+	FreeList *Final = nullptr;
 
 	/* Look through the explicit free list for any space. */
 	for (FreeList *Indexer = GlobalFreeList; 
@@ -178,12 +171,12 @@ Optional<void*> BasicMalloc(UINT64 Amt)
 			SetSizeAlloc(GetHeader(Next), FALSE, Diff);
 			LinkFreeList(Next);
 
-			AllocLock.Release();
-			return Optional<void*>(Current);
+			Final = Current;
+			break;
 		}
 	}
 	AllocLock.Release();
-	return Optional<void*>();
+	return Optional<void*>(Final);
 }
 
 void BasicFree(void *Addr)

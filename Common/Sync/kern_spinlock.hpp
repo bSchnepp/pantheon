@@ -23,6 +23,7 @@ public:
 	const char *GetDebugName();
 
 private:
+	[[nodiscard]] BOOL IsHolding() const;
 	const char *DebugName;
 	UINT8 CoreNo;
 	BOOL Locked; 

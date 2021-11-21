@@ -148,7 +148,8 @@ void SERIAL_LOG_UNSAFE(const char *Fmt, ...);
 namespace pantheon
 {
 
-void StopError(const char *Reason);
+void InitBasicMemory();
+void StopError(const char *Reason, void *Source = nullptr);
 
 }
 

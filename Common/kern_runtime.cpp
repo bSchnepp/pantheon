@@ -4,6 +4,7 @@
 #include <kern_datatypes.hpp>
 
 #include <Sync/kern_spinlock.hpp>
+#include <System/Proc/kern_cpu.hpp>
 
 #include <printf/printf.h>
 
@@ -156,15 +157,22 @@ void SERIAL_LOG(const char *Fmt, ...)
 	PrintMutex.Release();
 }
 
-void pantheon::StopError(const char *Reason)
+void pantheon::StopError(const char *Reason, void *Source)
 {
 	if (Reason)
 	{
-		SERIAL_LOG_UNSAFE("%s\n", Reason);
+		if (Source)
+		{
+			SERIAL_LOG_UNSAFE("panic: %s [source: %x, core %x]\n", Reason, Source, pantheon::CPU::GetProcessorNumber());
+		}
+		else
+		{
+			SERIAL_LOG_UNSAFE("panic: %s [core %x]\n", Reason, pantheon::CPU::GetProcessorNumber());
+		}
 	}
 	else
 	{
-		SERIAL_LOG_UNSAFE("%s\n", "unknown reason");
+		SERIAL_LOG_UNSAFE("panic: %s [core %x]\n", "unknown reason", pantheon::CPU::GetProcessorNumber());
 	}
 	
 	/* TODO: stop other cores */

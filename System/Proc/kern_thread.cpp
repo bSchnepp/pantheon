@@ -1,6 +1,7 @@
 #include <kern_datatypes.hpp>
 #include <Sync/kern_spinlock.hpp>
 
+#include "kern_cpu.hpp"
 #include "kern_proc.hpp"
 #include "kern_sched.hpp"
 #include "kern_thread.hpp"
@@ -259,6 +260,7 @@ pantheon::Thread &pantheon::Thread::operator=(const pantheon::Thread &Other)
 	{
 		return *this;
 	}
+	this->ThreadLock = pantheon::Spinlock("thread_lock");
 	this->ParentProcess = Other.ParentProcess;
 	this->PreemptCount = Other.PreemptCount;
 	this->Priority = Other.Priority;
@@ -279,6 +281,7 @@ pantheon::Thread &pantheon::Thread::operator=(pantheon::Thread &&Other) noexcept
 	{
 		return *this;
 	}
+	this->ThreadLock = pantheon::Spinlock("thread_lock");
 	this->ParentProcess = Other.ParentProcess;
 	this->PreemptCount = Other.PreemptCount;
 	this->Priority = Other.Priority;
@@ -322,4 +325,9 @@ VOID pantheon::Thread::Lock()
 VOID pantheon::Thread::Unlock()
 {
 	this->ThreadLock.Release();
+}
+
+void pantheon::Thread::SetProc(pantheon::Process *Proc)
+{
+	this->ParentProcess = Proc;
 }

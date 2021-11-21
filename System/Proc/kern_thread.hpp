@@ -73,6 +73,8 @@ public:
 
 	[[nodiscard]] void *GetTTBR0() const;
 
+	void SetProc(pantheon::Process *Proc);
+
 	VOID Lock();
 	VOID Unlock();
 

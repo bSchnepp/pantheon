@@ -11,6 +11,6 @@ extern "C" void sysm_Main()
 	for (;;)
 	{
 		svc_SignalEvent(Write);
-		svc_LogText("IN USERSPACE");
+		svc_LogText("IN USERSPACE [sysm]");
 	}
 }

@@ -41,19 +41,19 @@ static void proc_idle()
  */
 pantheon::Scheduler::Scheduler()
 {
-	this->CurThread = nullptr;
 	this->ShouldReschedule.Store(FALSE);
 	this->IgnoreReschedule.Store(FALSE);
 
 	/* hackishly create an idle thread */
 	UINT64 SP = (UINT64)((BasicMalloc(4096)())) + 4096;
 	UINT64 IP = (UINT64)proc_idle;
-	this->IdleThread = pantheon::Thread(pantheon::GetGlobalScheduler()->ObtainProcessByID(0), pantheon::THREAD_PRIORITY_NORMAL);
-	this->IdleThread.GetRegisters()->SetSP(SP);
-	this->IdleThread.GetRegisters()->SetPC(IP);
-	this->IdleThread.SetState(pantheon::THREAD_STATE_RUNNING);
 
-	this->CurThread = &this->IdleThread;
+	this->CurThread = static_cast<pantheon::Thread*>(BasicMalloc(sizeof(pantheon::Thread))());
+	*this->CurThread = pantheon::Thread(pantheon::GetGlobalScheduler()->ObtainProcessByID(0), pantheon::THREAD_PRIORITY_NORMAL);
+
+	this->CurThread->GetRegisters()->SetSP(SP);
+	this->CurThread->GetRegisters()->SetPC(IP);
+	this->CurThread->SetState(pantheon::THREAD_STATE_RUNNING);
 }
 
 pantheon::Scheduler::~Scheduler()
@@ -69,7 +69,6 @@ VOID pantheon::Scheduler::PerformCpuSwitch(Thread *Old, Thread *New)
 	pantheon::CpuContext *Next = (New->GetRegisters());
 
 	this->ShouldReschedule.Store(FALSE);
-	pantheon::GetGlobalScheduler()->ReleaseThread(Old);
 	cpu_switch(Prev, Next, CpuIRegOffset);
 }
 
@@ -96,14 +95,8 @@ void pantheon::Scheduler::Reschedule()
 		return;
 	}
 
-	pantheon::CPU::STI();
 	pantheon::Thread *Old = this->CurThread;
 	pantheon::Thread *New = pantheon::GetGlobalScheduler()->AcquireThread();
-
-	if (Old == New)
-	{
-		return;
-	}
 
 	if (New == nullptr)
 	{
@@ -112,12 +105,9 @@ void pantheon::Scheduler::Reschedule()
 	}
 
 	this->CurThread = New;
-	if (Old == nullptr)
-	{
-		return;
-	}
-
+	pantheon::GetGlobalScheduler()->ReleaseThread(Old);
 	this->PerformCpuSwitch(Old, New);
+	pantheon::CPU::STI();
 }
 
 pantheon::Process *pantheon::Scheduler::MyProc()
@@ -153,6 +143,16 @@ void pantheon::Scheduler::MaybeReschedule()
 void pantheon::Scheduler::SignalReschedule()
 {
 	this->ShouldReschedule.Store(TRUE);
+}
+
+void pantheon::Scheduler::StopPremption()
+{
+	this->IgnoreReschedule.Store(TRUE);
+}
+
+void pantheon::Scheduler::EnablePremption()
+{
+	this->IgnoreReschedule.Store(FALSE);
 }
 
 pantheon::GlobalScheduler::GlobalScheduler()
@@ -220,20 +220,15 @@ BOOL pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *Star
 	Regs->SetInitContext(IStartAddr, IThreadData, IStackSpace);
 	T.SetState(pantheon::THREAD_STATE_WAITING);
 	T.SetPriority(Priority);
-	this->ThreadList.Add(T);
+	this->ThreadList.Add(pantheon::Thread(T));
 	return TRUE;
 }
-
-static pantheon::Spinlock ThreadIDLock;
-static pantheon::Spinlock ProcIDLock;
 
 VOID pantheon::GlobalScheduler::Init()
 {
 	this->ThreadList = ArrayList<Thread>();
 	this->ProcessList = ArrayList<Process>();
-
-	ThreadIDLock = Spinlock("threadid");
-	ProcIDLock = Spinlock("procid");
+	AccessSpinlock = Spinlock("access_spinlock");
 
 	pantheon::Process Idle;
 	this->ProcessList.Add(Idle);
@@ -274,6 +269,11 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 		UINT64 MaxTicks = 0;
 		for (pantheon::Thread &MaybeThr : this->ThreadList)
 		{
+			if (MaybeThr.ThreadID() == pantheon::CPU::GetCurThread()->ThreadID())
+			{
+				continue;
+			}
+
 			MaybeThr.Lock();
 			UINT64 TickCount = MaybeThr.TicksLeft();
 			pantheon::ThreadState State = MaybeThr.MyState();
@@ -295,6 +295,11 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 		/* If we didn't find one after all that, refresh everyone. */
 		for (pantheon::Thread &MaybeThr : this->ThreadList)
 		{
+			if (MaybeThr.ThreadID() == pantheon::CPU::GetCurThread()->ThreadID())
+			{
+				continue;
+			}
+
 			MaybeThr.Lock();
 			MaybeThr.RefreshTicks();
 			MaybeThr.Unlock();
@@ -365,10 +370,10 @@ UINT32 pantheon::AcquireProcessID()
 	 */
 	UINT32 RetVal = 0;
 	static UINT32 ProcessID = 1;
-	ProcIDLock.Acquire();
+	pantheon::CPU::PUSHI();
 	/* A copy has to be made since we haven't unlocked the spinlock yet. */
 	RetVal = ProcessID++;
-	ProcIDLock.Release();
+	pantheon::CPU::POPI();
 	return RetVal;
 }
 
@@ -379,10 +384,10 @@ UINT64 pantheon::AcquireThreadID()
 	 */
 	UINT32 RetVal = 0;
 	static UINT64 ThreadID = 0;
-	ThreadIDLock.Acquire();
+	pantheon::CPU::PUSHI();
 	/* A copy has to be made since we haven't unlocked the spinlock yet. */
 	RetVal = ThreadID++;
-	ThreadIDLock.Release();
+	pantheon::CPU::POPI();
 	return RetVal;
 }
 

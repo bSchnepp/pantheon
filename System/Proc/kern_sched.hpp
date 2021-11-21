@@ -26,6 +26,9 @@ public:
 	void MaybeReschedule();
 	void SignalReschedule();
 
+	void StopPremption();
+	void EnablePremption();
+
 private:
 	VOID PerformCpuSwitch(Thread *Old, Thread *New);
 

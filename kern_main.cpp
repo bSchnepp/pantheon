@@ -56,12 +56,13 @@ extern "C"
 
 void kern_init_core()
 {
+	UINT8 CpuNo = pantheon::CPU::GetProcessorNumber();
+
 	while (pantheon::GetKernelStatus() < pantheon::KERNEL_STATUS_SECOND_STAGE)
 	{
 		/* Loop until core 0 finished essential kernel setup */
 	}
 
-	UINT8 CpuNo = pantheon::CPU::GetProcessorNumber();
 	pantheon::CPU::InitCoreInfo(CpuNo);
 	PerCoreInit();
 
@@ -79,11 +80,10 @@ void kern_init_core()
 		/* Loop until core 0 finished kernel setup */
 	}
 
-	pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle);
-
 	pantheon::RearmSystemTimer(1000);
-	pantheon::CPU::GetCoreInfo()->CurSched->SignalReschedule();
 	pantheon::CPU::STI();
+
+	pantheon::CPU::GetCoreInfo()->CurSched->SignalReschedule();
 	for (;;)
 	{
 		pantheon::CPU::GetCoreInfo()->CurSched->MaybeReschedule();
@@ -99,6 +99,7 @@ void kern_init(InitialBootInfo *InitBootInfo, void *initial_load_addr, void *vir
 	if (pantheon::CPU::GetProcessorNumber() == 0)
 	{
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);
+		pantheon::InitBasicMemory();
 		pantheon::GetGlobalScheduler()->Init();
 		pantheon::ipc::InitEventSystem();
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_SECOND_STAGE);
