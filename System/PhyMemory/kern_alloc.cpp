@@ -1,6 +1,6 @@
 #include <Boot/Boot.hpp>
 #include <Sync/kern_spinlock.hpp>
-#include <Common/PhyMemory/kern_alloc.hpp>
+#include <System/PhyMemory/kern_alloc.hpp>
 
 static pantheon::Spinlock AllocLock;
 

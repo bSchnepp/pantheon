@@ -6,7 +6,7 @@
 #include "kern_sched.hpp"
 #include "kern_thread.hpp"
 
-#include <Common/PhyMemory/kern_alloc.hpp>
+#include <System/PhyMemory/kern_alloc.hpp>
 
 /**
  * \~english @brief Prepares a thread ready to have contents moved to it.
