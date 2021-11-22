@@ -25,7 +25,6 @@ pantheon::Thread::Thread()
 	this->KernelStackSpace = nullptr;
 	this->UserStackSpace = nullptr;
 	this->TID = 0;
-	this->VisitFlag = FALSE;
 
 	/* TODO: Create new page tables, instead of reusing old stuff. */
 	this->TTBR0 = (void*)pantheon::CPUReg::R_TTBR0_EL1();
@@ -67,7 +66,6 @@ pantheon::Thread::Thread(Process *OwningProcess, ThreadPriority Priority)
 	this->State = pantheon::THREAD_STATE_INIT;
 
 	this->TID = AcquireThreadID();
-	this->VisitFlag = FALSE;
 
 	/* TODO: Create new page tables, instead of reusing old stuff. */
 	this->TTBR0 = (void*)pantheon::CPUReg::R_TTBR0_EL1();
@@ -90,7 +88,6 @@ pantheon::Thread::Thread(const pantheon::Thread &Other)
 	this->TID = Other.TID;
 	this->KernelStackSpace = Other.KernelStackSpace;
 	this->UserStackSpace = Other.UserStackSpace;
-	this->VisitFlag = Other.VisitFlag;
 	this->TTBR0 = (void*)Other.TTBR0;	
 	this->ThreadLock.Release();
 }
@@ -108,7 +105,6 @@ pantheon::Thread::Thread(pantheon::Thread &&Other) noexcept
 	this->TID = Other.TID;
 	this->KernelStackSpace = Other.KernelStackSpace;
 	this->UserStackSpace = Other.UserStackSpace;
-	this->VisitFlag = Other.VisitFlag;
 	this->TTBR0 = (void*)Other.TTBR0;
 	this->ThreadLock.Release();
 }
@@ -304,17 +300,6 @@ void pantheon::Thread::SetUserStackAddr(UINT64 Addr)
 {
 	this->Registers.SetSP(Addr);
 	this->UserStackSpace = reinterpret_cast<void*>((CHAR*)Addr);
-}
-
-void pantheon::Thread::FlipVisitFlag()
-{
-	this->VisitFlag = !this->VisitFlag;
-}
-
-[[nodiscard]]
-BOOL pantheon::Thread::GetVisitFlag() const
-{
-	return this->VisitFlag;
 }
 
 VOID pantheon::Thread::Lock()

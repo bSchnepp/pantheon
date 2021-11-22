@@ -1,3 +1,4 @@
+#include <kern_string.hpp>
 #include <kern_datatypes.hpp>
 
 #ifndef _KERN_EVENT_HPP_

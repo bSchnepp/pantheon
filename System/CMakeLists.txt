@@ -7,6 +7,9 @@ LIST(APPEND SYSTEM_SOURCES IPC/kern_event.cpp)
 LIST(APPEND SYSTEM_HEADERS PhyMemory/kern_alloc.hpp)
 LIST(APPEND SYSTEM_SOURCES PhyMemory/kern_alloc.cpp)
 
+LIST(APPEND SYSTEM_HEADERS Handle/kern_handle.hpp)
+LIST(APPEND SYSTEM_SOURCES Handle/kern_handle.cpp)
+
 INCLUDE_DIRECTORIES(PhyProtocol)
 ADD_SUBDIRECTORY(PhyProtocol)
 

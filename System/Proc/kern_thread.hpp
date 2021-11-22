@@ -65,9 +65,6 @@ public:
 	void SetUserStackAddr(UINT64 Addr);
 	void SetKernelStackAddr(UINT64 Addr);
 
-	void FlipVisitFlag();
-	[[nodiscard]] BOOL GetVisitFlag() const;
-
 	Thread &operator=(const Thread &Other);
 	Thread &operator=(Thread &&Other) noexcept;
 
@@ -94,8 +91,6 @@ private:
 	void *KernelStackSpace;
 	void *UserStackSpace;
 	void *TTBR0;
-
-	BOOL VisitFlag;
 };
 
 }

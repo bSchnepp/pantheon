@@ -132,51 +132,30 @@ void pantheon::Process::SetState(pantheon::ProcessState State)
 	this->CurState = State;
 }
 
-UINT8 pantheon::Process::EncodeReadableEvent(pantheon::ipc::ReadableEvent *Evt)
+INT64 pantheon::Process::EncodeHandle(const pantheon::Handle &NewHand)
 {
-	for (UINT8 Index = 0; Index < 64; Index++)
+	for (UINT64 Index = 0; Index < pantheon::Process::HandleTableSize; Index++)
 	{
-		if (this->ReadableEvents[Index] == nullptr)
+		if (this->ProcHandleTable[Index].IsValid() == FALSE)
 		{
-			this->ReadableEvents[Index] = Evt;
-			return Index;
+			this->ProcHandleTable[Index] = NewHand;
+			return static_cast<INT64>(Index);
 		}
 	}
 	return -1;
 }
 
-UINT8 pantheon::Process::EncodeWriteableEvent(pantheon::ipc::WritableEvent *Evt)
+pantheon::Handle *pantheon::Process::GetHandle(UINT8 HandleID)
 {
-	for (UINT8 Index = 0; Index < 64; Index++)
-	{
-		if (this->WriteableEvents[Index] == nullptr)
-		{
-			this->WriteableEvents[Index] = Evt;
-			return Index;
-		}
-	}
-	return -1;
-}
-
-pantheon::ipc::ReadableEvent *pantheon::Process::GetReadableEvent(UINT8 Handle)
-{
-	if (Handle > 64)
+	if (HandleID > pantheon::Process::HandleTableSize)
 	{
 		return nullptr;
 	}
 
-	/* This needs some additional checks, or better yet, wrap everything into
-	 * a generic handles table, and lookup into that. */
-	return this->ReadableEvents[Handle];
-}
-
-
-pantheon::ipc::WritableEvent *pantheon::Process::GetWritableEvent(UINT8 Handle)
-{
-	if (Handle > 64)
+	pantheon::Handle *CurHandle = &(this->ProcHandleTable[HandleID]);
+	if (CurHandle->IsValid())
 	{
-		return nullptr;
+		return CurHandle;
 	}
-		
-	return this->WriteableEvents[Handle];
+	return nullptr;
 }

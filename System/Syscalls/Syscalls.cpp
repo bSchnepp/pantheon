@@ -80,8 +80,8 @@ pantheon::Result pantheon::SVCCreateNamedEvent(const CHAR *Name, UINT8 *ReadHand
 	pantheon::ipc::NamedEvent *Evt = pantheon::ipc::LookupEvent(EvtName);
 	if (Evt != nullptr)
 	{
-		UINT8 Write = Proc->EncodeWriteableEvent(Evt->Writable);
-		UINT8 Read = Proc->EncodeReadableEvent(Evt->Readable);
+		UINT8 Write = Proc->EncodeHandle(pantheon::Handle(Evt->Writable));
+		UINT8 Read = Proc->EncodeHandle(pantheon::Handle(Evt->Readable));
 
 		*WriteHandle = Write;
 		*ReadHandle = Read;
@@ -93,8 +93,8 @@ pantheon::Result pantheon::SVCCreateNamedEvent(const CHAR *Name, UINT8 *ReadHand
 	{
 		/* TODO: Use copyin/copyout functions to safely read/write 
 		 * to user memory */
-		UINT8 Write = Proc->EncodeWriteableEvent(Evt->Writable);
-		UINT8 Read = Proc->EncodeReadableEvent(Evt->Readable);
+		UINT8 Write = Proc->EncodeHandle(pantheon::Handle(Evt->Writable));
+		UINT8 Read = Proc->EncodeHandle(pantheon::Handle(Evt->Readable));
 
 		*WriteHandle = Write;
 		*ReadHandle = Read;
@@ -107,8 +107,13 @@ pantheon::Result pantheon::SVCSignalEvent(UINT8 WriteHandle)
 {
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
 
-	/* TODO: Test that this handle exists. */
-	pantheon::ipc::WritableEvent *Evt = Proc->GetWritableEvent(WriteHandle);
+	pantheon::Handle *Hand = Proc->GetHandle(WriteHandle);
+	if (Hand->GetType() != pantheon::HANDLE_TYPE_WRITE_SIGNAL)
+	{
+		return -1;
+	}
+
+	pantheon::ipc::WritableEvent *Evt = Hand->GetContent().WriteEvent;
 	
 	if (Evt)
 	{
@@ -124,8 +129,13 @@ pantheon::Result pantheon::SVCClearEvent(UINT8 WriteHandle)
 {
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
 
-	/* TODO: Test that this handle exists. */
-	pantheon::ipc::WritableEvent *Evt = Proc->GetWritableEvent(WriteHandle);
+	pantheon::Handle *Hand = Proc->GetHandle(WriteHandle);
+	if (Hand->GetType() != pantheon::HANDLE_TYPE_WRITE_SIGNAL)
+	{
+		return -1;
+	}
+
+	pantheon::ipc::WritableEvent *Evt = Hand->GetContent().WriteEvent;
 
 	if (Evt)
 	{
@@ -138,28 +148,37 @@ pantheon::Result pantheon::SVCClearEvent(UINT8 WriteHandle)
 pantheon::Result pantheon::SVCResetEvent(UINT8 ReadHandle)
 {
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+	pantheon::Handle *Hand = Proc->GetHandle(ReadHandle);
+	if (Hand->GetType() != pantheon::HANDLE_TYPE_READ_SIGNAL)
+	{
+		return -1;
+	}
 
-	/* TODO: Test that this handle exists. */
-	pantheon::ipc::ReadableEvent *Evt = Proc->GetReadableEvent(ReadHandle);
+	pantheon::ipc::ReadableEvent *Evt = Hand->GetContent().ReadEvent;
 	if (Evt)
 	{
 		Evt->Clearer = Proc;
 		Evt->Parent->Status = pantheon::ipc::EVENT_TYPE_UNSIGNALED;
+		return 0;
 	}	
-	return 0;
+	return -1;
 }
 
 pantheon::Result pantheon::SVCPollEvent(UINT8 Handle)
 {
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+	pantheon::Handle *Hand = Proc->GetHandle(Handle);
+	if (Hand->GetType() != pantheon::HANDLE_TYPE_READ_SIGNAL)
+	{
+		return -1;
+	}
 
-	/* TODO: Test that this handle exists. */
-	pantheon::ipc::ReadableEvent *Evt = Proc->GetReadableEvent(Handle);
+	pantheon::ipc::ReadableEvent *Evt = Hand->GetContent().ReadEvent;
 	if (Evt)
 	{
 		return Evt->Parent->Status == pantheon::ipc::EVENT_TYPE_SIGNALED;
 	}
-	return 0;
+	return -1;
 }
 
 void *syscall_table[] = 
