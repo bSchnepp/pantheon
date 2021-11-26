@@ -168,13 +168,3 @@ UINT64 pantheon::arm::DAIFR()
 	asm volatile("mrs %0, daif\n" : "=r"(Val));
 	return Val;
 }
-
-VOID pantheon::arm::CLI()
-{
-	asm volatile("msr daifset, #3\n");
-}
-
-VOID pantheon::arm::STI()
-{
-	asm volatile("msr daifclr, #3\n");
-}

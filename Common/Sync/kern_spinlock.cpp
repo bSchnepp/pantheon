@@ -25,30 +25,38 @@ pantheon::Spinlock::~Spinlock()
 	__sync_synchronize();
 	UINT8 Core = pantheon::CPU::GetProcessorNumber();
 	UINT8 Lock = this->Locked;
+	__sync_synchronize();
+	
 	if (Core == this->CoreNo && Lock)
 	{
 		return TRUE;
 	}
 	return FALSE;
-	__sync_synchronize();
 }
 
 void pantheon::Spinlock::Acquire()
 {
 	pantheon::CPU::PUSHI();
+	__sync_synchronize();
+
+	if (this->IsHolding())
+	{
+		StopError(this->DebugName, this);
+	}
 
 	for (;;)
 	{
-		if (this->IsHolding())
+		__sync_synchronize();
+		if (this->Locked)
 		{
 			continue;
 		}
+
 		if (__sync_lock_test_and_set(&this->Locked, TRUE) == FALSE)
 		{
 			break;
 		}
-		pantheon::Sync::DSBSY();
-		pantheon::Sync::ISB();
+		__sync_synchronize();
 	}
 	this->CoreNo = pantheon::CPU::GetProcessorNumber();
 	__sync_synchronize();

@@ -8,8 +8,8 @@
 #include <Sync/kern_spinlock.hpp>
 
 #include <Proc/kern_thread.hpp>
-#include <IPC/kern_event.hpp>
 #include <Handle/kern_handle.hpp>
+#include <Handle/kern_lockable.hpp>
 
 #ifndef _KERN_PROC_HPP_
 #define _KERN_PROC_HPP_
@@ -37,7 +37,7 @@ typedef enum ProcessPriority
 	PROCESS_PRIORITY_VERYHIGH = 4,
 }ProcessPriority;
 
-class Process
+class Process : public pantheon::Lockable
 {
 public:
 	Process();
@@ -45,7 +45,7 @@ public:
 	Process(String &CommandString);
 	Process(const Process &Other) noexcept;
 	Process(Process &&Other) noexcept;
-	~Process();
+	~Process() override;
 
 	Process &operator=(const Process &Other);
 	Process &operator=(Process &&Other) noexcept;

@@ -100,13 +100,12 @@ void kern_init(InitialBootInfo *InitBootInfo, void *initial_load_addr, void *vir
 	{
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);
 		pantheon::InitBasicMemory();
-		pantheon::GetGlobalScheduler()->Init();
 		pantheon::ipc::InitEventSystem();
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_SECOND_STAGE);
-
 		/* Create an extra idle thread to ensure rescheduling happens.
 		 * Without a spare thread, no scheduling ever occurs. FIXME!
 		 */
+		pantheon::GetGlobalScheduler()->Init();
 		pantheon::GetGlobalScheduler()->CreateProcess("sysm", (void*)kern_idle2);
 		pantheon::GetGlobalScheduler()->CreateProcess("prgm", (void*)kern_idle3);
 

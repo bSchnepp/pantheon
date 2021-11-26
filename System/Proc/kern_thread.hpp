@@ -5,6 +5,7 @@
 #include <kern_container.hpp>
 
 #include <Sync/kern_atomic.hpp>
+#include <Handle/kern_lockable.hpp>
 
 #ifndef _KERN_THREAD_HPP_
 #define _KERN_THREAD_HPP_
@@ -32,8 +33,7 @@ typedef enum ThreadPriority
 
 class Process;
 
-/* NOT YET IMPLEMENTED! Placeholder for CPUInfo!!!! */
-class Thread
+class Thread  : public pantheon::Lockable
 {
 public:
 	Thread();
@@ -41,7 +41,7 @@ public:
 	Thread(Process *ParentProcess, ThreadPriority Priority);
 	Thread(const Thread &Other);
 	Thread(Thread &&Other) noexcept;
-	~Thread();
+	~Thread() override;
 
 	[[nodiscard]] Process *MyProc() const;
 
@@ -72,11 +72,7 @@ public:
 
 	void SetProc(pantheon::Process *Proc);
 
-	VOID Lock();
-	VOID Unlock();
-
 private:
-	pantheon::Spinlock ThreadLock;
 	UINT64 TID;
 
 	CpuContext Registers;

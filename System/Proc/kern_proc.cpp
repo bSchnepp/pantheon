@@ -5,10 +5,11 @@
 #include <System/Proc/kern_sched.hpp>
 #include <System/Proc/kern_thread.hpp>
 
+#include <Handle/kern_lockable.hpp>
 #include <Common/Structures/kern_slab.hpp>
 
 
-pantheon::Process::Process()
+pantheon::Process::Process() : pantheon::Lockable("Process")
 {
 	this->CurState = pantheon::PROCESS_STATE_INIT;
 	this->Priority = pantheon::PROCESS_PRIORITY_VERYLOW;
@@ -19,7 +20,7 @@ pantheon::Process::Process()
 	
 }
 
-pantheon::Process::Process(const char *CommandString)
+pantheon::Process::Process(const char *CommandString) : pantheon::Lockable("Process")
 {
 	this->ProcessCommand = pantheon::String(CommandString);
 	this->CurState = pantheon::PROCESS_STATE_INIT;
@@ -30,7 +31,7 @@ pantheon::Process::Process(const char *CommandString)
 	
 }
 
-pantheon::Process::Process(pantheon::String &CommandString)
+pantheon::Process::Process(pantheon::String &CommandString) : pantheon::Lockable("Process")
 {
 	this->CurState = pantheon::PROCESS_STATE_INIT;
 	this->Priority = pantheon::PROCESS_PRIORITY_NORMAL;
@@ -41,13 +42,15 @@ pantheon::Process::Process(pantheon::String &CommandString)
 	
 }
 
-pantheon::Process::Process(const Process &Other) noexcept
+pantheon::Process::Process(const Process &Other) noexcept : pantheon::Lockable("Process")
 {
+	this->Lock();
 	this->CurState = Other.CurState;
 	this->PID = Other.PID;
 	this->Priority = Other.Priority;
 	this->ProcessCommand = Other.ProcessCommand;
 	this->MemoryMap = Other.MemoryMap;
+	this->Unlock();
 }
 
 pantheon::Process::Process(Process &&Other) noexcept

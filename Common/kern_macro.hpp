@@ -1,3 +1,5 @@
+#include <kern_datatypes.hpp>
+
 #ifndef _KERN_MACRO_HPP_
 #define _KERN_MACRO_HPP_
 
@@ -9,5 +11,4 @@
 		COMPILER_CONCAT( \
 			COMPILER_CONCAT(assertion_failed_, __COUNTER__), _), \
 		__LINE__)[(2 * (!!(condition))) - 1]
-
 #endif

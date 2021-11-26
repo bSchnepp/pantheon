@@ -12,10 +12,9 @@
  * \~english @brief Prepares a thread ready to have contents moved to it.
  * \~english @author Brian Schnepp
  */
-pantheon::Thread::Thread()
+pantheon::Thread::Thread() : pantheon::Lockable("Thread")
 {
-	this->ThreadLock = pantheon::Spinlock("thread_lock");
-	this->ThreadLock.Acquire();
+	this->Lock();
 	this->ParentProcess = nullptr;
 	this->PreemptCount = 0;
 	this->Priority = pantheon::THREAD_PRIORITY_NORMAL;
@@ -28,7 +27,7 @@ pantheon::Thread::Thread()
 
 	/* TODO: Create new page tables, instead of reusing old stuff. */
 	this->TTBR0 = (void*)pantheon::CPUReg::R_TTBR0_EL1();
-	this->ThreadLock.Release();
+	this->Unlock();
 }
 
 /**
@@ -50,10 +49,9 @@ pantheon::Thread::Thread(Process *OwningProcess)
  * \~english @param Priority The priority of the current thread. The thread
  * priority given will never be greater than the supplied priority. 
  */
-pantheon::Thread::Thread(Process *OwningProcess, ThreadPriority Priority)
+pantheon::Thread::Thread(Process *OwningProcess, ThreadPriority Priority) : pantheon::Lockable("Thread")
 {
-	this->ThreadLock = pantheon::Spinlock("thread_lock");
-	this->ThreadLock.Acquire();
+	this->Lock();
 	this->ParentProcess = OwningProcess;
 	this->Priority = Priority;
 	this->KernelStackSpace = nullptr;
@@ -72,13 +70,12 @@ pantheon::Thread::Thread(Process *OwningProcess, ThreadPriority Priority)
 
 	/* 45 for NORMAL, 30 for LOW, 15 for VERYLOW, etc. */
 	this->RefreshTicks();
-	this->ThreadLock.Release();
+	this->Unlock();
 }
 
-pantheon::Thread::Thread(const pantheon::Thread &Other)
+pantheon::Thread::Thread(const pantheon::Thread &Other) : pantheon::Lockable("Thread")
 {
-	this->ThreadLock = pantheon::Spinlock("thread_lock");
-	this->ThreadLock.Acquire();
+	this->Lock();
 	this->ParentProcess = Other.ParentProcess;
 	this->PreemptCount = Other.PreemptCount;
 	this->Priority = Other.Priority;
@@ -89,13 +86,11 @@ pantheon::Thread::Thread(const pantheon::Thread &Other)
 	this->KernelStackSpace = Other.KernelStackSpace;
 	this->UserStackSpace = Other.UserStackSpace;
 	this->TTBR0 = (void*)Other.TTBR0;	
-	this->ThreadLock.Release();
+	this->Unlock();
 }
 
-pantheon::Thread::Thread(pantheon::Thread &&Other) noexcept
+pantheon::Thread::Thread(pantheon::Thread &&Other) noexcept : pantheon::Lockable("Thread")
 {
-	this->ThreadLock = pantheon::Spinlock("thread_lock");
-	this->ThreadLock.Acquire();
 	this->ParentProcess = Other.ParentProcess;
 	this->PreemptCount = Other.PreemptCount;
 	this->Priority = Other.Priority;
@@ -106,7 +101,6 @@ pantheon::Thread::Thread(pantheon::Thread &&Other) noexcept
 	this->KernelStackSpace = Other.KernelStackSpace;
 	this->UserStackSpace = Other.UserStackSpace;
 	this->TTBR0 = (void*)Other.TTBR0;
-	this->ThreadLock.Release();
 }
 
 pantheon::Thread::~Thread()
@@ -256,7 +250,6 @@ pantheon::Thread &pantheon::Thread::operator=(const pantheon::Thread &Other)
 	{
 		return *this;
 	}
-	this->ThreadLock = pantheon::Spinlock("thread_lock");
 	this->ParentProcess = Other.ParentProcess;
 	this->PreemptCount = Other.PreemptCount;
 	this->Priority = Other.Priority;
@@ -277,7 +270,6 @@ pantheon::Thread &pantheon::Thread::operator=(pantheon::Thread &&Other) noexcept
 	{
 		return *this;
 	}
-	this->ThreadLock = pantheon::Spinlock("thread_lock");
 	this->ParentProcess = Other.ParentProcess;
 	this->PreemptCount = Other.PreemptCount;
 	this->Priority = Other.Priority;
@@ -300,16 +292,6 @@ void pantheon::Thread::SetUserStackAddr(UINT64 Addr)
 {
 	this->Registers.SetSP(Addr);
 	this->UserStackSpace = reinterpret_cast<void*>((CHAR*)Addr);
-}
-
-VOID pantheon::Thread::Lock()
-{
-	this->ThreadLock.Acquire();
-}
-
-VOID pantheon::Thread::Unlock()
-{
-	this->ThreadLock.Release();
 }
 
 void pantheon::Thread::SetProc(pantheon::Process *Proc)

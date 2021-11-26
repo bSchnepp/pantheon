@@ -3,12 +3,25 @@
 #include <kern.h>
 #include <kern_integers.hpp>
 #include <kern_datatypes.hpp>
+#include <kern_runtime.hpp>
 
 /* Necessary since when portions of the kernel are recompiled in userspace
  * to run on the host (ie, for CI/CD), we don't want to break the libc
  * implementations.
  */
 #ifndef ONLY_TESTS
+
+void *operator new(UINT64 Sz)
+{
+	PANTHEON_UNUSED(Sz);
+	return BasicMalloc(Sz)();
+}
+
+void operator delete(void *Ptr)
+{
+	PANTHEON_UNUSED(Ptr);
+}
+
 extern "C"
 {
 
@@ -66,6 +79,7 @@ extern "C" void *memset(void *dest, int v, unsigned long int n)
 
 }
 #endif
+
 
 uint8_t SwapBytes(uint8_t Item)
 {

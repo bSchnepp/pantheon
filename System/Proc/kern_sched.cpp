@@ -95,6 +95,7 @@ void pantheon::Scheduler::Reschedule()
 		return;
 	}
 
+	this->IgnoreReschedule.Store(TRUE);
 	pantheon::Thread *Old = this->CurThread;
 	pantheon::Thread *New = pantheon::GetGlobalScheduler()->AcquireThread();
 
@@ -107,6 +108,7 @@ void pantheon::Scheduler::Reschedule()
 	this->CurThread = New;
 	pantheon::GetGlobalScheduler()->ReleaseThread(Old);
 	this->PerformCpuSwitch(Old, New);
+	this->IgnoreReschedule.Store(FALSE);
 	pantheon::CPU::STI();
 }
 
@@ -269,7 +271,7 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 		UINT64 MaxTicks = 0;
 		for (pantheon::Thread &MaybeThr : this->ThreadList)
 		{
-			if (MaybeThr.ThreadID() == pantheon::CPU::GetCurThread()->ThreadID())
+			if (MaybeThr.IsLocked() || MaybeThr.MyState() == pantheon::THREAD_STATE_RUNNING)
 			{
 				continue;
 			}
@@ -295,7 +297,7 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 		/* If we didn't find one after all that, refresh everyone. */
 		for (pantheon::Thread &MaybeThr : this->ThreadList)
 		{
-			if (MaybeThr.ThreadID() == pantheon::CPU::GetCurThread()->ThreadID())
+			if (MaybeThr.IsLocked() || MaybeThr.MyState() == pantheon::THREAD_STATE_RUNNING)
 			{
 				continue;
 			}
