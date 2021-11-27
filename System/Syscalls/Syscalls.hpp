@@ -24,6 +24,7 @@ Result SVCSignalEvent(UINT8 WriteHandle);
 Result SVCClearEvent(UINT8 WriteHandle);
 Result SVCResetEvent(UINT8 ReadHandle);
 Result SVCPollEvent(UINT8 Handle);
+Result SVCYield();
 }
 
 #endif

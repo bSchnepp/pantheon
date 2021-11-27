@@ -181,6 +181,16 @@ pantheon::Result pantheon::SVCPollEvent(UINT8 Handle)
 	return -1;
 }
 
+pantheon::Result pantheon::SVCYield()
+{
+	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+	pantheon::Scheduler *CurSched = pantheon::CPU::GetCurSched();
+	CurThread->AddTicks(-CurThread->TicksLeft());	/* Zero out remaining time */
+	CurSched->SignalReschedule();
+	CurSched->Reschedule();
+	return 0;
+}
+
 void *syscall_table[] = 
 {
 	(void*)pantheon::SVCExitProcess, 
@@ -193,4 +203,5 @@ void *syscall_table[] =
 	(void*)pantheon::SVCClearEvent,
 	(void*)pantheon::SVCResetEvent,
 	(void*)pantheon::SVCPollEvent,
+	(void*)pantheon::SVCYield,
 };

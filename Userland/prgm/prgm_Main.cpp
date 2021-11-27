@@ -15,6 +15,7 @@ extern "C" void prgm_Main()
 		{
 			svc_ResetEvent(Read);
 			svc_LogText("GOT SIGNAL");
+			svc_Yield();
 		}
 		svc_LogText("IN USERSPACE [prgm]");
 	}

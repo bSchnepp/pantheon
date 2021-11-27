@@ -17,6 +17,7 @@ extern "C" void svc_SignalEvent(UINT8 Handle);
 extern "C" void svc_ClearEvent(UINT8 Handle);
 extern "C" void svc_ResetEvent(UINT8 Handle);
 extern "C" BOOL svc_PollEvent(UINT8 Handle);
+extern "C" VOID svc_Yield();
 
 #ifdef __cplusplus
 }

@@ -57,3 +57,9 @@ svc_PollEvent:
 	mov w8, #9
 	svc #0
 	ret
+
+.globl svc_Yield
+svc_Yield:
+	mov w8, #10
+	svc #0
+	ret
