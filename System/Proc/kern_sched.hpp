@@ -5,6 +5,7 @@
 #include <kern_container.hpp>
 
 #include <Sync/kern_atomic.hpp>
+#include <Common/Structures/kern_linkedlist.hpp>
 
 #ifndef _KERN_SCHED_HPP_
 #define _KERN_SCHED_HPP_
@@ -63,7 +64,7 @@ public:
 private:
 	Spinlock AccessSpinlock;
 	ArrayList<Process> ProcessList;
-	ArrayList<Thread> ThreadList;
+	pantheon::LinkedList<Thread> ThreadList;
 };
 
 UINT32 AcquireProcessID();

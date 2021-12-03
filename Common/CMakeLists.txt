@@ -11,6 +11,7 @@ LIST(APPEND COMMON_HEADERS Structures/kern_optional.hpp)
 LIST(APPEND COMMON_HEADERS Structures/kern_bitmap.hpp)
 LIST(APPEND COMMON_HEADERS Structures/kern_rawbitmap.hpp)
 LIST(APPEND COMMON_HEADERS Structures/kern_slab.hpp)
+LIST(APPEND COMMON_HEADERS Structures/kern_linkedlist.hpp)
 
 
 LIST(APPEND COMMON_SOURCES kern_runtime.cpp)

@@ -10,6 +10,7 @@
 #include <System/Proc/kern_thread.hpp>
 
 #include <System/PhyMemory/kern_alloc.hpp>
+#include <Common/Structures/kern_linkedlist.hpp>
 
 #ifndef ONLY_TESTING
 extern "C" CHAR *USER_BEGIN;
@@ -212,23 +213,31 @@ BOOL pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *Star
 
 BOOL pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority, void *StackTop)
 {
-	pantheon::Thread T(Proc);
+	Optional<void*> MaybeMem = BasicMalloc(sizeof(pantheon::Thread));
+	if (MaybeMem.GetOkay() == FALSE)
+	{
+		return FALSE;
+	}
+
+	void *Mem = MaybeMem.GetValue();
+	pantheon::Thread *T = static_cast<pantheon::Thread*>(Mem);
+	*T = pantheon::Thread(Proc);
 
 	UINT64 IStartAddr = (UINT64)StartAddr;
 	UINT64 IThreadData = (UINT64)ThreadData;
 	UINT64 IStackSpace = (UINT64)StackTop;
 
-	pantheon::CpuContext *Regs = T.GetRegisters();
+	pantheon::CpuContext *Regs = T->GetRegisters();
 	Regs->SetInitContext(IStartAddr, IThreadData, IStackSpace);
-	T.SetState(pantheon::THREAD_STATE_WAITING);
-	T.SetPriority(Priority);
-	this->ThreadList.Add(pantheon::Thread(T));
+	T->SetState(pantheon::THREAD_STATE_WAITING);
+	T->SetPriority(Priority);
+	this->ThreadList.Append(pantheon::LinkedList<pantheon::Thread>::CreateEntry(T));
 	return TRUE;
 }
 
 VOID pantheon::GlobalScheduler::Init()
 {
-	this->ThreadList = ArrayList<Thread>();
+	this->ThreadList = pantheon::LinkedList<Thread>();
 	this->ProcessList = ArrayList<Process>();
 	AccessSpinlock = Spinlock("access_spinlock");
 
