@@ -32,7 +32,6 @@ static void proc_idle()
 {
 	for (;;) 
 	{
-		pantheon::CPU::GetCurSched()->MaybeReschedule();
 	}
 }
 
@@ -42,7 +41,6 @@ static void proc_idle()
  */
 pantheon::Scheduler::Scheduler()
 {
-	this->ShouldReschedule.Store(FALSE);
 	this->IgnoreReschedule.Store(FALSE);
 
 	/* hackishly create an idle thread */
@@ -55,6 +53,7 @@ pantheon::Scheduler::Scheduler()
 	this->CurThread->GetRegisters()->SetSP(SP);
 	this->CurThread->GetRegisters()->SetPC(IP);
 	this->CurThread->SetState(pantheon::THREAD_STATE_RUNNING);
+	pantheon::GetGlobalScheduler()->InjectThread(this->CurThread);
 }
 
 pantheon::Scheduler::~Scheduler()
@@ -68,8 +67,6 @@ VOID pantheon::Scheduler::PerformCpuSwitch(Thread *Old, Thread *New)
 {
 	pantheon::CpuContext *Prev = (Old->GetRegisters());
 	pantheon::CpuContext *Next = (New->GetRegisters());
-
-	this->ShouldReschedule.Store(FALSE);
 	cpu_switch(Prev, Next, CpuIRegOffset);
 }
 
@@ -85,13 +82,13 @@ VOID pantheon::Scheduler::PerformCpuSwitch(Thread *Old, Thread *New)
  */
 void pantheon::Scheduler::Reschedule()
 {
-	if (this->IgnoreReschedule.Load() == TRUE)
+	/* Interrupts must be enabled before we can do anything. */
+	if (pantheon::CPU::ICOUNT())
 	{
 		return;
 	}
 
-	/* Interrupts must be enabled before we can do anything. */
-	if (pantheon::CPU::ICOUNT())
+	if (this->IgnoreReschedule.Load())
 	{
 		return;
 	}
@@ -100,7 +97,7 @@ void pantheon::Scheduler::Reschedule()
 	pantheon::Thread *Old = this->CurThread;
 	pantheon::Thread *New = pantheon::GetGlobalScheduler()->AcquireThread();
 
-	if (New == nullptr)
+	if (New == nullptr || New == Old)
 	{
 		pantheon::CPU::HLT();
 		return;
@@ -125,27 +122,6 @@ pantheon::Process *pantheon::Scheduler::MyProc()
 pantheon::Thread *pantheon::Scheduler::MyThread()
 {
 	return this->CurThread;
-}
-
-/**
- * \~english @brief Attempts to reschedule if the appropriate flag is fired
- * \~english @author Brian Schnepp
- */
-void pantheon::Scheduler::MaybeReschedule()
-{
-	if (this->ShouldReschedule.Load() == TRUE)
-	{
-		this->Reschedule();
-	}
-}
-
-/**
- * \~english @brief Signals that this scheduler should run a different thread
- * \~english @author Brian Schnepp
- */
-void pantheon::Scheduler::SignalReschedule()
-{
-	this->ShouldReschedule.Store(TRUE);
 }
 
 void pantheon::Scheduler::StopPremption()
@@ -257,6 +233,13 @@ VOID pantheon::GlobalScheduler::CreateIdleProc(void *StartAddr)
 		}
 	}
 	AccessSpinlock.Release();
+}
+
+VOID pantheon::GlobalScheduler::InjectThread(pantheon::Thread *CurThread)
+{
+	this->AccessSpinlock.Acquire();
+	this->ThreadList.Append(pantheon::LinkedList<pantheon::Thread>::CreateEntry(CurThread));
+	this->AccessSpinlock.Release();
 }
 
 
@@ -418,12 +401,15 @@ void pantheon::AttemptReschedule()
 	{
 		CurThread->CountTick();
 		RemainingTicks = CurThread->TicksLeft();
-	}
-		
-	if (RemainingTicks == 0)
-	{
-		CurSched->SignalReschedule();
-	}
 
-	CurSched->MaybeReschedule();
+		if (RemainingTicks == 0)
+		{
+			CurSched->Reschedule();
+		}
+	}
+}
+
+extern "C" VOID FinishThread()
+{
+	pantheon::CPU::GetCurSched()->EnablePremption();
 }

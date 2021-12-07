@@ -134,6 +134,11 @@ void CopyMemory(VOID *Dest, VOID *Src, UINT64 Amt)
 
 void SERIAL_LOG_UNSAFE(const char *Fmt, ...)
 {
+	if (pantheon::Panicked())
+	{
+		return;
+	}
+	
 	va_list Args;
 	va_start(Args, Fmt);
 	vprintf(Fmt, Args);
@@ -148,6 +153,11 @@ static pantheon::Spinlock PrintMutex("print lock");
 
 void SERIAL_LOG(const char *Fmt, ...)
 {
+	if (pantheon::Panicked())
+	{
+		return;
+	}
+
 	PrintMutex.Acquire();
 	va_list Args;
 
@@ -156,6 +166,8 @@ void SERIAL_LOG(const char *Fmt, ...)
 	va_end(Args);
 	PrintMutex.Release();
 }
+
+static BOOL PanickedState;
 
 void pantheon::StopError(const char *Reason, void *Source)
 {
@@ -176,5 +188,12 @@ void pantheon::StopError(const char *Reason, void *Source)
 	}
 	
 	/* TODO: stop other cores */
+	PanickedState = TRUE;
+	pantheon::CPU::CLI();
 	for (;;){};
+}
+
+BOOL pantheon::Panicked()
+{
+	return PanickedState;
 }

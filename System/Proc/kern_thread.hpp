@@ -55,6 +55,7 @@ public:
 	VOID AddTicks(UINT64 TickCount);
 	VOID CountTick();
 	VOID RefreshTicks();
+	VOID SetTicks(UINT64 TickCount);
 
 	VOID SetState(ThreadState State);
 	VOID SetPriority(ThreadPriority Priority);

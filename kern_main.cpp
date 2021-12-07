@@ -82,12 +82,6 @@ void kern_init_core()
 
 	pantheon::RearmSystemTimer(1000);
 	pantheon::CPU::STI();
-
-	pantheon::CPU::GetCoreInfo()->CurSched->SignalReschedule();
-	for (;;)
-	{
-		pantheon::CPU::GetCoreInfo()->CurSched->MaybeReschedule();
-	}
 }
 
 void kern_init(InitialBootInfo *InitBootInfo, void *initial_load_addr, void *virt_load_addr)
@@ -112,6 +106,10 @@ void kern_init(InitialBootInfo *InitBootInfo, void *initial_load_addr, void *vir
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_OK);
 	}
 	kern_init_core();
+	for (;;)
+	{
+		pantheon::CPU::GetCoreInfo()->CurSched->Reschedule();
+	}	
 }
 
 #ifdef __cplusplus

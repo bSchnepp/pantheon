@@ -24,9 +24,6 @@ public:
 	Process *MyProc();
 	Thread *MyThread();
 
-	void MaybeReschedule();
-	void SignalReschedule();
-
 	void StopPremption();
 	void EnablePremption();
 
@@ -34,7 +31,6 @@ private:
 	VOID PerformCpuSwitch(Thread *Old, Thread *New);
 
 	Thread *CurThread;
-	Atomic<BOOL> ShouldReschedule;
 	Atomic<BOOL> IgnoreReschedule;
 
 	pantheon::Thread IdleThread;
@@ -53,6 +49,7 @@ public:
 	BOOL CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority);
 	BOOL CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority, void *StackTop);
 	VOID CreateIdleProc(void *StartAddr);
+	VOID InjectThread(pantheon::Thread *CurThread);
 
 	Thread* AcquireThread();
 	UINT64 CountThreads(UINT64 PID);

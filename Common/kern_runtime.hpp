@@ -150,6 +150,7 @@ namespace pantheon
 
 void InitBasicMemory();
 void StopError(const char *Reason, void *Source = nullptr);
+BOOL Panicked();
 
 }
 

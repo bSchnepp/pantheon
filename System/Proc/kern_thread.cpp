@@ -219,6 +219,11 @@ VOID pantheon::Thread::SetState(ThreadState State)
 	this->State = State;
 }
 
+VOID pantheon::Thread::SetTicks(UINT64 TickCount)
+{
+	this->RemainingTicks = TickCount;
+}
+
 /**
  * \~english @brief Changes the priority of the current thread
  * \~english @details Informs the kernel that this thread should be scheduled
