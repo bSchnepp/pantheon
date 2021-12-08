@@ -51,7 +51,7 @@ void pantheon::Spinlock::Acquire()
 		{
 			continue;
 		}
-
+		__sync_synchronize();
 		if (__sync_lock_test_and_set(&this->Locked, TRUE) == FALSE)
 		{
 			break;
@@ -70,17 +70,17 @@ void pantheon::Spinlock::Release()
 		pantheon::StopError(this->DebugName, this);
 	}
 
+	__sync_synchronize();
 	if (this->Holder() != pantheon::CPU::GetProcessorNumber())
 	{
 		pantheon::StopError(this->DebugName, this);
 	}
 	
 	this->CoreNo = 0;
-	__sync_synchronize();
 	__sync_lock_release(&this->Locked);
+	__sync_synchronize();
 	pantheon::CPU::POPI();
-	pantheon::Sync::DSBSY();
-	pantheon::Sync::ISB();	
+	
 }
 
 /**

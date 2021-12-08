@@ -106,10 +106,18 @@ pantheon::Result pantheon::SVCCreateNamedEvent(const CHAR *Name, UINT8 *ReadHand
 pantheon::Result pantheon::SVCSignalEvent(UINT8 WriteHandle)
 {
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+	Proc->Lock();
 
 	pantheon::Handle *Hand = Proc->GetHandle(WriteHandle);
+	if (Hand == nullptr)
+	{
+		Proc->Unlock();
+		return -1;
+	}
+
 	if (Hand->GetType() != pantheon::HANDLE_TYPE_WRITE_SIGNAL)
 	{
+		Proc->Unlock();
 		return -1;
 	}
 
@@ -122,16 +130,25 @@ pantheon::Result pantheon::SVCSignalEvent(UINT8 WriteHandle)
 	}
 
 	/* TODO: wakeup every process waiting on it */
+	Proc->Unlock();
 	return 0;
 }
 
 pantheon::Result pantheon::SVCClearEvent(UINT8 WriteHandle)
 {
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+	Proc->Lock();
 
 	pantheon::Handle *Hand = Proc->GetHandle(WriteHandle);
+	if (Hand == nullptr)
+	{
+		Proc->Unlock();
+		return -1;
+	}
+	
 	if (Hand->GetType() != pantheon::HANDLE_TYPE_WRITE_SIGNAL)
 	{
+		Proc->Unlock();
 		return -1;
 	}
 
@@ -142,15 +159,25 @@ pantheon::Result pantheon::SVCClearEvent(UINT8 WriteHandle)
 		Evt->Parent->Readable->Clearer = Proc;
 		Evt->Parent->Status = pantheon::ipc::EVENT_TYPE_UNSIGNALED;
 	}
+	Proc->Unlock();
 	return 0;
 }
 
 pantheon::Result pantheon::SVCResetEvent(UINT8 ReadHandle)
 {
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+	Proc->Lock();
+
 	pantheon::Handle *Hand = Proc->GetHandle(ReadHandle);
+	if (Hand == nullptr)
+	{
+		Proc->Unlock();
+		return -1;
+	}
+	
 	if (Hand->GetType() != pantheon::HANDLE_TYPE_READ_SIGNAL)
 	{
+		Proc->Unlock();
 		return -1;
 	}
 
@@ -159,25 +186,37 @@ pantheon::Result pantheon::SVCResetEvent(UINT8 ReadHandle)
 	{
 		Evt->Clearer = Proc;
 		Evt->Parent->Status = pantheon::ipc::EVENT_TYPE_UNSIGNALED;
+		Proc->Unlock();
 		return 0;
-	}	
+	}
+	Proc->Unlock();
 	return -1;
 }
 
 pantheon::Result pantheon::SVCPollEvent(UINT8 Handle)
 {
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+	Proc->Lock();
 	pantheon::Handle *Hand = Proc->GetHandle(Handle);
+	if (Hand == nullptr)
+	{
+		Proc->Unlock();
+		return -1;
+	}
+	
 	if (Hand->GetType() != pantheon::HANDLE_TYPE_READ_SIGNAL)
 	{
+		Proc->Unlock();
 		return -1;
 	}
 
 	pantheon::ipc::ReadableEvent *Evt = Hand->GetContent().ReadEvent;
 	if (Evt)
 	{
+		Proc->Unlock();
 		return Evt->Parent->Status == pantheon::ipc::EVENT_TYPE_SIGNALED;
 	}
+	Proc->Unlock();
 	return -1;
 }
 
