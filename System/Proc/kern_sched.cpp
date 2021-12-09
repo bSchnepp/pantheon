@@ -47,13 +47,7 @@ pantheon::Scheduler::Scheduler()
 	UINT64 SP = (UINT64)((BasicMalloc(4096)())) + 4096;
 	UINT64 IP = (UINT64)proc_idle;
 
-	this->CurThread = static_cast<pantheon::Thread*>(BasicMalloc(sizeof(pantheon::Thread))());
-	*this->CurThread = pantheon::Thread(pantheon::GetGlobalScheduler()->ObtainProcessByID(0), pantheon::THREAD_PRIORITY_NORMAL);
-
-	this->CurThread->GetRegisters()->SetSP(SP);
-	this->CurThread->GetRegisters()->SetPC(IP);
-	this->CurThread->SetState(pantheon::THREAD_STATE_RUNNING);
-	pantheon::GetGlobalScheduler()->InjectThread(this->CurThread);
+	this->CurThread = pantheon::GetGlobalScheduler()->CreateProcessorIdleThread(SP, IP);
 }
 
 pantheon::Scheduler::~Scheduler()
@@ -235,11 +229,19 @@ VOID pantheon::GlobalScheduler::CreateIdleProc(void *StartAddr)
 	AccessSpinlock.Release();
 }
 
-VOID pantheon::GlobalScheduler::InjectThread(pantheon::Thread *CurThread)
+pantheon::Thread *pantheon::GlobalScheduler::CreateProcessorIdleThread(UINT64 SP, UINT64 IP)
 {
+	pantheon::Thread *CurThread = static_cast<pantheon::Thread*>(BasicMalloc(sizeof(pantheon::Thread))());
+	*CurThread = pantheon::Thread(pantheon::GetGlobalScheduler()->ObtainProcessByID(0), pantheon::THREAD_PRIORITY_NORMAL);
+
+	CurThread->GetRegisters()->SetSP(SP);
+	CurThread->GetRegisters()->SetPC(IP);
+	CurThread->SetState(pantheon::THREAD_STATE_RUNNING);
+
 	this->AccessSpinlock.Acquire();
 	this->ThreadList.Append(pantheon::LinkedList<pantheon::Thread>::CreateEntry(CurThread));
 	this->AccessSpinlock.Release();
+	return CurThread;
 }
 
 
