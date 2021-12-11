@@ -61,7 +61,7 @@ VOID pantheon::Scheduler::PerformCpuSwitch(Thread *Old, Thread *New)
 {
 	pantheon::CpuContext *Prev = (Old->GetRegisters());
 	pantheon::CpuContext *Next = (New->GetRegisters());
-	cpu_switch(Prev, Next, CpuIRegOffset);
+	cpu_switch(Prev, Next, CpuIRegOffset);	
 }
 
 /**

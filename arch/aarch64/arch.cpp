@@ -73,6 +73,7 @@ VOID pantheon::CPU::PUSHI()
 		CoreInfo->IntStatus = InterruptsOn;
 	}
 	CoreInfo->NOff++;
+	pantheon::Sync::ISB();
 }
 
 VOID pantheon::CPU::POPI()
@@ -90,6 +91,7 @@ VOID pantheon::CPU::POPI()
 	{
 		pantheon::CPU::STI();
 	}
+	pantheon::Sync::ISB();
 }
 
 VOID pantheon::CPU::LIDT(void *Table)

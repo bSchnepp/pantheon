@@ -4,6 +4,11 @@
 
 static pantheon::Spinlock AllocLock;
 
+void pantheon::PageAllocator::InitPageAllocator()
+{
+	AllocLock = pantheon::Spinlock("page_alloc");
+}
+
 UINT64 pantheon::PageAllocator::Alloc()
 {
 	AllocLock.Acquire();

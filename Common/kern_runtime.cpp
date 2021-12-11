@@ -5,6 +5,7 @@
 
 #include <Sync/kern_spinlock.hpp>
 #include <System/Proc/kern_cpu.hpp>
+#include <System/PhyMemory/kern_alloc.hpp>
 
 #include <printf/printf.h>
 
@@ -145,11 +146,8 @@ void SERIAL_LOG_UNSAFE(const char *Fmt, ...)
 	va_end(Args);	
 }
 
-/* Note that until some of the issues with static constructors are resolved,
- * this mutex is technically in undefined state. We'll need .init_array to work
- * right first...
- */
-static pantheon::Spinlock PrintMutex("print lock");
+static pantheon::Spinlock PrintMutex;
+static BOOL PanickedState;
 
 void SERIAL_LOG(const char *Fmt, ...)
 {
@@ -166,8 +164,6 @@ void SERIAL_LOG(const char *Fmt, ...)
 	va_end(Args);
 	PrintMutex.Release();
 }
-
-static BOOL PanickedState;
 
 void pantheon::StopError(const char *Reason, void *Source)
 {
@@ -196,4 +192,11 @@ void pantheon::StopError(const char *Reason, void *Source)
 BOOL pantheon::Panicked()
 {
 	return PanickedState;
+}
+
+void pantheon::InitBasicRuntime()
+{
+	PrintMutex = pantheon::Spinlock("print_mutex");
+	PanickedState = 0;
+	pantheon::PageAllocator::InitPageAllocator();
 }

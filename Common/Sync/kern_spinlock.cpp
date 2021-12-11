@@ -12,7 +12,7 @@ pantheon::Spinlock::Spinlock(const char *Name)
 {
 	this->DebugName = Name;
 	this->CoreNo = 0;
-	this->Locked = false;	
+	this->Locked = FALSE;
 }
 
 pantheon::Spinlock::~Spinlock()
@@ -22,23 +22,17 @@ pantheon::Spinlock::~Spinlock()
 
 [[nodiscard]] BOOL pantheon::Spinlock::IsHolding() const
 {
-	__sync_synchronize();
-	UINT8 Core = pantheon::CPU::GetProcessorNumber();
-	UINT8 Lock = this->Locked;
-	__sync_synchronize();
-	
-	if (Core == this->CoreNo && Lock)
-	{
-		return TRUE;
-	}
-	return FALSE;
+	return (this->Locked && this->CoreNo == pantheon::CPU::GetProcessorNumber());
 }
 
 void pantheon::Spinlock::Acquire()
 {
+	if (this->DebugName == nullptr)
+	{
+		StopError("bad spinlock");
+	}
+	
 	pantheon::CPU::PUSHI();
-	__sync_synchronize();
-
 	if (this->IsHolding())
 	{
 		StopError(this->DebugName, this);
@@ -46,17 +40,14 @@ void pantheon::Spinlock::Acquire()
 
 	for (;;)
 	{
-		__sync_synchronize();
-		if (this->Locked)
-		{
-			continue;
-		}
-		__sync_synchronize();
 		if (__sync_lock_test_and_set(&this->Locked, TRUE) == FALSE)
 		{
 			break;
 		}
-		__sync_synchronize();
+		while (__atomic_load_n(&this->Locked, __ATOMIC_RELAXED))
+		{
+			pantheon::CPU::PAUSE();
+		}
 	}
 	this->CoreNo = pantheon::CPU::GetProcessorNumber();
 	__sync_synchronize();
@@ -64,21 +55,13 @@ void pantheon::Spinlock::Acquire()
 
 void pantheon::Spinlock::Release()
 {
-	__sync_synchronize();
-	if (!this->Locked)
+	if (!this->IsHolding())
 	{
 		pantheon::StopError(this->DebugName, this);
 	}
-
-	__sync_synchronize();
-	if (this->Holder() != pantheon::CPU::GetProcessorNumber())
-	{
-		pantheon::StopError(this->DebugName, this);
-	}
-	
 	this->CoreNo = 0;
-	__sync_lock_release(&this->Locked);
 	__sync_synchronize();
+	__sync_lock_release(&this->Locked);
 	pantheon::CPU::POPI();
 	
 }

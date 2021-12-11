@@ -148,10 +148,13 @@ void SERIAL_LOG_UNSAFE(const char *Fmt, ...);
 namespace pantheon
 {
 
+void InitBasicRuntime();
 void InitBasicMemory();
 void StopError(const char *Reason, void *Source = nullptr);
 BOOL Panicked();
 
 }
+
+#define OBJECT_SELF_ASSERT(x) if ((x) == nullptr) { StopError("called method was nullptr"); }
 
 #endif

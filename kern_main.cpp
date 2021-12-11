@@ -13,21 +13,6 @@
 extern "C" void sysm_Main();
 extern "C" void prgm_Main();
 
-/* Since we don't use the MMU at all, we need thread-unique storage, 
- * since theres no kernel-level thread-local storage. */
-void kern_idle(void *unused)
-{
-	PANTHEON_UNUSED(unused);
-	static UINT64 Count[2000];
-	volatile UINT64 TID = pantheon::CPU::GetCurThread()->ThreadID();
-	Count[TID] = 0;
-	for (;;)
-	{
-		Count[TID]++;
-	}
-	for (;;){}
-}
-
 void kern_idle2(void *unused)
 {
 	PANTHEON_UNUSED(unused);
@@ -65,15 +50,7 @@ void kern_init_core()
 
 	pantheon::CPU::InitCoreInfo(CpuNo);
 	PerCoreInit();
-
-	volatile UINT64 SCTLRVal = 0;
-	asm volatile(
-		"mrs %0, sctlr_el1\n"
-		"isb\n"
-		"dsb sy"
-		: "=r"(SCTLRVal):: "memory");
-
-	SERIAL_LOG("Pantheon booted with core %hhu, and paging is %x\n", CpuNo, SCTLRVal & 0x01);
+	SERIAL_LOG("Pantheon booted with core %hhu\n", CpuNo);
 
 	while (pantheon::GetKernelStatus() < pantheon::KERNEL_STATUS_OK)
 	{
@@ -93,6 +70,7 @@ void kern_init(InitialBootInfo *InitBootInfo, void *initial_load_addr, void *vir
 	if (pantheon::CPU::GetProcessorNumber() == 0)
 	{
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);
+		pantheon::InitBasicRuntime();
 		pantheon::InitBasicMemory();
 		pantheon::ipc::InitEventSystem();
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_SECOND_STAGE);

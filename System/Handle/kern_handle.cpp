@@ -1,3 +1,4 @@
+#include <kern_runtime.hpp>
 #include <System/Handle/kern_handle.hpp>
 
 pantheon::Handle::Handle()
@@ -25,10 +26,12 @@ pantheon::Handle::~Handle()
 
 pantheon::HandleContent &pantheon::Handle::GetContent()
 {
+	OBJECT_SELF_ASSERT(this);
 	return this->Content;
 }
 
 pantheon::HandleType pantheon::Handle::GetType()
 {
+	OBJECT_SELF_ASSERT(this);
 	return this->Type;
 }

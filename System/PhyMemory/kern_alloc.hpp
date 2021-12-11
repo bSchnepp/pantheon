@@ -5,6 +5,7 @@
 
 namespace pantheon::PageAllocator
 {
+	void InitPageAllocator();
 	UINT64 Alloc();
 	void Free(UINT64 Page);
 }

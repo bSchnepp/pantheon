@@ -74,6 +74,7 @@ pantheon::Process &pantheon::Process::operator=(const pantheon::Process &Other)
 	{
 		return *this;
 	}
+	Lockable::operator=(Other);
 	this->CurState = Other.CurState;
 	this->PID = Other.PID;
 	this->Priority = Other.Priority;
@@ -88,6 +89,7 @@ pantheon::Process &pantheon::Process::operator=(pantheon::Process &&Other) noexc
 	{
 		return *this;
 	}
+	Lockable::operator=(Other);
 	this->CurState = Other.CurState;
 	this->PID = Other.PID;
 	this->Priority = Other.Priority;

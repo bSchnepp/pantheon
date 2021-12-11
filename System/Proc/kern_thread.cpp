@@ -255,6 +255,8 @@ pantheon::Thread &pantheon::Thread::operator=(const pantheon::Thread &Other)
 	{
 		return *this;
 	}
+
+	Lockable::operator=(Other);
 	this->ParentProcess = Other.ParentProcess;
 	this->PreemptCount = Other.PreemptCount;
 	this->Priority = Other.Priority;
@@ -275,6 +277,7 @@ pantheon::Thread &pantheon::Thread::operator=(pantheon::Thread &&Other) noexcept
 	{
 		return *this;
 	}
+	Lockable::operator=(Other);
 	this->ParentProcess = Other.ParentProcess;
 	this->PreemptCount = Other.PreemptCount;
 	this->Priority = Other.Priority;
