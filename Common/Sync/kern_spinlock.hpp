@@ -25,7 +25,7 @@ public:
 private:
 	[[nodiscard]] BOOL IsHolding() const;
 	const char *DebugName;
-	UINT8 CoreNo;
+	UINT16 CoreNo;
 	BOOL Locked; 
 };
 

@@ -11,7 +11,7 @@ pantheon::Spinlock::Spinlock() : pantheon::Spinlock::Spinlock("lock")
 pantheon::Spinlock::Spinlock(const char *Name)
 {
 	this->DebugName = Name;
-	this->CoreNo = 0;
+	this->CoreNo = -1;
 	this->Locked = FALSE;
 }
 
@@ -59,7 +59,7 @@ void pantheon::Spinlock::Release()
 	{
 		pantheon::StopError(this->DebugName, this);
 	}
-	this->CoreNo = 0;
+	this->CoreNo = -1;
 	__sync_synchronize();
 	__sync_lock_release(&this->Locked);
 	pantheon::CPU::POPI();

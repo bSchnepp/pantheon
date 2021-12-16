@@ -107,7 +107,7 @@ BOOL StringCompare(const CHAR *Arg1, const CHAR *Arg2, UINT64 Amt)
 	return TRUE;
 }
 
-void ClearBuffer(CHAR *Location, UINT32 Amount)
+void SetBufferBytes(CHAR *Location, UINT8 Value, UINT32 Amount)
 {
 	UINT32 Index = 0;
 
@@ -119,8 +119,13 @@ void ClearBuffer(CHAR *Location, UINT32 Amount)
 
 	for (; Index < Amount; ++Index)
 	{
-		Location[Index] = '\0';
+		Location[Index] = Value;
 	}
+}
+
+void ClearBuffer(CHAR *Location, UINT32 Amount)
+{
+	SetBufferBytes(Location, 0x00, Amount);
 }
 
 void CopyMemory(VOID *Dest, VOID *Src, UINT64 Amt)

@@ -58,6 +58,11 @@ pantheon::Result pantheon::SVCCreateThread(
 	void *StackTop, pantheon::ThreadPriority Priority)
 {
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+	if (Proc == nullptr)
+	{
+		StopError("System call with no process");
+		return -1;
+	}
 	return pantheon::GetGlobalScheduler()->CreateThread(Proc, (void*)Entry, RESERVED, Priority, StackTop);
 }
 
@@ -75,6 +80,11 @@ pantheon::Result pantheon::SVCCreateThread(
 pantheon::Result pantheon::SVCCreateNamedEvent(const CHAR *Name, UINT8 *ReadHandle, UINT8 *WriteHandle)
 {
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+	if (Proc == nullptr)
+	{
+		StopError("System call with no process");
+		return -1;
+	}
 	pantheon::String EvtName(Name);
 
 	pantheon::ipc::NamedEvent *Evt = pantheon::ipc::LookupEvent(EvtName);
@@ -106,6 +116,11 @@ pantheon::Result pantheon::SVCCreateNamedEvent(const CHAR *Name, UINT8 *ReadHand
 pantheon::Result pantheon::SVCSignalEvent(UINT8 WriteHandle)
 {
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+	if (Proc == nullptr)
+	{
+		StopError("System call with no process");
+		return -1;
+	}
 	Proc->Lock();
 
 	pantheon::Handle *Hand = Proc->GetHandle(WriteHandle);
@@ -137,6 +152,11 @@ pantheon::Result pantheon::SVCSignalEvent(UINT8 WriteHandle)
 pantheon::Result pantheon::SVCClearEvent(UINT8 WriteHandle)
 {
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+	if (Proc == nullptr)
+	{
+		StopError("System call with no process");
+		return -1;
+	}
 	Proc->Lock();
 
 	pantheon::Handle *Hand = Proc->GetHandle(WriteHandle);
@@ -166,6 +186,11 @@ pantheon::Result pantheon::SVCClearEvent(UINT8 WriteHandle)
 pantheon::Result pantheon::SVCResetEvent(UINT8 ReadHandle)
 {
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+	if (Proc == nullptr)
+	{
+		StopError("System call with no process");
+		return -1;
+	}
 	Proc->Lock();
 
 	pantheon::Handle *Hand = Proc->GetHandle(ReadHandle);
@@ -196,6 +221,11 @@ pantheon::Result pantheon::SVCResetEvent(UINT8 ReadHandle)
 pantheon::Result pantheon::SVCPollEvent(UINT8 Handle)
 {
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+	if (Proc == nullptr)
+	{
+		StopError("System call with no process");
+		return -1;
+	}
 	Proc->Lock();
 	pantheon::Handle *Hand = Proc->GetHandle(Handle);
 	if (Hand == nullptr)

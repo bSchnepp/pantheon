@@ -48,7 +48,6 @@ public:
 	BOOL CreateProcess(pantheon::String ProcStr, void *StartAddr);
 	BOOL CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority);
 	BOOL CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority, void *StackTop);
-	VOID CreateIdleProc(void *StartAddr);
 
 	Thread* AcquireThread();
 	UINT64 CountThreads(UINT64 PID);
@@ -60,6 +59,7 @@ public:
 	pantheon::Thread *CreateProcessorIdleThread(UINT64 SP, UINT64 IP);
 
 private:
+	Atomic<BOOL> Okay;
 	Spinlock AccessSpinlock;
 	ArrayList<Process> ProcessList;
 	pantheon::LinkedList<Thread> ThreadList;

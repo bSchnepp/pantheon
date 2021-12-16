@@ -213,24 +213,13 @@ VOID pantheon::GlobalScheduler::Init()
 
 	pantheon::Process Idle;
 	this->ProcessList.Add(Idle);
-}
-
-VOID pantheon::GlobalScheduler::CreateIdleProc(void *StartAddr)
-{
-	AccessSpinlock.Acquire();
-	for (pantheon::Process &Proc : this->ProcessList)
-	{
-		if (Proc.ProcessID() == 0)
-		{
-			Proc.CreateThread(StartAddr, nullptr);
-			break;
-		}
-	}
-	AccessSpinlock.Release();
+	this->Okay.Store(TRUE);
 }
 
 pantheon::Thread *pantheon::GlobalScheduler::CreateProcessorIdleThread(UINT64 SP, UINT64 IP)
 {
+	while (!this->Okay.Load()){}
+
 	pantheon::Thread *CurThread = static_cast<pantheon::Thread*>(BasicMalloc(sizeof(pantheon::Thread))());
 	*CurThread = pantheon::Thread(pantheon::GetGlobalScheduler()->ObtainProcessByID(0), pantheon::THREAD_PRIORITY_NORMAL);
 
@@ -329,15 +318,22 @@ void pantheon::GlobalScheduler::ReleaseThread(Thread *T)
 
 pantheon::Process *pantheon::GlobalScheduler::ObtainProcessByID(UINT64 PID)
 {
+	pantheon::Process *Result = nullptr;
 	for (pantheon::Process &Proc : this->ProcessList)
 	{
-		/* TODO: lock Proc */
+		Proc.Lock();
 		if (Proc.ProcessID() == PID)
 		{
-			return &Proc;
+			Result = &Proc;
+		}
+		Proc.Unlock();
+
+		if (Result)
+		{
+			break;
 		}
 	}
-	return nullptr;
+	return Result;
 }
 
 pantheon::Thread *pantheon::GlobalScheduler::ObtainThreadByID(UINT64 TID)

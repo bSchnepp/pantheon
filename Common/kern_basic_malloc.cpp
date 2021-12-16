@@ -80,10 +80,7 @@ void pantheon::InitBasicMemory()
 	/* Double check this, just to be sure. */
 	GlobalFreeList = nullptr;
 
-	for (char &Item : BasicMemory)
-	{
-		Item = '\0';
-	}
+	SetBufferBytes(BasicMemory, 0x4D, HeapSpace);
 
 	/* Mark the ends as in use, so coalescing doesn't become a problem. */
 	SetSizeAlloc(((char*)(BasicMemory)), TRUE, sizeof(BlockHeader));
@@ -172,6 +169,7 @@ Optional<void*> BasicMalloc(UINT64 Amt)
 			LinkFreeList(Next);
 
 			Final = Current;
+			SetBufferBytes((CHAR*)Final, 0x3D, Amount);
 			break;
 		}
 	}
