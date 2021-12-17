@@ -306,3 +306,18 @@ void pantheon::Thread::SetProc(pantheon::Process *Proc)
 {
 	this->ParentProcess = Proc;
 }
+
+void pantheon::Thread::BlockScheduling()
+{
+	this->SystemScheduled.Store(TRUE);
+}
+
+void pantheon::Thread::EnableScheduling()
+{
+	this->SystemScheduled.Store(FALSE);
+}
+
+bool pantheon::Thread::CanSchedule()
+{
+	return !this->SystemScheduled.Load();
+}

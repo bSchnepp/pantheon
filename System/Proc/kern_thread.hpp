@@ -73,6 +73,10 @@ public:
 
 	void SetProc(pantheon::Process *Proc);
 
+	void BlockScheduling();
+	void EnableScheduling();
+	bool CanSchedule();
+
 private:
 	UINT64 TID;
 
@@ -84,6 +88,7 @@ private:
 
 	UINT64 PreemptCount;
 	UINT64 RemainingTicks;
+	pantheon::Atomic<UINT64> SystemScheduled;
 
 	void *KernelStackSpace;
 	void *UserStackSpace;

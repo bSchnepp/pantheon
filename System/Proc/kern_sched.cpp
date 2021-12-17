@@ -41,8 +41,6 @@ static void proc_idle()
  */
 pantheon::Scheduler::Scheduler()
 {
-	this->IgnoreReschedule.Store(FALSE);
-
 	/* hackishly create an idle thread */
 	UINT64 SP = (UINT64)((BasicMalloc(4096)())) + 4096;
 	UINT64 IP = (UINT64)proc_idle;
@@ -79,19 +77,19 @@ void pantheon::Scheduler::Reschedule()
 	/* Interrupts must be enabled before we can do anything. */
 	if (pantheon::CPU::ICOUNT())
 	{
-		return;
+		StopError("Try to reschedule with interrupts off");
 	}
 
-	if (this->IgnoreReschedule.Load())
+	this->CurThread->BlockScheduling();
+	pantheon::Thread *Old = this->CurThread;
+	pantheon::Thread *New = pantheon::GetGlobalScheduler()->AcquireThread();
+
+	if (New == Old)
 	{
 		return;
 	}
 
-	this->IgnoreReschedule.Store(TRUE);
-	pantheon::Thread *Old = this->CurThread;
-	pantheon::Thread *New = pantheon::GetGlobalScheduler()->AcquireThread();
-
-	if (New == nullptr || New == Old)
+	if (New == nullptr)
 	{
 		pantheon::CPU::HLT();
 		return;
@@ -99,9 +97,9 @@ void pantheon::Scheduler::Reschedule()
 
 	this->CurThread = New;
 	pantheon::GetGlobalScheduler()->ReleaseThread(Old);
+
 	this->PerformCpuSwitch(Old, New);
-	this->IgnoreReschedule.Store(FALSE);
-	pantheon::CPU::STI();
+	this->CurThread->EnableScheduling();
 }
 
 pantheon::Process *pantheon::Scheduler::MyProc()
@@ -116,16 +114,6 @@ pantheon::Process *pantheon::Scheduler::MyProc()
 pantheon::Thread *pantheon::Scheduler::MyThread()
 {
 	return this->CurThread;
-}
-
-void pantheon::Scheduler::StopPremption()
-{
-	this->IgnoreReschedule.Store(TRUE);
-}
-
-void pantheon::Scheduler::EnablePremption()
-{
-	this->IgnoreReschedule.Store(FALSE);
 }
 
 pantheon::GlobalScheduler::GlobalScheduler()
@@ -390,24 +378,27 @@ pantheon::GlobalScheduler *pantheon::GetGlobalScheduler()
 
 void pantheon::AttemptReschedule()
 {
-	pantheon::CPU::CoreInfo *CoreData = pantheon::CPU::GetCoreInfo();
-	pantheon::Scheduler *CurSched = CoreData->CurSched;
-	pantheon::Thread *CurThread = CurSched->MyThread();
+	pantheon::Scheduler *CurSched = pantheon::CPU::GetCurSched();
+	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 
-	UINT64 RemainingTicks = 0;
 	if (CurThread)
 	{
 		CurThread->CountTick();
-		RemainingTicks = CurThread->TicksLeft();
+		UINT64 RemainingTicks = CurThread->TicksLeft();
 
-		if (RemainingTicks == 0)
+		if (RemainingTicks > 0 || !CurThread->CanSchedule())
 		{
-			CurSched->Reschedule();
+			return;
 		}
+		
+		CurThread->SetTicks(0);
+		pantheon::CPU::STI();
+		CurSched->Reschedule();
+		pantheon::CPU::CLI();
 	}
 }
 
 extern "C" VOID FinishThread()
 {
-	pantheon::CPU::GetCurSched()->EnablePremption();
+	pantheon::CPU::GetCurThread()->EnableScheduling();
 }

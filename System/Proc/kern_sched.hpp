@@ -24,16 +24,9 @@ public:
 	Process *MyProc();
 	Thread *MyThread();
 
-	void StopPremption();
-	void EnablePremption();
-
 private:
 	VOID PerformCpuSwitch(Thread *Old, Thread *New);
-
 	Thread *CurThread;
-	Atomic<BOOL> IgnoreReschedule;
-
-	pantheon::Thread IdleThread;
 };
 
 class GlobalScheduler
