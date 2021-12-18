@@ -112,6 +112,11 @@ BOOL pantheon::Process::CreateThread(void *StartAddr, void *ThreadData)
 
 BOOL pantheon::Process::CreateThread(void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority)
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("Process not locked with CreateThread");
+	}
+
 	if (this->CurState == pantheon::PROCESS_STATE_INIT)
 	{
 		this->SetState(pantheon::PROCESS_STATE_RUNNING);
@@ -134,11 +139,21 @@ pantheon::ProcessState pantheon::Process::MyState() const
 
 void pantheon::Process::SetState(pantheon::ProcessState State)
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("Process not locked with SetState");
+	}
+
 	this->CurState = State;
 }
 
 INT64 pantheon::Process::EncodeHandle(const pantheon::Handle &NewHand)
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("Process not locked with EncodeHandle");
+	}
+
 	for (UINT64 Index = 0; Index < pantheon::Process::HandleTableSize; Index++)
 	{
 		if (this->ProcHandleTable[Index].IsValid() == FALSE)
@@ -152,6 +167,11 @@ INT64 pantheon::Process::EncodeHandle(const pantheon::Handle &NewHand)
 
 pantheon::Handle *pantheon::Process::GetHandle(UINT8 HandleID)
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("Process not locked with GetHandle");
+	}
+
 	if (HandleID > pantheon::Process::HandleTableSize)
 	{
 		return nullptr;

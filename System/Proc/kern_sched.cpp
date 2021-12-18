@@ -86,11 +86,11 @@ void pantheon::Scheduler::Reschedule()
 
 	if (New == Old)
 	{
-		return;
+		StopError("Same thread was issued to run");
 	}
 
-	pantheon::GetGlobalScheduler()->ReleaseThread(Old);
 	this->CurThread = New;
+	pantheon::GetGlobalScheduler()->ReleaseThread(Old);
 
 	this->PerformCpuSwitch(Old, New);
 	this->CurThread->EnableScheduling();
@@ -141,7 +141,9 @@ BOOL pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *St
 	UINT64 Index = this->ProcessList.Size();
 	pantheon::Process NewProc(ProcStr);
 	this->ProcessList.Add(NewProc);
+	this->ProcessList[Index].Lock();
 	Value = this->ProcessList[Index].CreateThread(StartAddr, nullptr);
+	this->ProcessList[Index].Unlock();
 	AccessSpinlock.Release();
 	
 	return Value;
@@ -242,13 +244,19 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 				MaybeThr.Unlock();
 				continue;
 			}
-			
+
 			UINT64 TickCount = MaybeThr.TicksLeft();
 			pantheon::ThreadState State = MaybeThr.MyState();
 
 			if (State == pantheon::THREAD_STATE_WAITING && TickCount > MaxTicks)
 			{
 				MaxTicks = MaybeThr.TicksLeft();
+				if (Thr)
+				{
+					Thr->Lock();
+					Thr->SetState(pantheon::THREAD_STATE_WAITING);
+					Thr->Unlock();
+				}
 				Thr = &MaybeThr;
 				Thr->SetState(pantheon::THREAD_STATE_RUNNING);
 			}
