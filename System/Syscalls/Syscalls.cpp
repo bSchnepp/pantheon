@@ -31,9 +31,7 @@ pantheon::Result pantheon::SVCForkProcess()
 
 pantheon::Result pantheon::SVCLogText(const CHAR *Data)
 {
-	pantheon::CPU::PUSHI();
 	SERIAL_LOG("%s\n", Data);
-	pantheon::CPU::POPI();
 	return 0;
 }
 
@@ -87,6 +85,7 @@ pantheon::Result pantheon::SVCCreateNamedEvent(const CHAR *Name, UINT8 *ReadHand
 	}
 	pantheon::String EvtName(Name);
 
+	Proc->Lock();
 	pantheon::ipc::NamedEvent *Evt = pantheon::ipc::LookupEvent(EvtName);
 	if (Evt != nullptr)
 	{
@@ -95,6 +94,7 @@ pantheon::Result pantheon::SVCCreateNamedEvent(const CHAR *Name, UINT8 *ReadHand
 
 		*WriteHandle = Write;
 		*ReadHandle = Read;
+		Proc->Unlock();
 		return 0;
 	}
 
@@ -108,8 +108,10 @@ pantheon::Result pantheon::SVCCreateNamedEvent(const CHAR *Name, UINT8 *ReadHand
 
 		*WriteHandle = Write;
 		*ReadHandle = Read;
+		Proc->Unlock();
 		return 0;
 	}
+	Proc->Unlock();
 	return -1;
 }
 
@@ -243,8 +245,9 @@ pantheon::Result pantheon::SVCPollEvent(UINT8 Handle)
 	pantheon::ipc::ReadableEvent *Evt = Hand->GetContent().ReadEvent;
 	if (Evt)
 	{
+		BOOL Result = Evt->Parent->Status == pantheon::ipc::EVENT_TYPE_SIGNALED;
 		Proc->Unlock();
-		return Evt->Parent->Status == pantheon::ipc::EVENT_TYPE_SIGNALED;
+		return Result;
 	}
 	Proc->Unlock();
 	return -1;

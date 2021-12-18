@@ -48,7 +48,6 @@ public:
 	ThreadState MyState();
 	ThreadPriority MyPriority();
 
-	[[nodiscard]] UINT64 Preempts() const;
 	[[nodiscard]] UINT64 TicksLeft() const;
 	[[nodiscard]] UINT64 ThreadID() const;
 
@@ -75,7 +74,7 @@ public:
 
 	void BlockScheduling();
 	void EnableScheduling();
-	bool CanSchedule();
+	[[nodiscard]] BOOL Preempted() const;
 
 private:
 	UINT64 TID;
@@ -86,9 +85,8 @@ private:
 	ThreadState State;
 	ThreadPriority Priority;
 
-	UINT64 PreemptCount;
+	INT64 PreemptCount;
 	UINT64 RemainingTicks;
-	pantheon::Atomic<UINT64> SystemScheduled;
 
 	void *KernelStackSpace;
 	void *UserStackSpace;

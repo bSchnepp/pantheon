@@ -24,6 +24,7 @@ pantheon::Thread::Thread() : pantheon::Lockable("Thread")
 	this->KernelStackSpace = nullptr;
 	this->UserStackSpace = nullptr;
 	this->TID = 0;
+	this->BlockScheduling();
 
 	/* TODO: Create new page tables, instead of reusing old stuff. */
 	this->TTBR0 = (void*)pantheon::CPUReg::R_TTBR0_EL1();
@@ -64,6 +65,7 @@ pantheon::Thread::Thread(Process *OwningProcess, ThreadPriority Priority) : pant
 	this->State = pantheon::THREAD_STATE_INIT;
 
 	this->TID = AcquireThreadID();
+	this->BlockScheduling();
 
 	/* TODO: Create new page tables, instead of reusing old stuff. */
 	this->TTBR0 = (void*)pantheon::CPUReg::R_TTBR0_EL1();
@@ -149,15 +151,14 @@ pantheon::ThreadPriority pantheon::Thread::MyPriority()
 }
 
 /**
- * \~english @brief Gets the number of times this process has been pre-empted.
+ * \~english @brief Checks if this thread is valid to interrupt at this moment
  * \~english @author Brian Schnepp
- * \~english @return The number of times the kernel has interrupted this thread
- * to resume execution of some other work.
+ * \~english @return 0 if not doing system work currently, 1 otherwise.
  */
 [[nodiscard]]
-UINT64 pantheon::Thread::Preempts() const
+BOOL pantheon::Thread::Preempted() const
 {
-	return this->PreemptCount;
+	return this->PreemptCount != 0;
 }
 
 /**
@@ -309,15 +310,12 @@ void pantheon::Thread::SetProc(pantheon::Process *Proc)
 
 void pantheon::Thread::BlockScheduling()
 {
-	this->SystemScheduled.Store(TRUE);
+	this->PreemptCount++;
+	pantheon::Sync::DSBISH();
 }
 
 void pantheon::Thread::EnableScheduling()
 {
-	this->SystemScheduled.Store(FALSE);
-}
-
-bool pantheon::Thread::CanSchedule()
-{
-	return !this->SystemScheduled.Load();
+	this->PreemptCount--;
+	pantheon::Sync::DSBISH();
 }

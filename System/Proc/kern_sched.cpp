@@ -89,14 +89,8 @@ void pantheon::Scheduler::Reschedule()
 		return;
 	}
 
-	if (New == nullptr)
-	{
-		pantheon::CPU::HLT();
-		return;
-	}
-
-	this->CurThread = New;
 	pantheon::GetGlobalScheduler()->ReleaseThread(Old);
+	this->CurThread = New;
 
 	this->PerformCpuSwitch(Old, New);
 	this->CurThread->EnableScheduling();
@@ -242,12 +236,13 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 		UINT64 MaxTicks = 0;
 		for (pantheon::Thread &MaybeThr : this->ThreadList)
 		{
-			if (MaybeThr.IsLocked() || MaybeThr.MyState() == pantheon::THREAD_STATE_RUNNING)
+			MaybeThr.Lock();
+			if (MaybeThr.MyState() == pantheon::THREAD_STATE_RUNNING)
 			{
+				MaybeThr.Unlock();
 				continue;
 			}
-
-			MaybeThr.Lock();
+			
 			UINT64 TickCount = MaybeThr.TicksLeft();
 			pantheon::ThreadState State = MaybeThr.MyState();
 
@@ -268,11 +263,6 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 		/* If we didn't find one after all that, refresh everyone. */
 		for (pantheon::Thread &MaybeThr : this->ThreadList)
 		{
-			if (MaybeThr.IsLocked() || MaybeThr.MyState() == pantheon::THREAD_STATE_RUNNING)
-			{
-				continue;
-			}
-
 			MaybeThr.Lock();
 			MaybeThr.RefreshTicks();
 			MaybeThr.Unlock();
@@ -386,15 +376,18 @@ void pantheon::AttemptReschedule()
 		CurThread->CountTick();
 		UINT64 RemainingTicks = CurThread->TicksLeft();
 
-		if (RemainingTicks > 0 || !CurThread->CanSchedule())
+		if (RemainingTicks > 0 || CurThread->Preempted())
 		{
 			return;
 		}
+
+		if (pantheon::CPU::ICOUNT() != 0)
+		{
+			StopError("Interrupts not allowed for reschedule");
+		}
 		
 		CurThread->SetTicks(0);
-		pantheon::CPU::STI();
 		CurSched->Reschedule();
-		pantheon::CPU::CLI();
 	}
 }
 
