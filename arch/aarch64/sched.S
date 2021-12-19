@@ -3,6 +3,7 @@
 .globl drop_usermode
 
 .extern FinishThread
+.extern ReleaseThread
 
 _hang:
 	b _hang

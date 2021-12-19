@@ -333,8 +333,8 @@ protected:
 	constexpr UINT64 GetBits(UINT64 Offset, UINT64 Count) const
 	{
 		/* Enforce offset and count can not be any more than 64 bits. */
-		Offset = ((Offset <= 64) * (Offset)) + (Offset > 64) * (64);
-		Count = ((Count <= 64) * (Count)) + (Count > 64) * (64);
+		Offset = ((Offset <= 64) * (Offset)) + static_cast<UINT64>((Offset > 64) * (64));
+		Count = ((Count <= 64) * (Count)) + static_cast<UINT64>((Count > 64) * (64));
 		UINT64 Mask = (1ULL << Count) - 1;
 		UINT64 Shifted = (this->Raw >> Offset);
 		return Shifted & Mask;
@@ -344,8 +344,8 @@ protected:
 	constexpr UINT64 GetMaskedBits(UINT64 Offset, UINT64 Count) const
 	{
 		/* Enforce offset and count can not be any more than 64 bits. */
-		Offset = ((Offset <= 64) * (Offset)) + (Offset > 64) * (64);
-		Count = ((Count <= 64) * (Count)) + (Count > 64) * (64);
+		Offset = ((Offset <= 64) * (Offset)) + static_cast<UINT64>((Offset > 64) * (64));
+		Count = ((Count <= 64) * (Count)) + static_cast<UINT64>((Count > 64) * (64));
 		UINT64 Mask = (1ULL << Count) - 1;
 		return (this->Raw) & ((Mask << Offset) & Mask);
 	}
@@ -353,8 +353,8 @@ protected:
 	constexpr VOID SetBits(UINT64 Offset, UINT64 Count, UINT64 Value)
 	{
 		/* Enforce offset and count can not be any more than 64 bits. */
-		Offset = ((Offset <= 64) * (Offset)) + (Offset > 64) * (64);
-		Count = ((Count <= 64) * (Count)) + (Count > 64) * (64);
+		Offset = ((Offset <= 64) * (Offset)) + static_cast<UINT64>((Offset > 64) * (64));
+		Count = ((Count <= 64) * (Count)) + static_cast<UINT64>((Count > 64) * (64));
 		const UINT64 Mask = ((1ULL << Count) - 1);
 		this->Raw &= ~(Mask << Offset);
 		Value &= Mask;
@@ -364,8 +364,8 @@ protected:
 	constexpr VOID SetBitsRaw(UINT64 Offset, UINT64 Count, UINT64 Value)
 	{
 		/* Enforce offset and count can not be any more than 64 bits. */
-		Offset = ((Offset <= 64) * (Offset)) + (Offset > 64) * (64);
-		Count = ((Count <= 64) * (Count)) + (Count > 64) * (64);
+		Offset = ((Offset <= 64) * (Offset)) + static_cast<UINT64>((Offset > 64) * (64));
+		Count = ((Count <= 64) * (Count)) + static_cast<UINT64>((Count > 64) * (64));
 		const UINT64 Mask = ((1ULL << Count) - 1);
 		this->Raw &= ~(Mask << Offset);
 		this->Raw |= (Value & (Mask << Offset));
@@ -436,8 +436,5 @@ private:
 };
 
 }
-
-extern "C" VOID write_ttbr0_el1(UINT64 Val);
-extern "C" VOID write_ttbr1_el1(UINT64 Val);
 
 #endif

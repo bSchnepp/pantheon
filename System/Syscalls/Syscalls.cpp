@@ -257,7 +257,9 @@ pantheon::Result pantheon::SVCYield()
 {
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	pantheon::Scheduler *CurSched = pantheon::CPU::GetCurSched();
+	CurThread->Lock();
 	CurThread->SetTicks(0);
+	CurThread->Unlock();
 	CurSched->Reschedule();
 	return 0;
 }

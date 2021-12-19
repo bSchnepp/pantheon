@@ -93,6 +93,7 @@ pantheon::Thread::Thread(const pantheon::Thread &Other) : pantheon::Lockable("Th
 
 pantheon::Thread::Thread(pantheon::Thread &&Other) noexcept : pantheon::Lockable("Thread")
 {
+	this->Lock();
 	this->ParentProcess = Other.ParentProcess;
 	this->PreemptCount = Other.PreemptCount;
 	this->Priority = Other.Priority;
@@ -103,6 +104,7 @@ pantheon::Thread::Thread(pantheon::Thread &&Other) noexcept : pantheon::Lockable
 	this->KernelStackSpace = Other.KernelStackSpace;
 	this->UserStackSpace = Other.UserStackSpace;
 	this->TTBR0 = (void*)Other.TTBR0;
+	this->Unlock();
 }
 
 pantheon::Thread::~Thread()
@@ -136,6 +138,10 @@ pantheon::Process *pantheon::Thread::MyProc() const
  */
 pantheon::ThreadState pantheon::Thread::MyState()
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("MyState without lock");
+	}
 	return this->State;
 }
 
@@ -147,6 +153,10 @@ pantheon::ThreadState pantheon::Thread::MyState()
 [[nodiscard]]
 pantheon::ThreadPriority pantheon::Thread::MyPriority()
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("MyPriority without lock");
+	}
 	return this->Priority;
 }
 
@@ -179,6 +189,11 @@ UINT64 pantheon::Thread::TicksLeft() const
  */
 VOID pantheon::Thread::CountTick()
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("CountTicks without lock");
+	}
+
 	if (this->RemainingTicks)
 	{
 		this->RemainingTicks--;
@@ -203,12 +218,20 @@ void *pantheon::Thread::GetTTBR0() const
  */
 VOID pantheon::Thread::AddTicks(UINT64 TickCount)
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("AddTicks without lock");
+	}
 	this->RemainingTicks += TickCount;
 }
 
 VOID pantheon::Thread::RefreshTicks()
 {
-	this->RemainingTicks = (this->Priority + 1) * 3;
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("RefreshTicks without lock");
+	}
+	this->RemainingTicks = static_cast<UINT64>((this->Priority + 1)) * 3;
 }
 
 /**
@@ -217,11 +240,19 @@ VOID pantheon::Thread::RefreshTicks()
  */
 VOID pantheon::Thread::SetState(ThreadState State)
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("SetState without lock");
+	}	
 	this->State = State;
 }
 
 VOID pantheon::Thread::SetTicks(UINT64 TickCount)
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("SetTicks without lock");
+	}
 	this->RemainingTicks = TickCount;
 }
 
@@ -234,6 +265,11 @@ VOID pantheon::Thread::SetTicks(UINT64 TickCount)
  */
 VOID pantheon::Thread::SetPriority(ThreadPriority Priority)
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("SetPriority without lock");
+	}
+
 	if (Priority <= this->Priority)
 	{
 		this->Priority = Priority;
@@ -246,6 +282,11 @@ VOID pantheon::Thread::SetPriority(ThreadPriority Priority)
  */
 pantheon::CpuContext *pantheon::Thread::GetRegisters()
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("GetRegisters without lock");
+	}
+
 	/* TODO: Copy the actual registers to the internal representation! */
 	return &this->Registers;
 }
@@ -293,29 +334,43 @@ pantheon::Thread &pantheon::Thread::operator=(pantheon::Thread &&Other) noexcept
 
 void pantheon::Thread::SetKernelStackAddr(UINT64 Addr)
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("SetKernelStackAddr without lock");
+	}
+
 	this->Registers.SetSP(Addr);
 	this->KernelStackSpace = reinterpret_cast<void*>((CHAR*)Addr);
 }
 
 void pantheon::Thread::SetUserStackAddr(UINT64 Addr)
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("SetUserStackAddr without lock");
+	}
+
 	this->Registers.SetSP(Addr);
 	this->UserStackSpace = reinterpret_cast<void*>((CHAR*)Addr);
 }
 
 void pantheon::Thread::SetProc(pantheon::Process *Proc)
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("SetProc without lock");
+	}	
 	this->ParentProcess = Proc;
 }
 
 void pantheon::Thread::BlockScheduling()
 {
-	this->PreemptCount++;
+	this->PreemptCount = 1;
 	pantheon::Sync::DSBISH();
 }
 
 void pantheon::Thread::EnableScheduling()
 {
-	this->PreemptCount--;
+	this->PreemptCount = 0;
 	pantheon::Sync::DSBISH();
 }

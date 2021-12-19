@@ -31,7 +31,7 @@ VOID pantheon::arm::GICInit()
 {
 	/* TODO: Create functions to more easilly get this info.*/
 	UINT32 TypeR = GICRead(GIC_CLASS_DISTRIBUTOR, GICD_TYPER, 0);
-	NumInterrupts = 32 * ((TypeR & 0x1F) + 1);
+	NumInterrupts = static_cast<UINT64>(32) * ((TypeR & 0x1F) + 1);
 	NumSockets = ((TypeR >> 5) & 0b111) + 1;
 	SecurityExtensions = ((TypeR >> 10) & 0x01);
 
@@ -96,14 +96,14 @@ VOID pantheon::arm::GICDisable()
 UINT32 pantheon::arm::GICRead(GICClassType Type, 
 	GICRegisterOffsets Offset, UINT32 ArrayIndex)
 {
-	UINT64 Value = GICAddresses[Type] + Offset + (ArrayIndex * 4);
+	UINT64 Value = GICAddresses[Type] + Offset + (static_cast<UINT64>(ArrayIndex) * 4);
 	return ReadMMIOU32(Value);
 }
 
 VOID pantheon::arm::GICWrite(GICClassType Type, 
 	GICRegisterOffsets Offset, UINT32 ArrayIndex, UINT32 Value)
 {
-	UINT64 Addr = GICAddresses[Type] + Offset + (ArrayIndex * 4);
+	UINT64 Addr = GICAddresses[Type] + Offset + (static_cast<UINT64>(ArrayIndex) * 4);
 	WriteMMIOU32(Addr, Value);
 }
 

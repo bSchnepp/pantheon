@@ -12,7 +12,7 @@ typedef struct FreeList
 
 /* Try to align to 32-bytes, so that allocations can be bitpacked nicely. */
 typedef UINT64 BlockHeader;
-static constexpr UINT64 HeapSpace = 6 * 1024 * 1024;
+static constexpr UINT64 HeapSpace = 6ULL * 1024ULL * 1024ULL;
 static constexpr UINT64 MinBlockSize = sizeof(FreeList) + (2 * sizeof(BlockHeader));
 COMPILER_ASSERT(MinBlockSize == 32);
 

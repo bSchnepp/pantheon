@@ -8,7 +8,7 @@
 #define _KERN_CPU_HPP_
 
 #define MAX_NUM_CPUS (8)
-#define DEFAULT_STACK_SIZE (4 * 1024)
+#define DEFAULT_STACK_SIZE (4 * 1024ULL)
 
 namespace pantheon
 {
