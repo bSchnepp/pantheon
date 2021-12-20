@@ -16,7 +16,7 @@ pantheon::Thread::Thread() : pantheon::Lockable("Thread")
 {
 	this->Lock();
 	this->ParentProcess = nullptr;
-	this->PreemptCount = 0;
+	this->PreemptCount = 1;
 	this->Priority = pantheon::THREAD_PRIORITY_NORMAL;
 	this->State = pantheon::THREAD_STATE_TERMINATED;
 	this->RemainingTicks = 0;
@@ -24,7 +24,6 @@ pantheon::Thread::Thread() : pantheon::Lockable("Thread")
 	this->KernelStackSpace = nullptr;
 	this->UserStackSpace = nullptr;
 	this->TID = 0;
-	this->BlockScheduling();
 
 	/* TODO: Create new page tables, instead of reusing old stuff. */
 	this->TTBR0 = (void*)pantheon::CPUReg::R_TTBR0_EL1();
@@ -58,14 +57,13 @@ pantheon::Thread::Thread(Process *OwningProcess, ThreadPriority Priority) : pant
 	this->KernelStackSpace = nullptr;
 	this->UserStackSpace = nullptr;
 
-	this->PreemptCount = 0;
+	this->PreemptCount = 1;
 	this->RemainingTicks = 0;
 
 	this->Registers.Wipe();
 	this->State = pantheon::THREAD_STATE_INIT;
 
 	this->TID = AcquireThreadID();
-	this->BlockScheduling();
 
 	/* TODO: Create new page tables, instead of reusing old stuff. */
 	this->TTBR0 = (void*)pantheon::CPUReg::R_TTBR0_EL1();
@@ -365,12 +363,18 @@ void pantheon::Thread::SetProc(pantheon::Process *Proc)
 
 void pantheon::Thread::BlockScheduling()
 {
-	this->PreemptCount = 1;
+	this->Lock();
 	pantheon::Sync::DSBISH();
+	this->PreemptCount++;
+	pantheon::Sync::DSBISH();
+	this->Unlock();
 }
 
 void pantheon::Thread::EnableScheduling()
 {
-	this->PreemptCount = 0;
+	this->Lock();
 	pantheon::Sync::DSBISH();
+	this->PreemptCount--;
+	pantheon::Sync::DSBISH();
+	this->Unlock();
 }
