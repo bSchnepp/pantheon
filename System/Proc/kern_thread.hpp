@@ -5,6 +5,7 @@
 #include <kern_container.hpp>
 
 #include <Sync/kern_atomic.hpp>
+#include <Handle/kern_lockable.hpp>
 
 #ifndef _KERN_THREAD_HPP_
 #define _KERN_THREAD_HPP_
@@ -32,8 +33,7 @@ typedef enum ThreadPriority
 
 class Process;
 
-/* NOT YET IMPLEMENTED! Placeholder for CPUInfo!!!! */
-class Thread
+class Thread  : public pantheon::Lockable
 {
 public:
 	Thread();
@@ -41,20 +41,20 @@ public:
 	Thread(Process *ParentProcess, ThreadPriority Priority);
 	Thread(const Thread &Other);
 	Thread(Thread &&Other) noexcept;
-	~Thread();
+	~Thread() override;
 
 	[[nodiscard]] Process *MyProc() const;
 
 	ThreadState MyState();
 	ThreadPriority MyPriority();
 
-	[[nodiscard]] UINT64 Preempts() const;
 	[[nodiscard]] UINT64 TicksLeft() const;
 	[[nodiscard]] UINT64 ThreadID() const;
 
 	VOID AddTicks(UINT64 TickCount);
 	VOID CountTick();
 	VOID RefreshTicks();
+	VOID SetTicks(UINT64 TickCount);
 
 	VOID SetState(ThreadState State);
 	VOID SetPriority(ThreadPriority Priority);
@@ -65,19 +65,18 @@ public:
 	void SetUserStackAddr(UINT64 Addr);
 	void SetKernelStackAddr(UINT64 Addr);
 
-	void FlipVisitFlag();
-	[[nodiscard]] BOOL GetVisitFlag() const;
-
 	Thread &operator=(const Thread &Other);
 	Thread &operator=(Thread &&Other) noexcept;
 
 	[[nodiscard]] void *GetTTBR0() const;
 
-	VOID Lock();
-	VOID Unlock();
+	void SetProc(pantheon::Process *Proc);
+
+	void BlockScheduling();
+	void EnableScheduling();
+	[[nodiscard]] BOOL Preempted() const;
 
 private:
-	pantheon::Spinlock ThreadLock;
 	UINT64 TID;
 
 	CpuContext Registers;
@@ -86,14 +85,12 @@ private:
 	ThreadState State;
 	ThreadPriority Priority;
 
-	UINT64 PreemptCount;
+	INT64 PreemptCount;
 	UINT64 RemainingTicks;
 
 	void *KernelStackSpace;
 	void *UserStackSpace;
 	void *TTBR0;
-
-	BOOL VisitFlag;
 };
 
 }

@@ -12,7 +12,7 @@ typedef struct FreeList
 
 /* Try to align to 32-bytes, so that allocations can be bitpacked nicely. */
 typedef UINT64 BlockHeader;
-static constexpr UINT64 HeapSpace = 6 * 1024 * 1024;
+static constexpr UINT64 HeapSpace = 6ULL * 1024ULL * 1024ULL;
 static constexpr UINT64 MinBlockSize = sizeof(FreeList) + (2 * sizeof(BlockHeader));
 COMPILER_ASSERT(MinBlockSize == 32);
 
@@ -72,23 +72,15 @@ static void UnlinkFreeList(FreeList *Current)
 	}
 }
 
+static pantheon::Spinlock AllocLock;
 
-
-void InitBasicMemory()
+void pantheon::InitBasicMemory()
 {
-	/*  lazilly handle basic malloc memory */
-	if (InitMemoryOkay)
-	{
-		return;
-	}
-
+	AllocLock = pantheon::Spinlock("basic_malloc");
 	/* Double check this, just to be sure. */
 	GlobalFreeList = nullptr;
 
-	for (char &Item : BasicMemory)
-	{
-		Item = '\0';
-	}
+	SetBufferBytes(BasicMemory, 0x4D, HeapSpace);
 
 	/* Mark the ends as in use, so coalescing doesn't become a problem. */
 	SetSizeAlloc(((char*)(BasicMemory)), TRUE, sizeof(BlockHeader));
@@ -100,8 +92,6 @@ void InitBasicMemory()
 	GlobalFreeList->Prev = nullptr;
 	InitMemoryOkay = TRUE;
 }
-
-static pantheon::Spinlock AllocLock;
 
 
 void LinkFreeList(VOID *Addr)
@@ -155,10 +145,10 @@ Optional<void*> BasicMalloc(UINT64 Amt)
 	{
 		return Optional<void*>();
 	}
-	
+
 	AllocLock.Acquire();
-	InitBasicMemory();
 	UINT64 Amount = Max(Align(Amt, (sizeof(BlockHeader))), MinBlockSize);
+	FreeList *Final = nullptr;
 
 	/* Look through the explicit free list for any space. */
 	for (FreeList *Indexer = GlobalFreeList; 
@@ -178,12 +168,13 @@ Optional<void*> BasicMalloc(UINT64 Amt)
 			SetSizeAlloc(GetHeader(Next), FALSE, Diff);
 			LinkFreeList(Next);
 
-			AllocLock.Release();
-			return Optional<void*>(Current);
+			Final = Current;
+			SetBufferBytes((CHAR*)Final, 0x3D, Amount);
+			break;
 		}
 	}
 	AllocLock.Release();
-	return Optional<void*>();
+	return Optional<void*>(Final);
 }
 
 void BasicFree(void *Addr)

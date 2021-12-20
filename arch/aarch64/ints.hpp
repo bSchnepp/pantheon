@@ -15,9 +15,6 @@ VOID RearmSystemTimer();
 VOID RearmSystemTimer(UINT64 Frequency);
 VOID DisableSystemTimer();
 
-VOID CLI();
-VOID STI();
-
 UINT64 DAIFR();
 
 }

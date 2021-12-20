@@ -67,6 +67,7 @@ pantheon::TrapFrame *pantheon::CPU::GetCurFrame()
 extern "C" VOID drop_usermode(UINT64 PC, UINT64 PSTATE, UINT64 SP);
 BOOL pantheon::CPU::DropToUsermode(UINT64 PC)
 {
+	pantheon::CPU::GetCurThread()->Lock();
 	pantheon::vmm::PageTableEntry UEntry;
 	UEntry.SetPagePermissions(0b01 << 6);
 	UEntry.SetKernelNoExecute(TRUE);
@@ -83,6 +84,7 @@ BOOL pantheon::CPU::DropToUsermode(UINT64 PC)
 	BaseAllocator()->Reprotect(PT, StackArea, pantheon::vmm::BlockSize::L3BlockSize, UEntry);
 
 	StackArea += pantheon::vmm::BlockSize::L3BlockSize;
+	pantheon::CPU::GetCurThread()->Unlock();
 	drop_usermode(PC, 0, StackArea);
 	return TRUE;
 }
@@ -91,5 +93,5 @@ alignas(4096) static char StackArea[MAX_NUM_CPUS * DEFAULT_STACK_SIZE];
 
 void *pantheon::CPU::GetStackArea(UINT64 Core)
 {
-	return StackArea + (Core * DEFAULT_STACK_SIZE);
+	return StackArea + static_cast<UINT64>(Core * DEFAULT_STACK_SIZE);
 }

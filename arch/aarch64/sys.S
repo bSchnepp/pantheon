@@ -27,3 +27,39 @@ svc_CreateThread:
 	mov w8, #4
 	svc #0
 	ret
+
+.globl svc_CreateNamedEvent
+svc_CreateNamedEvent:
+	mov w8, #5
+	svc #0
+	ret
+
+.globl svc_SignalEvent
+svc_SignalEvent:
+	mov w8, #6
+	svc #0
+	ret
+
+.globl svc_ClearEvent
+svc_ClearEvent:
+	mov w8, #7
+	svc #0
+	ret
+
+.globl svc_ResetEvent
+svc_ResetEvent:
+	mov w8, #8
+	svc #0
+	ret
+
+.globl svc_PollEvent
+svc_PollEvent:
+	mov w8, #9
+	svc #0
+	ret
+
+.globl svc_Yield
+svc_Yield:
+	mov w8, #10
+	svc #0
+	ret

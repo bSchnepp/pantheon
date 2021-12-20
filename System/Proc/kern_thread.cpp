@@ -1,22 +1,22 @@
 #include <kern_datatypes.hpp>
 #include <Sync/kern_spinlock.hpp>
 
+#include "kern_cpu.hpp"
 #include "kern_proc.hpp"
 #include "kern_sched.hpp"
 #include "kern_thread.hpp"
 
-#include <Common/PhyMemory/kern_alloc.hpp>
+#include <System/PhyMemory/kern_alloc.hpp>
 
 /**
  * \~english @brief Prepares a thread ready to have contents moved to it.
  * \~english @author Brian Schnepp
  */
-pantheon::Thread::Thread()
+pantheon::Thread::Thread() : pantheon::Lockable("Thread")
 {
-	this->ThreadLock = pantheon::Spinlock("thread_lock");
-	this->ThreadLock.Acquire();
+	this->Lock();
 	this->ParentProcess = nullptr;
-	this->PreemptCount = 0;
+	this->PreemptCount = 1;
 	this->Priority = pantheon::THREAD_PRIORITY_NORMAL;
 	this->State = pantheon::THREAD_STATE_TERMINATED;
 	this->RemainingTicks = 0;
@@ -24,11 +24,10 @@ pantheon::Thread::Thread()
 	this->KernelStackSpace = nullptr;
 	this->UserStackSpace = nullptr;
 	this->TID = 0;
-	this->VisitFlag = FALSE;
 
 	/* TODO: Create new page tables, instead of reusing old stuff. */
 	this->TTBR0 = (void*)pantheon::CPUReg::R_TTBR0_EL1();
-	this->ThreadLock.Release();
+	this->Unlock();
 }
 
 /**
@@ -50,36 +49,33 @@ pantheon::Thread::Thread(Process *OwningProcess)
  * \~english @param Priority The priority of the current thread. The thread
  * priority given will never be greater than the supplied priority. 
  */
-pantheon::Thread::Thread(Process *OwningProcess, ThreadPriority Priority)
+pantheon::Thread::Thread(Process *OwningProcess, ThreadPriority Priority) : pantheon::Lockable("Thread")
 {
-	this->ThreadLock = pantheon::Spinlock("thread_lock");
-	this->ThreadLock.Acquire();
+	this->Lock();
 	this->ParentProcess = OwningProcess;
 	this->Priority = Priority;
 	this->KernelStackSpace = nullptr;
 	this->UserStackSpace = nullptr;
 
-	this->PreemptCount = 0;
+	this->PreemptCount = 1;
 	this->RemainingTicks = 0;
 
 	this->Registers.Wipe();
 	this->State = pantheon::THREAD_STATE_INIT;
 
 	this->TID = AcquireThreadID();
-	this->VisitFlag = FALSE;
 
 	/* TODO: Create new page tables, instead of reusing old stuff. */
 	this->TTBR0 = (void*)pantheon::CPUReg::R_TTBR0_EL1();
 
 	/* 45 for NORMAL, 30 for LOW, 15 for VERYLOW, etc. */
 	this->RefreshTicks();
-	this->ThreadLock.Release();
+	this->Unlock();
 }
 
-pantheon::Thread::Thread(const pantheon::Thread &Other)
+pantheon::Thread::Thread(const pantheon::Thread &Other) : pantheon::Lockable("Thread")
 {
-	this->ThreadLock = pantheon::Spinlock("thread_lock");
-	this->ThreadLock.Acquire();
+	this->Lock();
 	this->ParentProcess = Other.ParentProcess;
 	this->PreemptCount = Other.PreemptCount;
 	this->Priority = Other.Priority;
@@ -89,15 +85,13 @@ pantheon::Thread::Thread(const pantheon::Thread &Other)
 	this->TID = Other.TID;
 	this->KernelStackSpace = Other.KernelStackSpace;
 	this->UserStackSpace = Other.UserStackSpace;
-	this->VisitFlag = Other.VisitFlag;
 	this->TTBR0 = (void*)Other.TTBR0;	
-	this->ThreadLock.Release();
+	this->Unlock();
 }
 
-pantheon::Thread::Thread(pantheon::Thread &&Other) noexcept
+pantheon::Thread::Thread(pantheon::Thread &&Other) noexcept : pantheon::Lockable("Thread")
 {
-	this->ThreadLock = pantheon::Spinlock("thread_lock");
-	this->ThreadLock.Acquire();
+	this->Lock();
 	this->ParentProcess = Other.ParentProcess;
 	this->PreemptCount = Other.PreemptCount;
 	this->Priority = Other.Priority;
@@ -107,9 +101,8 @@ pantheon::Thread::Thread(pantheon::Thread &&Other) noexcept
 	this->TID = Other.TID;
 	this->KernelStackSpace = Other.KernelStackSpace;
 	this->UserStackSpace = Other.UserStackSpace;
-	this->VisitFlag = Other.VisitFlag;
 	this->TTBR0 = (void*)Other.TTBR0;
-	this->ThreadLock.Release();
+	this->Unlock();
 }
 
 pantheon::Thread::~Thread()
@@ -143,6 +136,10 @@ pantheon::Process *pantheon::Thread::MyProc() const
  */
 pantheon::ThreadState pantheon::Thread::MyState()
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("MyState without lock");
+	}
 	return this->State;
 }
 
@@ -154,19 +151,22 @@ pantheon::ThreadState pantheon::Thread::MyState()
 [[nodiscard]]
 pantheon::ThreadPriority pantheon::Thread::MyPriority()
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("MyPriority without lock");
+	}
 	return this->Priority;
 }
 
 /**
- * \~english @brief Gets the number of times this process has been pre-empted.
+ * \~english @brief Checks if this thread is valid to interrupt at this moment
  * \~english @author Brian Schnepp
- * \~english @return The number of times the kernel has interrupted this thread
- * to resume execution of some other work.
+ * \~english @return 0 if not doing system work currently, 1 otherwise.
  */
 [[nodiscard]]
-UINT64 pantheon::Thread::Preempts() const
+BOOL pantheon::Thread::Preempted() const
 {
-	return this->PreemptCount;
+	return this->PreemptCount != 0;
 }
 
 /**
@@ -187,6 +187,11 @@ UINT64 pantheon::Thread::TicksLeft() const
  */
 VOID pantheon::Thread::CountTick()
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("CountTicks without lock");
+	}
+
 	if (this->RemainingTicks)
 	{
 		this->RemainingTicks--;
@@ -211,12 +216,20 @@ void *pantheon::Thread::GetTTBR0() const
  */
 VOID pantheon::Thread::AddTicks(UINT64 TickCount)
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("AddTicks without lock");
+	}
 	this->RemainingTicks += TickCount;
 }
 
 VOID pantheon::Thread::RefreshTicks()
 {
-	this->RemainingTicks = (this->Priority + 1) * 3;
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("RefreshTicks without lock");
+	}
+	this->RemainingTicks = static_cast<UINT64>((this->Priority + 1)) * 3;
 }
 
 /**
@@ -225,7 +238,20 @@ VOID pantheon::Thread::RefreshTicks()
  */
 VOID pantheon::Thread::SetState(ThreadState State)
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("SetState without lock");
+	}	
 	this->State = State;
+}
+
+VOID pantheon::Thread::SetTicks(UINT64 TickCount)
+{
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("SetTicks without lock");
+	}
+	this->RemainingTicks = TickCount;
 }
 
 /**
@@ -237,6 +263,11 @@ VOID pantheon::Thread::SetState(ThreadState State)
  */
 VOID pantheon::Thread::SetPriority(ThreadPriority Priority)
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("SetPriority without lock");
+	}
+
 	if (Priority <= this->Priority)
 	{
 		this->Priority = Priority;
@@ -249,6 +280,11 @@ VOID pantheon::Thread::SetPriority(ThreadPriority Priority)
  */
 pantheon::CpuContext *pantheon::Thread::GetRegisters()
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("GetRegisters without lock");
+	}
+
 	/* TODO: Copy the actual registers to the internal representation! */
 	return &this->Registers;
 }
@@ -259,6 +295,8 @@ pantheon::Thread &pantheon::Thread::operator=(const pantheon::Thread &Other)
 	{
 		return *this;
 	}
+
+	Lockable::operator=(Other);
 	this->ParentProcess = Other.ParentProcess;
 	this->PreemptCount = Other.PreemptCount;
 	this->Priority = Other.Priority;
@@ -279,6 +317,7 @@ pantheon::Thread &pantheon::Thread::operator=(pantheon::Thread &&Other) noexcept
 	{
 		return *this;
 	}
+	Lockable::operator=(Other);
 	this->ParentProcess = Other.ParentProcess;
 	this->PreemptCount = Other.PreemptCount;
 	this->Priority = Other.Priority;
@@ -293,33 +332,49 @@ pantheon::Thread &pantheon::Thread::operator=(pantheon::Thread &&Other) noexcept
 
 void pantheon::Thread::SetKernelStackAddr(UINT64 Addr)
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("SetKernelStackAddr without lock");
+	}
+
 	this->Registers.SetSP(Addr);
 	this->KernelStackSpace = reinterpret_cast<void*>((CHAR*)Addr);
 }
 
 void pantheon::Thread::SetUserStackAddr(UINT64 Addr)
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("SetUserStackAddr without lock");
+	}
+
 	this->Registers.SetSP(Addr);
 	this->UserStackSpace = reinterpret_cast<void*>((CHAR*)Addr);
 }
 
-void pantheon::Thread::FlipVisitFlag()
+void pantheon::Thread::SetProc(pantheon::Process *Proc)
 {
-	this->VisitFlag = !this->VisitFlag;
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("SetProc without lock");
+	}	
+	this->ParentProcess = Proc;
 }
 
-[[nodiscard]]
-BOOL pantheon::Thread::GetVisitFlag() const
+void pantheon::Thread::BlockScheduling()
 {
-	return this->VisitFlag;
+	this->Lock();
+	pantheon::Sync::DSBISH();
+	this->PreemptCount++;
+	pantheon::Sync::DSBISH();
+	this->Unlock();
 }
 
-VOID pantheon::Thread::Lock()
+void pantheon::Thread::EnableScheduling()
 {
-	this->ThreadLock.Acquire();
-}
-
-VOID pantheon::Thread::Unlock()
-{
-	this->ThreadLock.Release();
+	this->Lock();
+	pantheon::Sync::DSBISH();
+	this->PreemptCount--;
+	pantheon::Sync::DSBISH();
+	this->Unlock();
 }

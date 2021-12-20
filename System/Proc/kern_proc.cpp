@@ -5,10 +5,11 @@
 #include <System/Proc/kern_sched.hpp>
 #include <System/Proc/kern_thread.hpp>
 
+#include <Handle/kern_lockable.hpp>
 #include <Common/Structures/kern_slab.hpp>
 
 
-pantheon::Process::Process()
+pantheon::Process::Process() : pantheon::Lockable("Process")
 {
 	this->CurState = pantheon::PROCESS_STATE_INIT;
 	this->Priority = pantheon::PROCESS_PRIORITY_VERYLOW;
@@ -19,7 +20,7 @@ pantheon::Process::Process()
 	
 }
 
-pantheon::Process::Process(const char *CommandString)
+pantheon::Process::Process(const char *CommandString) : pantheon::Lockable("Process")
 {
 	this->ProcessCommand = pantheon::String(CommandString);
 	this->CurState = pantheon::PROCESS_STATE_INIT;
@@ -30,7 +31,7 @@ pantheon::Process::Process(const char *CommandString)
 	
 }
 
-pantheon::Process::Process(pantheon::String &CommandString)
+pantheon::Process::Process(pantheon::String &CommandString) : pantheon::Lockable("Process")
 {
 	this->CurState = pantheon::PROCESS_STATE_INIT;
 	this->Priority = pantheon::PROCESS_PRIORITY_NORMAL;
@@ -41,13 +42,15 @@ pantheon::Process::Process(pantheon::String &CommandString)
 	
 }
 
-pantheon::Process::Process(const Process &Other) noexcept
+pantheon::Process::Process(const Process &Other) noexcept : pantheon::Lockable("Process")
 {
+	this->Lock();
 	this->CurState = Other.CurState;
 	this->PID = Other.PID;
 	this->Priority = Other.Priority;
 	this->ProcessCommand = Other.ProcessCommand;
 	this->MemoryMap = Other.MemoryMap;
+	this->Unlock();
 }
 
 pantheon::Process::Process(Process &&Other) noexcept
@@ -71,6 +74,7 @@ pantheon::Process &pantheon::Process::operator=(const pantheon::Process &Other)
 	{
 		return *this;
 	}
+	Lockable::operator=(Other);
 	this->CurState = Other.CurState;
 	this->PID = Other.PID;
 	this->Priority = Other.Priority;
@@ -85,6 +89,7 @@ pantheon::Process &pantheon::Process::operator=(pantheon::Process &&Other) noexc
 	{
 		return *this;
 	}
+	Lockable::operator=(Other);
 	this->CurState = Other.CurState;
 	this->PID = Other.PID;
 	this->Priority = Other.Priority;
@@ -107,6 +112,11 @@ BOOL pantheon::Process::CreateThread(void *StartAddr, void *ThreadData)
 
 BOOL pantheon::Process::CreateThread(void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority)
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("Process not locked with CreateThread");
+	}
+
 	if (this->CurState == pantheon::PROCESS_STATE_INIT)
 	{
 		this->SetState(pantheon::PROCESS_STATE_RUNNING);
@@ -129,5 +139,48 @@ pantheon::ProcessState pantheon::Process::MyState() const
 
 void pantheon::Process::SetState(pantheon::ProcessState State)
 {
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("Process not locked with SetState");
+	}
+
 	this->CurState = State;
+}
+
+INT64 pantheon::Process::EncodeHandle(const pantheon::Handle &NewHand)
+{
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("Process not locked with EncodeHandle");
+	}
+
+	for (UINT64 Index = 0; Index < pantheon::Process::HandleTableSize; Index++)
+	{
+		if (this->ProcHandleTable[Index].IsValid() == FALSE)
+		{
+			this->ProcHandleTable[Index] = NewHand;
+			return static_cast<INT64>(Index);
+		}
+	}
+	return -1;
+}
+
+pantheon::Handle *pantheon::Process::GetHandle(UINT8 HandleID)
+{
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("Process not locked with GetHandle");
+	}
+
+	if (HandleID > pantheon::Process::HandleTableSize)
+	{
+		return nullptr;
+	}
+
+	pantheon::Handle *CurHandle = &(this->ProcHandleTable[HandleID]);
+	if (CurHandle->IsValid())
+	{
+		return CurHandle;
+	}
+	return nullptr;
 }

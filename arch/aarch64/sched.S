@@ -2,13 +2,14 @@
 .globl createprocess_tail
 .globl drop_usermode
 
-.extern enable_interrupts
+.extern FinishThread
+.extern ReleaseThread
 
 _hang:
 	b _hang
 
 createprocess_tail:
-	bl enable_interrupts
+	bl FinishThread
 	mov x0, x20
 	blr x19
 

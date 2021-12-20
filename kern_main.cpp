@@ -11,27 +11,22 @@
 
 
 extern "C" void sysm_Main();
-
-/* Since we don't use the MMU at all, we need thread-unique storage, 
- * since theres no kernel-level thread-local storage. */
-void kern_idle(void *unused)
-{
-	PANTHEON_UNUSED(unused);
-	static UINT64 Count[2000];
-	volatile UINT64 TID = pantheon::CPU::GetCurThread()->ThreadID();
-	Count[TID] = 0;
-	for (;;)
-	{
-		Count[TID]++;
-		SERIAL_LOG("(%hhu) %s\t%u \t\t[%ld]\n", pantheon::CPU::GetProcessorNumber(), "idle: ", Count[TID], TID);
-	}
-	for (;;){}
-}
+extern "C" void prgm_Main();
 
 void kern_idle2(void *unused)
 {
 	PANTHEON_UNUSED(unused);
 	pantheon::CPU::DropToUsermode((UINT64)sysm_Main);
+	for (;;)
+	{
+		SERIAL_LOG("%s\n", "STUCK IN KERNEL SPACE");
+	}
+}
+
+void kern_idle3(void *unused)
+{
+	PANTHEON_UNUSED(unused);
+	pantheon::CPU::DropToUsermode((UINT64)prgm_Main);
 	for (;;)
 	{
 		SERIAL_LOG("%s\n", "STUCK IN KERNEL SPACE");
@@ -46,38 +41,24 @@ extern "C"
 
 void kern_init_core()
 {
+	UINT8 CpuNo = pantheon::CPU::GetProcessorNumber();
+
 	while (pantheon::GetKernelStatus() < pantheon::KERNEL_STATUS_SECOND_STAGE)
 	{
 		/* Loop until core 0 finished essential kernel setup */
 	}
 
-	UINT8 CpuNo = pantheon::CPU::GetProcessorNumber();
 	pantheon::CPU::InitCoreInfo(CpuNo);
 	PerCoreInit();
-
-	volatile UINT64 SCTLRVal = 0;
-	asm volatile(
-		"mrs %0, sctlr_el1\n"
-		"isb\n"
-		"dsb sy"
-		: "=r"(SCTLRVal):: "memory");
-
-	SERIAL_LOG("Pantheon booted with core %hhu, and paging is %x\n", CpuNo, SCTLRVal & 0x01);
+	SERIAL_LOG("Pantheon booted with core %hhu\n", CpuNo);
 
 	while (pantheon::GetKernelStatus() < pantheon::KERNEL_STATUS_OK)
 	{
 		/* Loop until core 0 finished kernel setup */
 	}
 
-	pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle);
-
 	pantheon::RearmSystemTimer(1000);
-	pantheon::CPU::GetCoreInfo()->CurSched->SignalReschedule();
 	pantheon::CPU::STI();
-	for (;;)
-	{
-		pantheon::CPU::GetCoreInfo()->CurSched->MaybeReschedule();
-	}
 }
 
 void kern_init(InitialBootInfo *InitBootInfo, void *initial_load_addr, void *virt_load_addr)
@@ -89,16 +70,24 @@ void kern_init(InitialBootInfo *InitBootInfo, void *initial_load_addr, void *vir
 	if (pantheon::CPU::GetProcessorNumber() == 0)
 	{
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);
-		pantheon::GetGlobalScheduler()->Init();
+		pantheon::InitBasicRuntime();
+		pantheon::InitBasicMemory();
+		pantheon::ipc::InitEventSystem();
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_SECOND_STAGE);
-
 		/* Create an extra idle thread to ensure rescheduling happens.
 		 * Without a spare thread, no scheduling ever occurs. FIXME!
 		 */
-		pantheon::GetGlobalScheduler()->CreateIdleProc((void*)kern_idle2);
+		pantheon::GetGlobalScheduler()->Init();
+		pantheon::GetGlobalScheduler()->CreateProcess("sysm", (void*)kern_idle2);
+		pantheon::GetGlobalScheduler()->CreateProcess("prgm", (void*)kern_idle3);
+
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_OK);
 	}
 	kern_init_core();
+	for (;;)
+	{
+		pantheon::CPU::GetCoreInfo()->CurSched->Reschedule();
+	}	
 }
 
 #ifdef __cplusplus

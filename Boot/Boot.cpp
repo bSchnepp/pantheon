@@ -331,41 +331,41 @@ void PrintDTB(fdt_header *dtb)
 			CHAR Buffer[512];
 			ClearBuffer(Buffer, 512);
 			DTBState.CopyStringFromOffset(Offset, Buffer, 512);
-			SERIAL_LOG("%s%s%s", CurDevNode, " : ", Buffer);
+			SERIAL_LOG_UNSAFE("%s%s%s", CurDevNode, " : ", Buffer);
 			if (IsStringPropType(Buffer) || IsStringListPropType(Buffer))
 			{
 				CHAR Buffer2[512];
 				ClearBuffer(Buffer2, 512);
 				DTBState.CopyStringFromStructPropNode(Buffer2, 512);
-				SERIAL_LOG("%s%s%s", " (", Buffer2, ")");
+				SERIAL_LOG_UNSAFE("%s%s%s", " (", Buffer2, ")");
 			}
 			else if (IsU32PropType(Buffer))
 			{
 				UINT32 U32;
 				DTBState.CopyU32FromStructPropNode(&U32);
-				SERIAL_LOG("%s%u%s", " (", U32, ")");
+				SERIAL_LOG_UNSAFE("%s%u%s", " (", U32, ")");
 			}
 			else if (IsU64PropType(Buffer))
 			{
 				UINT64 U64;
 				DTBState.CopyU64FromStructPropNode(&U64);
-				SERIAL_LOG("%s%u%s", " (", U64, ")");
+				SERIAL_LOG_UNSAFE("%s%u%s", " (", U64, ")");
 			}
 			
 			CHAR DevName[512];
 			UINT64 Addr;
 			DTBState.NodeNameToAddress(CurDevNode, DevName, 512, &Addr);
-			SERIAL_LOG("%s", "\n");
+			SERIAL_LOG_UNSAFE("%s", "\n");
 		}
 		else if (CurNode == FDT_BEGIN_NODE)
 		{
 			ClearBuffer(CurDevNode, 512);
 			DTBState.CopyStringFromStructBeginNode(CurDevNode, 512);
-			SERIAL_LOG("%s%s%s", "<<", CurDevNode, ">>\n");
+			SERIAL_LOG_UNSAFE("%s%s%s", "<<", CurDevNode, ">>\n");
 
 		}
 	}
-	SERIAL_LOG("%s\n", "finished going through dtb");
+	SERIAL_LOG_UNSAFE("%s\n", "finished going through dtb");
 }
 
 static pantheon::vmm::PageAllocator InitialPageTables;
@@ -379,7 +379,7 @@ static void SetupPageTables()
 	 * 	- Add the number of pages to handle there.
 	 */
 
-	constexpr UINT64 NumTables = 8 * 1024;
+	constexpr UINT64 NumTables = static_cast<UINT64>(8 * 1024);
 	MemArea = Align<UINT64>(MemArea, pantheon::vmm::BlockSize::L3BlockSize);
 	InitialPageTables = pantheon::vmm::PageAllocator((void*)MemArea, NumTables);
 

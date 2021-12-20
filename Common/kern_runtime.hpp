@@ -130,6 +130,7 @@ extern "C"
 
 BOOL StringCompare(const CHAR *Arg1, const CHAR *Arg2, UINT64 Amt);
 void ClearBuffer(CHAR *Location, UINT32 Amount);
+void SetBufferBytes(CHAR *Location, UINT8 Value, UINT32 Amount);
 void CopyMemory(VOID *Dest, VOID *Src, UINT64 Amt);
 
 constexpr UINT32 ConstStrLen(const CHAR *Str)
@@ -148,8 +149,13 @@ void SERIAL_LOG_UNSAFE(const char *Fmt, ...);
 namespace pantheon
 {
 
-void StopError(const char *Reason);
+void InitBasicRuntime();
+void InitBasicMemory();
+void StopError(const char *Reason, void *Source = nullptr);
+BOOL Panicked();
 
 }
+
+#define OBJECT_SELF_ASSERT(x) if ((x) == nullptr) { StopError("called method was nullptr"); }
 
 #endif

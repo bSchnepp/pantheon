@@ -11,7 +11,8 @@ LIST(APPEND COMMON_HEADERS Structures/kern_optional.hpp)
 LIST(APPEND COMMON_HEADERS Structures/kern_bitmap.hpp)
 LIST(APPEND COMMON_HEADERS Structures/kern_rawbitmap.hpp)
 LIST(APPEND COMMON_HEADERS Structures/kern_slab.hpp)
-LIST(APPEND COMMON_HEADERS PhyMemory/kern_alloc.hpp)
+LIST(APPEND COMMON_HEADERS Structures/kern_linkedlist.hpp)
+
 
 LIST(APPEND COMMON_SOURCES kern_runtime.cpp)
 LIST(APPEND COMMON_SOURCES kern_basic_malloc.cpp)
@@ -20,15 +21,11 @@ LIST(APPEND COMMON_SOURCES kern_string.cpp)
 LIST(APPEND COMMON_SOURCES Sync/kern_spinlock.cpp)
 LIST(APPEND COMMON_SOURCES Structures/kern_bitmap.cpp)
 LIST(APPEND COMMON_SOURCES Structures/kern_rawbitmap.cpp)
-LIST(APPEND COMMON_SOURCES PhyMemory/kern_alloc.cpp)
 
 INCLUDE_DIRECTORIES(../externals)
-
-INCLUDE_DIRECTORIES(PhyProtocol)
-ADD_SUBDIRECTORY(PhyProtocol)
 
 ADD_LIBRARY(Common STATIC
 	${COMMON_HEADERS}
 	${COMMON_SOURCES})
 
-TARGET_LINK_LIBRARIES(Common PRIVATE PhyProtocol Printf)
+TARGET_LINK_LIBRARIES(Common PRIVATE Printf)

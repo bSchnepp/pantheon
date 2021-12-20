@@ -8,6 +8,8 @@
 #include <Sync/kern_spinlock.hpp>
 
 #include <Proc/kern_thread.hpp>
+#include <Handle/kern_handle.hpp>
+#include <Handle/kern_lockable.hpp>
 
 #ifndef _KERN_PROC_HPP_
 #define _KERN_PROC_HPP_
@@ -35,7 +37,7 @@ typedef enum ProcessPriority
 	PROCESS_PRIORITY_VERYHIGH = 4,
 }ProcessPriority;
 
-class Process
+class Process : public pantheon::Lockable
 {
 public:
 	Process();
@@ -43,7 +45,7 @@ public:
 	Process(String &CommandString);
 	Process(const Process &Other) noexcept;
 	Process(Process &&Other) noexcept;
-	~Process();
+	~Process() override;
 
 	Process &operator=(const Process &Other);
 	Process &operator=(Process &&Other) noexcept;
@@ -58,6 +60,9 @@ public:
 
 	void MapPages(pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, pantheon::vmm::PageTableEntry *PageAttributes, UINT64 NumPages);
 
+	INT64 EncodeHandle(const pantheon::Handle &NewHand);
+	pantheon::Handle *GetHandle(UINT8 HandleID);
+
 private:
 	UINT32 PID;
 	String ProcessCommand;
@@ -67,6 +72,9 @@ private:
 
 	pantheon::Spinlock ProcessLock;
 	pantheon::vmm::PageTable *MemoryMap;
+
+	static constexpr UINT64 HandleTableSize = 64;
+	pantheon::Handle ProcHandleTable[HandleTableSize];
 };
 
 }

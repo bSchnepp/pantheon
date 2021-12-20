@@ -14,12 +14,12 @@ UINT8 pantheon::CPU::GetProcessorNumber()
 
 VOID pantheon::CPU::CLI()
 {
-	pantheon::arm::CLI();
+	asm volatile("msr daifset, #2\n");
 }
 
 VOID pantheon::CPU::STI()
 {
-	pantheon::arm::STI();
+	asm volatile("msr daifclr, #2\n");
 }
 
 VOID pantheon::CPU::PAUSE()
@@ -58,7 +58,8 @@ VOID pantheon::CPUReg::W_TTBR1_EL1(UINT64 Val)
 
 BOOL pantheon::CPU::IF()
 {
-	return ((pantheon::arm::DAIFR() >> 6) & 0b111) != 0;
+	volatile UINT64 Number = (pantheon::arm::DAIFR() >> 6);
+	return (Number & 0x03) != 0;
 }
 
 VOID pantheon::CPU::PUSHI()
@@ -72,6 +73,7 @@ VOID pantheon::CPU::PUSHI()
 		CoreInfo->IntStatus = InterruptsOn;
 	}
 	CoreInfo->NOff++;
+	pantheon::Sync::ISB();
 }
 
 VOID pantheon::CPU::POPI()
@@ -89,6 +91,7 @@ VOID pantheon::CPU::POPI()
 	{
 		pantheon::CPU::STI();
 	}
+	pantheon::Sync::ISB();
 }
 
 VOID pantheon::CPU::LIDT(void *Table)

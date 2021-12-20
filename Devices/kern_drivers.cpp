@@ -12,9 +12,9 @@
 
 #include <Proc/kern_cpu.hpp>
 
-#include <Common/PhyProtocol/PCI/PCIe.hpp>
-#include <Common/PhyProtocol/PSCI/PSCI.hpp>
-#include <Common/PhyProtocol/DeviceTree/DeviceTree.hpp>
+#include <System/PhyProtocol/PCI/PCIe.hpp>
+#include <System/PhyProtocol/PSCI/PSCI.hpp>
+#include <System/PhyProtocol/DeviceTree/DeviceTree.hpp>
 
 static BOOL UseGIC = FALSE;
 static BOOL UseECAM = FALSE;

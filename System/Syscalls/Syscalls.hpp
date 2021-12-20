@@ -1,3 +1,4 @@
+#include <kern_thread.hpp>
 #include <kern_datatypes.hpp>
 
 #ifndef _SYSCALLS_HPP_
@@ -18,7 +19,12 @@ Result SVCForkProcess();
 Result SVCLogText(const CHAR *Data);
 Result SVCAllocateBuffer(UINT64 Sz);
 Result SVCCreateThread(ThreadStartPtr Entry, VOID *RESERVED, void *StackTop, pantheon::ThreadPriority Priority);
-
+Result SVCCreateNamedEvent(const CHAR *Name, UINT8 *ReadHandle, UINT8 *WriteHandle);
+Result SVCSignalEvent(UINT8 WriteHandle);
+Result SVCClearEvent(UINT8 WriteHandle);
+Result SVCResetEvent(UINT8 ReadHandle);
+Result SVCPollEvent(UINT8 Handle);
+Result SVCYield();
 }
 
 #endif
