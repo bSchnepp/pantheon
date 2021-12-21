@@ -13,9 +13,9 @@
 
 typedef enum DeviceToAddress
 {
-	DEVICE_TYPE_UART = 0x09000000,
-	DEVICE_TYPE_GIC_DIST = 0x08000000,
-	DEVICE_TYPE_GIC_CPU = 0x08010000,
+	DEVICE_TYPE_UART = 0xFFFFFFF7FFDF0000,
+	DEVICE_TYPE_GIC_DIST = 0xFFFFFFF7FFDF2000,
+	DEVICE_TYPE_GIC_CPU = 0xFFFFFFF7FFDF4000,
 }DeviceToAddress;
 
 
@@ -43,7 +43,7 @@ void WriteString(const CHAR *String)
 extern "C" void BoardInit(pantheon::vmm::PageAllocator &PageAllocator)
 {
 	/* FIXME: Handle paging for all the devices as needed. */
-	pantheon::vmm::PageTable *TTBR0 = (pantheon::vmm::PageTable*)pantheon::CPUReg::R_TTBR0_EL1();
+	pantheon::vmm::PageTable *TTBR1 = (pantheon::vmm::PageTable*)pantheon::CPUReg::R_TTBR1_EL1();
 	pantheon::vmm::PageTableEntry DeviceMMIOEntry;
 
 	DeviceMMIOEntry.SetBlock(TRUE);
@@ -56,13 +56,13 @@ extern "C" void BoardInit(pantheon::vmm::PageAllocator &PageAllocator)
 	DeviceMMIOEntry.SetPagePermissions(pantheon::vmm::PAGE_PERMISSION_KERNEL_RW);
 	DeviceMMIOEntry.SetMAIREntry(pantheon::vmm::MAIREntry_0);
 
-	PageAllocator.Map(TTBR0, DEVICE_TYPE_UART, DEVICE_TYPE_UART, pantheon::vmm::BlockSize::L3BlockSize, DeviceMMIOEntry);
+	PageAllocator.Map(TTBR1, DEVICE_TYPE_UART, 0x09000000, pantheon::vmm::BlockSize::L3BlockSize, DeviceMMIOEntry);
 	pantheon::pl011::PL011Init(DEVICE_TYPE_UART, 0);
 
-	PageAllocator.Map(TTBR0, DEVICE_TYPE_GIC_DIST, DEVICE_TYPE_GIC_DIST, pantheon::vmm::BlockSize::L3BlockSize, DeviceMMIOEntry);
+	PageAllocator.Map(TTBR1, DEVICE_TYPE_GIC_DIST, 0x08000000, pantheon::vmm::BlockSize::L3BlockSize, DeviceMMIOEntry);
 	pantheon::arm::GICSetMMIOAddr(pantheon::arm::GIC_CLASS_DISTRIBUTOR, DEVICE_TYPE_GIC_DIST);
 
-	PageAllocator.Map(TTBR0, DEVICE_TYPE_GIC_CPU, DEVICE_TYPE_GIC_CPU, pantheon::vmm::BlockSize::L3BlockSize, DeviceMMIOEntry);
+	PageAllocator.Map(TTBR1, DEVICE_TYPE_GIC_CPU, 0x08010000, pantheon::vmm::BlockSize::L3BlockSize, DeviceMMIOEntry);
 	pantheon::arm::GICSetMMIOAddr(pantheon::arm::GIC_CLASS_CPU_INTERFACE, DEVICE_TYPE_GIC_CPU);
 
 	pantheon::arm::GICInit();
