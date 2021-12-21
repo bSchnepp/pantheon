@@ -21,12 +21,28 @@ extern "C" CHAR *kern_begin;
 extern "C" CHAR *kern_end;
 extern "C" CHAR *USER_BEGIN;
 extern "C" CHAR *USER_END;
+extern "C" CHAR *TEXT_AREA;
+extern "C" CHAR *TEXT_END;
+extern "C" CHAR *RODATA_AREA;
+extern "C" CHAR *RODATA_END;
+extern "C" CHAR *DATA_AREA;
+extern "C" CHAR *DATA_END;
+extern "C" CHAR *BSS_AREA;
+extern "C" CHAR *BSS_END;
 #else
 static UINT8 Area[50000];
 UINT64 kern_begin = (UINT64)&Area;
 UINT64 kern_end = (UINT64)(&Area + 50000);
 static UINT64 USER_BEGIN = 0;
 static UINT64 USER_END = 0;
+static UINT64 TEXT_AREA = 0;
+static UINT64 TEXT_END = 0;
+static UINT64 RODATA_AREA = 0;
+static UINT64 RODATA_END = 0;
+static UINT64 DATA_AREA = 0;
+static UINT64 DATA_END = 0;
+static UINT64 BSS_AREA = 0;
+static UINT64 BSS_END = 0;
 #endif
 
 
@@ -445,6 +461,48 @@ static void SetupPageTables()
 	 * 4. Remap kernel rwdata as RW-
 	 * 5. Reprotect rodata as R-- after running constructors for kernel objects
 	 */
+	UINT64 NoWritePermission = 0;
+	NoWritePermission |= pantheon::vmm::PAGE_PERMISSION_READ_ONLY_KERN;
+	NoWritePermission |= pantheon::vmm::PAGE_PERMISSION_EXECUTE_KERN; 
+	NoWritePermission |= pantheon::vmm::PAGE_PERMISSION_READ_ONLY_USER;
+	NoWritePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_USER;
+	pantheon::vmm::PageTableEntry NoWrite(Entry);
+	NoWrite.SetPagePermissions(NoWritePermission);
+
+	pantheon::vmm::VirtualAddress BaseAddrText = reinterpret_cast<pantheon::vmm::VirtualAddress>(&TEXT_AREA);
+	pantheon::vmm::VirtualAddress EndAddrText = reinterpret_cast<pantheon::vmm::VirtualAddress>(&TEXT_END);
+	InitialPageTables.Map(TTBR1, BaseAddrText, BaseAddrText, EndAddrText - BaseAddrText, NoWrite);
+
+	UINT64 NoExecutePermission = 0;
+	NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_KERN;
+	NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_KERN; 
+	NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_READ_ONLY_USER;
+	NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_USER;
+	pantheon::vmm::PageTableEntry NoExecute(Entry);
+	NoExecute.SetPagePermissions(NoExecutePermission);
+
+	pantheon::vmm::VirtualAddress BaseAddrRodata = reinterpret_cast<pantheon::vmm::VirtualAddress>(&RODATA_AREA);
+	pantheon::vmm::VirtualAddress EndAddrRodata = reinterpret_cast<pantheon::vmm::VirtualAddress>(&RODATA_END);
+	InitialPageTables.Map(TTBR1, BaseAddrRodata, BaseAddrRodata, EndAddrRodata - BaseAddrRodata, NoExecute);
+
+	pantheon::vmm::VirtualAddress BaseAddrData = reinterpret_cast<pantheon::vmm::VirtualAddress>(&DATA_AREA);
+	pantheon::vmm::VirtualAddress EndAddrData = reinterpret_cast<pantheon::vmm::VirtualAddress>(&DATA_END);
+	InitialPageTables.Map(TTBR1, BaseAddrData, BaseAddrData, EndAddrData - BaseAddrData, NoExecute);
+
+	pantheon::vmm::VirtualAddress BaseAddrBSS = reinterpret_cast<pantheon::vmm::VirtualAddress>(&BSS_AREA);
+	pantheon::vmm::VirtualAddress EndAddrBSS = reinterpret_cast<pantheon::vmm::VirtualAddress>(&BSS_END);
+	InitialPageTables.Map(TTBR1, BaseAddrBSS, BaseAddrBSS, EndAddrBSS - BaseAddrBSS, NoExecute);
+
+	/* Run kernel constructors here */
+
+	UINT64 ROPagePermission = 0;
+	ROPagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_ONLY_KERN;
+	ROPagePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_KERN; 
+	ROPagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_ONLY_USER;
+	ROPagePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_USER;
+	Entry.SetPagePermissions(ROPagePermission);
+	InitialPageTables.Reprotect(TTBR1, BaseAddrRodata, EndAddrRodata - BaseAddrRodata, Entry);
+
 	PageTablesCreated.Store(TRUE);
 }
 
