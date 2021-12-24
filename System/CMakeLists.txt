@@ -10,6 +10,9 @@ LIST(APPEND SYSTEM_SOURCES PhyMemory/kern_alloc.cpp)
 LIST(APPEND SYSTEM_HEADERS Handle/kern_handle.hpp)
 LIST(APPEND SYSTEM_SOURCES Handle/kern_handle.cpp)
 
+LIST(APPEND SYSTEM_HEADERS Exec/kern_elf.hpp)
+LIST(APPEND SYSTEM_SOURCES Exec/kern_elf.cpp)
+
 INCLUDE_DIRECTORIES(PhyProtocol)
 ADD_SUBDIRECTORY(PhyProtocol)
 
