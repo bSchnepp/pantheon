@@ -13,6 +13,9 @@ LIST(APPEND SYSTEM_SOURCES Handle/kern_handle.cpp)
 LIST(APPEND SYSTEM_HEADERS Exec/kern_elf.hpp)
 LIST(APPEND SYSTEM_SOURCES Exec/kern_elf.cpp)
 
+LIST(APPEND SYSTEM_HEADERS Exec/kern_initialprograms.hpp)
+LIST(APPEND SYSTEM_SOURCES Exec/kern_initialprograms.cpp)
+
 INCLUDE_DIRECTORIES(PhyProtocol)
 ADD_SUBDIRECTORY(PhyProtocol)
 

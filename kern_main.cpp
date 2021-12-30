@@ -6,6 +6,7 @@
 
 #include <Proc/kern_cpu.hpp>
 #include <Devices/kern_drivers.hpp>
+#include <System/Exec/kern_initialprograms.hpp>
 
 #include <Boot/Boot.hpp>
 
@@ -78,6 +79,7 @@ void kern_init(InitialBootInfo *InitBootInfo, void *initial_load_addr, void *vir
 		 * Without a spare thread, no scheduling ever occurs. FIXME!
 		 */
 		pantheon::GetGlobalScheduler()->Init();
+		pantheon::UnpackInitPrograms();
 		pantheon::GetGlobalScheduler()->CreateProcess("sysm", (void*)kern_idle2);
 		pantheon::GetGlobalScheduler()->CreateProcess("prgm", (void*)kern_idle3);
 
