@@ -71,12 +71,12 @@ private:
 	ProcessState CurState;
 	ProcessPriority Priority;
 
-	pantheon::Spinlock ProcessLock;
+	/* Note that TTBR0 refers to the physical address of MemoryMap. */
+	void *TTBR0;
 	pantheon::vmm::PageTable *MemoryMap;
 
 	static constexpr UINT64 HandleTableSize = 64;
 	pantheon::Handle ProcHandleTable[HandleTableSize];
-	void *TTBR0;
 };
 
 }

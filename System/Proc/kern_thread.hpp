@@ -88,6 +88,8 @@ private:
 
 	void *KernelStackSpace;
 	void *UserStackSpace;
+
+	static constexpr UINT64 InitialNumStackPages = 4;
 };
 
 }

@@ -18,6 +18,8 @@ namespace BlockSize
 	constexpr UINT64 L3BlockSize = (4 * 1024ULL);
 }
 
+constexpr UINT64 SmallestPageSize = pantheon::vmm::BlockSize::L3BlockSize;
+
 typedef enum PageAccessor : UINT64
 {
 	PAGE_ACCESSOR_KERNEL = (0b00ULL << 6),

@@ -65,12 +65,12 @@ void AllocateMemoryArea(UINT64 StartAddr, UINT64 Size);
 void AllocateMemoryArea(UINT64 StartAddr, UINT64 Size)
 {
 	/* If it's less than 4 pages, don't even bother. */
-	if (Size < 4 * pantheon::vmm::BlockSize::L3BlockSize)
+	if (Size < 4 * pantheon::vmm::SmallestPageSize)
 	{
 		return;
 	}
 
-	UINT64 ToBitmapPageSize = Size / (8 * pantheon::vmm::BlockSize::L3BlockSize);
+	UINT64 ToBitmapPageSize = Size / (8 * pantheon::vmm::SmallestPageSize);
 	InitBootInfo.InitMemoryAreas[InitBootInfo.NumMemoryAreas].BaseAddress = (UINT64)StartAddr;
 	InitBootInfo.InitMemoryAreas[InitBootInfo.NumMemoryAreas].Size = Size;
 	InitBootInfo.InitMemoryAreas[InitBootInfo.NumMemoryAreas].Map = pantheon::RawBitmap((UINT8*)MemArea, ToBitmapPageSize);
@@ -86,14 +86,14 @@ void AllocatePage(UINT64 Addr)
 		InitialMemoryArea &InitMemArea = InitBootInfo.InitMemoryAreas[InitArea];
 
 		UINT64 MinAddr = InitMemArea.BaseAddress;
-		UINT64 MaxAddr = MinAddr + InitMemArea.Map.GetSizeBytes() * pantheon::vmm::BlockSize::L3BlockSize * 8;
+		UINT64 MaxAddr = MinAddr + InitMemArea.Map.GetSizeBytes() * pantheon::vmm::SmallestPageSize * 8;
 
 		if (Addr < MinAddr || Addr > MaxAddr)
 		{
 			continue;
 		}
 
-		UINT64 Offset = (Addr - MinAddr) / (pantheon::vmm::BlockSize::L3BlockSize);
+		UINT64 Offset = (Addr - MinAddr) / (pantheon::vmm::SmallestPageSize);
 		InitMemArea.Map.Set(Offset, TRUE);
 	}
 }
@@ -106,14 +106,14 @@ void FreePage(UINT64 Addr)
 		InitialMemoryArea &InitMemArea = InitBootInfo.InitMemoryAreas[InitArea];
 
 		UINT64 MinAddr = InitMemArea.BaseAddress;
-		UINT64 MaxAddr = MinAddr + InitMemArea.Map.GetSizeBytes() * pantheon::vmm::BlockSize::L3BlockSize * 8;
+		UINT64 MaxAddr = MinAddr + InitMemArea.Map.GetSizeBytes() * pantheon::vmm::SmallestPageSize * 8;
 
 		if (Addr < MinAddr || Addr > MaxAddr)
 		{
 			continue;
 		}
 
-		UINT64 Offset = (Addr - MinAddr) / (pantheon::vmm::BlockSize::L3BlockSize);
+		UINT64 Offset = (Addr - MinAddr) / (pantheon::vmm::SmallestPageSize);
 		InitMemArea.Map.Set(Offset, FALSE);
 	}
 }
@@ -128,7 +128,7 @@ UINT64 FindPage()
 		{
 			if (InitMemArea.Map.Get(Bit) == 0)
 			{
-				return InitMemArea.BaseAddress + (pantheon::vmm::BlockSize::L3BlockSize * Bit);
+				return InitMemArea.BaseAddress + (pantheon::vmm::SmallestPageSize * Bit);
 			}
 		}
 	}
@@ -396,7 +396,7 @@ static void SetupPageTables()
 	 */
 
 	constexpr UINT64 NumTables = static_cast<UINT64>(8 * 1024);
-	MemArea = Align<UINT64>(MemArea, pantheon::vmm::BlockSize::L3BlockSize);
+	MemArea = Align<UINT64>(MemArea, pantheon::vmm::SmallestPageSize);
 	InitialPageTables = pantheon::vmm::PageAllocator((void*)MemArea, NumTables);
 
 	/* We'll need two top level page tables. */
@@ -562,7 +562,7 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 		KernSize = (UINT64)&kern_end - (UINT64)&kern_begin;
 		KernEnd = KernBegin + KernSize;
 
-		MemArea = InitAddr + KernSize + pantheon::vmm::BlockSize::L3BlockSize;
+		MemArea = InitAddr + KernSize + pantheon::vmm::SmallestPageSize;
 
 		/* The DTB is handled in 3 passes:
 		 * The first initializes memory areas, so the physical
@@ -577,8 +577,8 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 		SetupPageTables();
 
 		for (UINT64 Start = InitAddr; 
-			Start <= Align<UINT64>(MemArea, pantheon::vmm::BlockSize::L3BlockSize);
-			Start += pantheon::vmm::BlockSize::L3BlockSize)
+			Start <= Align<UINT64>(MemArea, pantheon::vmm::SmallestPageSize);
+			Start += pantheon::vmm::SmallestPageSize)
 		{
 			AllocatePage(Start);
 		}

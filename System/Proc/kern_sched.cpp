@@ -162,15 +162,15 @@ BOOL pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *St
 
 BOOL pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority)
 {
+	/* Attempt 4 pages of stack space for now... */
+	static constexpr UINT64 InitialThreadStackSize = pantheon::vmm::SmallestPageSize * 4;
 	pantheon::Thread T(Proc);
 
-	/* Attempt 128KB of stack space for now... */
-	UINT64 StackSz = 4096;
-	Optional<void*> StackSpace = BasicMalloc(StackSz);
+	Optional<void*> StackSpace = BasicMalloc(InitialThreadStackSize);
 	if (StackSpace.GetOkay())
 	{
 		UINT64 IStackSpace = (UINT64)StackSpace();
-		IStackSpace += StackSz;
+		IStackSpace += InitialThreadStackSize;
 		this->CreateThread(Proc, StartAddr, ThreadData, Priority, (void*)IStackSpace);
 	}
 	return StackSpace.GetOkay();
