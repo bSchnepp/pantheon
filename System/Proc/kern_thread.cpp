@@ -24,9 +24,6 @@ pantheon::Thread::Thread() : pantheon::Lockable("Thread")
 	this->KernelStackSpace = nullptr;
 	this->UserStackSpace = nullptr;
 	this->TID = 0;
-
-	/* TODO: Create new page tables, instead of reusing old stuff. */
-	this->TTBR0 = (void*)pantheon::CPUReg::R_TTBR0_EL1();
 	this->Unlock();
 }
 
@@ -65,9 +62,6 @@ pantheon::Thread::Thread(Process *OwningProcess, ThreadPriority Priority) : pant
 
 	this->TID = AcquireThreadID();
 
-	/* TODO: Create new page tables, instead of reusing old stuff. */
-	this->TTBR0 = (void*)pantheon::CPUReg::R_TTBR0_EL1();
-
 	/* 45 for NORMAL, 30 for LOW, 15 for VERYLOW, etc. */
 	this->RefreshTicks();
 	this->Unlock();
@@ -85,7 +79,6 @@ pantheon::Thread::Thread(const pantheon::Thread &Other) : pantheon::Lockable("Th
 	this->TID = Other.TID;
 	this->KernelStackSpace = Other.KernelStackSpace;
 	this->UserStackSpace = Other.UserStackSpace;
-	this->TTBR0 = (void*)Other.TTBR0;	
 	this->Unlock();
 }
 
@@ -101,7 +94,6 @@ pantheon::Thread::Thread(pantheon::Thread &&Other) noexcept : pantheon::Lockable
 	this->TID = Other.TID;
 	this->KernelStackSpace = Other.KernelStackSpace;
 	this->UserStackSpace = Other.UserStackSpace;
-	this->TTBR0 = (void*)Other.TTBR0;
 	this->Unlock();
 }
 
@@ -202,12 +194,6 @@ VOID pantheon::Thread::CountTick()
 UINT64 pantheon::Thread::ThreadID() const
 {
 	return this->TID;
-}
-
-[[nodiscard]] 
-void *pantheon::Thread::GetTTBR0() const
-{
-	return this->TTBR0;
 }
 
 /**

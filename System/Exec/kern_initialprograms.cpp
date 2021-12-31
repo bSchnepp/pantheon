@@ -1,3 +1,6 @@
+#include <mmu.hpp>
+#include <vmm/vmm.hpp>
+
 #include <kern_runtime.hpp>
 #include <kern_datatypes.hpp>
 #include <System/Exec/kern_elf.hpp>
@@ -6,6 +9,15 @@
 
 extern char *sysm_location;
 extern char *prgm_location;
+
+static void RunSysm()
+{
+}
+
+static void RunPrgm()
+{
+
+}
 
 void pantheon::UnpackInitPrograms()
 {
@@ -16,4 +28,18 @@ void pantheon::UnpackInitPrograms()
 	{
 		pantheon::StopError("unable to unpack initial programs");
 	}
+
+	/* Okay, now make sure these are actually executables... */
+	if (SysmHeader().e_type != ET_REL && SysmHeader().e_type != ET_EXEC)
+	{
+		pantheon::StopError("sysm not an executable");
+	}
+
+	if (PrgmHeader().e_type != ET_REL && PrgmHeader().e_type != ET_EXEC)
+	{
+		pantheon::StopError("prgm not an executable");
+	}
+
+	RunSysm();
+	RunPrgm();
 }

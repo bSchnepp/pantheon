@@ -20,6 +20,20 @@ Optional<ELFFileHeader64> pantheon::exec::ParseElfFileHeader(void *Data)
 		}
 	}
 
+	/* One restriction: everything must be 64-bit. 
+	 * 1 is 32-bit, and 2 is 64-bit.
+	 */
+	if (FinalHeader.e_ident[EI_CLASS] != 2)
+	{
+		return Optional<ELFFileHeader64>();
+	}
+
+	/* Make sure it's ABI compatible with ELF version 1. */
+	if (FinalHeader.e_ident[EI_VERSION] != 1)
+	{
+		return Optional<ELFFileHeader64>();
+	}
+
 	/* We don't bother with checking endianness, 
 	 * header version, etc, architecture, etc. 
 	 * Since these images we're loading here are implied to be valid:

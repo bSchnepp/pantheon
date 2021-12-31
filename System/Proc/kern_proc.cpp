@@ -15,7 +15,8 @@ pantheon::Process::Process() : pantheon::Lockable("Process")
 	this->Priority = pantheon::PROCESS_PRIORITY_VERYLOW;
 	this->ProcessCommand = "idle";
 	this->PID = 0;
-
+	/* TODO: Create new page tables, instead of reusing old stuff. */
+	this->TTBR0 = (void*)pantheon::CPUReg::R_TTBR0_EL1();
 	this->MemoryMap = nullptr;
 	
 }
@@ -26,7 +27,8 @@ pantheon::Process::Process(const char *CommandString) : pantheon::Lockable("Proc
 	this->CurState = pantheon::PROCESS_STATE_INIT;
 	this->Priority = pantheon::PROCESS_PRIORITY_NORMAL;
 	this->PID = pantheon::AcquireProcessID();
-	
+	/* TODO: Create new page tables, instead of reusing old stuff. */
+	this->TTBR0 = (void*)pantheon::CPUReg::R_TTBR0_EL1();
 	this->MemoryMap = nullptr;
 	
 }
@@ -37,7 +39,8 @@ pantheon::Process::Process(pantheon::String &CommandString) : pantheon::Lockable
 	this->Priority = pantheon::PROCESS_PRIORITY_NORMAL;
 	this->ProcessCommand = CommandString;
 	this->PID = pantheon::AcquireProcessID();
-	
+	/* TODO: Create new page tables, instead of reusing old stuff. */
+	this->TTBR0 = (void*)pantheon::CPUReg::R_TTBR0_EL1();
 	this->MemoryMap = nullptr;
 	
 }
@@ -50,6 +53,7 @@ pantheon::Process::Process(const Process &Other) noexcept : pantheon::Lockable("
 	this->Priority = Other.Priority;
 	this->ProcessCommand = Other.ProcessCommand;
 	this->MemoryMap = Other.MemoryMap;
+	this->TTBR0 = Other.TTBR0;
 	this->Unlock();
 }
 
@@ -60,6 +64,7 @@ pantheon::Process::Process(Process &&Other) noexcept
 	this->Priority = Other.Priority;
 	this->ProcessCommand = Other.ProcessCommand;
 	this->MemoryMap = Other.MemoryMap;
+	this->TTBR0 = Other.TTBR0;
 	ClearBuffer((CHAR*)&Other, sizeof(Process));	
 }
 
@@ -80,6 +85,7 @@ pantheon::Process &pantheon::Process::operator=(const pantheon::Process &Other)
 	this->Priority = Other.Priority;
 	this->ProcessCommand = Other.ProcessCommand;
 	this->MemoryMap = Other.MemoryMap;
+	this->TTBR0 = Other.TTBR0;
 	return *this;
 }
 
@@ -95,6 +101,7 @@ pantheon::Process &pantheon::Process::operator=(pantheon::Process &&Other) noexc
 	this->Priority = Other.Priority;
 	this->ProcessCommand = Other.ProcessCommand;
 	this->MemoryMap = Other.MemoryMap;
+	this->TTBR0 = Other.TTBR0;	
 	ClearBuffer((CHAR*)&Other, sizeof(Process));
 	return *this;
 }
@@ -183,4 +190,10 @@ pantheon::Handle *pantheon::Process::GetHandle(UINT8 HandleID)
 		return CurHandle;
 	}
 	return nullptr;
+}
+
+[[nodiscard]] 
+void *pantheon::Process::GetTTBR0() const
+{
+	return this->TTBR0;
 }

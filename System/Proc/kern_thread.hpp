@@ -68,8 +68,6 @@ public:
 	Thread &operator=(const Thread &Other);
 	Thread &operator=(Thread &&Other) noexcept;
 
-	[[nodiscard]] void *GetTTBR0() const;
-
 	void SetProc(pantheon::Process *Proc);
 
 	void BlockScheduling();
@@ -90,7 +88,6 @@ private:
 
 	void *KernelStackSpace;
 	void *UserStackSpace;
-	void *TTBR0;
 };
 
 }

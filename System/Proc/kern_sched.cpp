@@ -62,6 +62,9 @@ VOID pantheon::Scheduler::PerformCpuSwitch(Thread *Old, Thread *New)
 
 	pantheon::GetGlobalScheduler()->ReleaseThread(Old);
 
+	UINT64 NewTTBR0 = (UINT64)New->MyProc()->GetTTBR0();
+	pantheon::CPUReg::W_TTBR0_EL1(NewTTBR0);
+
 	New->Unlock();
 	Old->Unlock();
 

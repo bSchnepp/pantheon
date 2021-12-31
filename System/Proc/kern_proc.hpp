@@ -62,6 +62,7 @@ public:
 
 	INT64 EncodeHandle(const pantheon::Handle &NewHand);
 	pantheon::Handle *GetHandle(UINT8 HandleID);
+	[[nodiscard]] void *GetTTBR0() const;
 
 private:
 	UINT32 PID;
@@ -75,6 +76,7 @@ private:
 
 	static constexpr UINT64 HandleTableSize = 64;
 	pantheon::Handle ProcHandleTable[HandleTableSize];
+	void *TTBR0;
 };
 
 }
