@@ -144,7 +144,7 @@ pantheon::GlobalScheduler::~GlobalScheduler()
  * \~english @return TRUE is the process was sucessfully created, false otherwise.
  * \~english @author Brian Schnepp
  */
-BOOL pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *StartAddr)
+pantheon::Process *pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *StartAddr)
 {
 	BOOL Value = FALSE;
 	
@@ -157,7 +157,11 @@ BOOL pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *St
 	this->ProcessList[Index].Unlock();
 	AccessSpinlock.Release();
 	
-	return Value;
+	if (Value)
+	{
+		return &this->ProcessList[Index];
+	}
+	return nullptr;
 }
 
 BOOL pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority)
@@ -253,6 +257,12 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 		{
 			MaybeThr.Lock();
 			if (MaybeThr.MyState() != pantheon::THREAD_STATE_WAITING)
+			{
+				MaybeThr.Unlock();
+				continue;
+			}
+
+			if (MaybeThr.MyProc()->MyState() != pantheon::PROCESS_STATE_RUNNING)
 			{
 				MaybeThr.Unlock();
 				continue;

@@ -123,11 +123,7 @@ BOOL pantheon::Process::CreateThread(void *StartAddr, void *ThreadData, pantheon
 	{
 		StopError("Process not locked with CreateThread");
 	}
-
-	if (this->CurState == pantheon::PROCESS_STATE_INIT)
-	{
-		this->SetState(pantheon::PROCESS_STATE_RUNNING);
-	}
+	
 	BOOL Status = pantheon::GetGlobalScheduler()->CreateThread(this, StartAddr, ThreadData, Priority);
 	return Status;
 }

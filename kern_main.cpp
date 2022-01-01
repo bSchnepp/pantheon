@@ -80,8 +80,16 @@ void kern_init(InitialBootInfo *InitBootInfo, void *initial_load_addr, void *vir
 		 */
 		pantheon::GetGlobalScheduler()->Init();
 		pantheon::UnpackInitPrograms();
-		pantheon::GetGlobalScheduler()->CreateProcess("sysm", (void*)kern_idle2);
-		pantheon::GetGlobalScheduler()->CreateProcess("prgm", (void*)kern_idle3);
+		pantheon::Process *sysm = pantheon::GetGlobalScheduler()->CreateProcess("sysm", (void*)kern_idle2);
+		pantheon::Process *prgm = pantheon::GetGlobalScheduler()->CreateProcess("prgm", (void*)kern_idle3);
+
+		sysm->Lock();
+		sysm->SetState(pantheon::PROCESS_STATE_RUNNING);
+		sysm->Unlock();
+
+		prgm->Lock();
+		prgm->SetState(pantheon::PROCESS_STATE_RUNNING);
+		prgm->Unlock();
 
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_OK);
 	}

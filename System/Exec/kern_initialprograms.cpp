@@ -6,17 +6,19 @@
 #include <System/Exec/kern_elf.hpp>
 #include <System/Exec/kern_initialprograms.hpp>
 
+#include <System/Proc/kern_sched.hpp>
 
 extern char *sysm_location;
 extern char *prgm_location;
 
-static void RunSysm()
+static void RunSysm(UINT64 IP)
 {
+	pantheon::GetGlobalScheduler()->CreateProcess("sysm.elf", (void*)IP);	
 }
 
-static void RunPrgm()
+static void RunPrgm(UINT64 IP)
 {
-
+	pantheon::GetGlobalScheduler()->CreateProcess("prgm.elf", (void*)IP);
 }
 
 void pantheon::UnpackInitPrograms()
@@ -40,6 +42,6 @@ void pantheon::UnpackInitPrograms()
 		pantheon::StopError("prgm not an executable");
 	}
 
-	RunSysm();
-	RunPrgm();
+	RunSysm(SysmHeader().e_entry);
+	RunPrgm(PrgmHeader().e_entry);
 }

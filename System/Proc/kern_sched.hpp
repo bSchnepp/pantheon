@@ -5,6 +5,7 @@
 #include <kern_container.hpp>
 
 #include <Sync/kern_atomic.hpp>
+#include <System/Proc/kern_proc.hpp>
 #include <Common/Structures/kern_linkedlist.hpp>
 
 #ifndef _KERN_SCHED_HPP_
@@ -38,7 +39,7 @@ public:
 
 	void Init();
 
-	BOOL CreateProcess(pantheon::String ProcStr, void *StartAddr);
+	pantheon::Process *CreateProcess(pantheon::String ProcStr, void *StartAddr);
 	BOOL CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority);
 	BOOL CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority, void *StackTop);
 
