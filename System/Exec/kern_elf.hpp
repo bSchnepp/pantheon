@@ -56,8 +56,12 @@ struct ELFFileHeader64
 	UINT16 e_ehsize;
 	UINT16 e_phentsize;
 	UINT16 e_phnum;
+	UINT16 e_shentsize;
+	UINT16 e_shnum;
 	UINT16 e_shstrndx;
 }__attribute__((__packed__));
+
+static_assert(sizeof(ELFFileHeader64) == 0x40);
 
 enum ProgramHeaderPType : UINT32
 {

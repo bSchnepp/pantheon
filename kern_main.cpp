@@ -73,6 +73,7 @@ void kern_init(InitialBootInfo *InitBootInfo, void *initial_load_addr, void *vir
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);
 		pantheon::InitBasicRuntime();
 		pantheon::InitBasicMemory();
+		pantheon::InitProcessTables();
 		pantheon::ipc::InitEventSystem();
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_SECOND_STAGE);
 		/* Create an extra idle thread to ensure rescheduling happens.

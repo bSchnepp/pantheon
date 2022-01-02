@@ -58,11 +58,13 @@ public:
 	[[nodiscard]] ProcessState MyState() const;
 	void SetState(ProcessState State);
 
+	void CreateBlankPageTable();
+	void SetPageTable(pantheon::vmm::PageTable *Root, pantheon::vmm::PhysicalAddress PageTablePhysicalAddr);
 	void MapPages(pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, pantheon::vmm::PageTableEntry *PageAttributes, UINT64 NumPages);
 
 	INT64 EncodeHandle(const pantheon::Handle &NewHand);
 	pantheon::Handle *GetHandle(UINT8 HandleID);
-	[[nodiscard]] void *GetTTBR0() const;
+	[[nodiscard]] pantheon::vmm::PhysicalAddress GetTTBR0() const;
 
 private:
 	UINT32 PID;
@@ -72,12 +74,14 @@ private:
 	ProcessPriority Priority;
 
 	/* Note that TTBR0 refers to the physical address of MemoryMap. */
-	void *TTBR0;
+	pantheon::vmm::PhysicalAddress TTBR0;
 	pantheon::vmm::PageTable *MemoryMap;
 
 	static constexpr UINT64 HandleTableSize = 64;
 	pantheon::Handle ProcHandleTable[HandleTableSize];
 };
+
+void InitProcessTables();
 
 }
 

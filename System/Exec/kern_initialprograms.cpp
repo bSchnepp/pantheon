@@ -7,18 +7,91 @@
 #include <System/Exec/kern_initialprograms.hpp>
 
 #include <System/Proc/kern_sched.hpp>
+#include <System/PhyMemory/kern_alloc.hpp>
 
 extern char *sysm_location;
 extern char *prgm_location;
 
-static void RunSysm(UINT64 IP)
+static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, pantheon::Process *Proc)
 {
-	pantheon::GetGlobalScheduler()->CreateProcess("sysm.elf", (void*)IP);	
+	Proc->Lock();
+
+	/* We need to create a new page table for this. This is a hack for now, 
+	 * since we dont really properly handle virtual memory yet. */
+	Proc->CreateBlankPageTable();
+
+	ELFProgramHeader64 *PrgHeaderTable = (ELFProgramHeader64*)(ElfLocation + Header.e_phoff);
+	UINT64 NumPrg = Header.e_phnum;
+	
+	/* Map in everything and all. */
+	for (UINT64 Index = 0; Index < NumPrg; Index++)
+	{
+		if (PrgHeaderTable[Index].p_type == 0)
+		{
+			continue;
+		}
+
+		UINT64 BaseVAddr = PrgHeaderTable[Index].p_vaddr;
+		UINT64 CurSize = PrgHeaderTable[Index].p_filesz;
+
+		if (CurSize == 0)
+		{
+			continue;
+		}
+
+		UINT64 NumPages = Align<UINT64>(CurSize, pantheon::vmm::SmallestPageSize);
+		for (UINT64 Count = 0; Count < NumPages / pantheon::vmm::SmallestPageSize; Count++)
+		{
+			/* Create a new page for every part of the program section... */
+			pantheon::vmm::PhysicalAddress NewPage = pantheon::PageAllocator::Alloc();
+			/* TODO: virtualize this address for kernel space! */
+			if (CurSize > pantheon::vmm::SmallestPageSize)
+			{
+				const char *FinalLocation = (ElfLocation + (pantheon::vmm::SmallestPageSize * Count));
+				CopyMemory((void*)NewPage, (void*)FinalLocation, pantheon::vmm::SmallestPageSize);
+				CurSize -= pantheon::vmm::SmallestPageSize;
+			}
+			else
+			{
+				const char *FinalLocation = (ElfLocation + (pantheon::vmm::SmallestPageSize * Count));
+				CopyMemory((void*)NewPage, (void*)FinalLocation, CurSize);
+				CurSize = 0;
+			}
+
+			/* Map this page in now... */
+			UINT64 TargetVAddr = BaseVAddr + (pantheon::vmm::SmallestPageSize * Count);
+
+
+			/* Let's go ahead and map in everything in the lower table as-is. */
+			pantheon::vmm::PageTableEntry UEntry;
+			UEntry.SetBlock(TRUE);
+			UEntry.SetMapped(TRUE);
+			UEntry.SetPagePermissions(0b01 << 6);
+			UEntry.SetKernelNoExecute(TRUE);
+			UEntry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
+			UEntry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
+			UEntry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
+
+			Proc->MapPages(&TargetVAddr, &NewPage, &UEntry, 1);
+		}
+	}
+	/* Set the process to running here... 
+	 * Until we properly have a higher half kernel, 
+	 * this is unsafe, since we could change memory from under the kernel
+	 * while it's still in use. */
+	Proc->Unlock();
 }
 
-static void RunPrgm(UINT64 IP)
+static void RunSysm(ELFFileHeader64 Header, const char *ElfLocation)
 {
-	pantheon::GetGlobalScheduler()->CreateProcess("prgm.elf", (void*)IP);
+	pantheon::Process *sysm = pantheon::GetGlobalScheduler()->CreateProcess("sysm", (void*)Header.e_entry);
+	RunElf(Header, ElfLocation, sysm);
+}
+
+static void RunPrgm(ELFFileHeader64 Header, const char *ElfLocation)
+{
+	pantheon::Process *prgm = pantheon::GetGlobalScheduler()->CreateProcess("prgm", (void*)Header.e_entry);
+	RunElf(Header, ElfLocation, prgm);
 }
 
 void pantheon::UnpackInitPrograms()
@@ -42,6 +115,6 @@ void pantheon::UnpackInitPrograms()
 		pantheon::StopError("prgm not an executable");
 	}
 
-	RunSysm(SysmHeader().e_entry);
-	RunPrgm(PrgmHeader().e_entry);
+	RunSysm(SysmHeader(), (char*)&sysm_location);
+	RunPrgm(PrgmHeader(), (char*)&prgm_location);
 }

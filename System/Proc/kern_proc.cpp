@@ -8,6 +8,15 @@
 #include <Handle/kern_lockable.hpp>
 #include <Common/Structures/kern_slab.hpp>
 
+/* This needs to be replaced with a proper slab allocator at some point */
+static constexpr UINT64 InitNumPageTables = 1024;
+static pantheon::vmm::PageTable Tables[InitNumPageTables];
+static pantheon::vmm::PageAllocator PageTableAllocator;
+
+void pantheon::InitProcessTables()
+{
+	PageTableAllocator = pantheon::vmm::PageAllocator(Tables, InitNumPageTables);
+}
 
 pantheon::Process::Process() : pantheon::Lockable("Process")
 {
@@ -16,7 +25,7 @@ pantheon::Process::Process() : pantheon::Lockable("Process")
 	this->ProcessCommand = "idle";
 	this->PID = 0;
 	/* TODO: Create new page tables, instead of reusing old stuff. */
-	this->TTBR0 = (void*)pantheon::CPUReg::R_TTBR0_EL1();
+	this->TTBR0 = pantheon::CPUReg::R_TTBR0_EL1();
 	this->MemoryMap = nullptr;
 	
 }
@@ -28,7 +37,7 @@ pantheon::Process::Process(const char *CommandString) : pantheon::Lockable("Proc
 	this->Priority = pantheon::PROCESS_PRIORITY_NORMAL;
 	this->PID = pantheon::AcquireProcessID();
 	/* TODO: Create new page tables, instead of reusing old stuff. */
-	this->TTBR0 = (void*)pantheon::CPUReg::R_TTBR0_EL1();
+	this->TTBR0 = pantheon::CPUReg::R_TTBR0_EL1();
 	this->MemoryMap = nullptr;
 	
 }
@@ -40,7 +49,7 @@ pantheon::Process::Process(pantheon::String &CommandString) : pantheon::Lockable
 	this->ProcessCommand = CommandString;
 	this->PID = pantheon::AcquireProcessID();
 	/* TODO: Create new page tables, instead of reusing old stuff. */
-	this->TTBR0 = (void*)pantheon::CPUReg::R_TTBR0_EL1();
+	this->TTBR0 = pantheon::CPUReg::R_TTBR0_EL1();
 	this->MemoryMap = nullptr;
 	
 }
@@ -123,9 +132,30 @@ BOOL pantheon::Process::CreateThread(void *StartAddr, void *ThreadData, pantheon
 	{
 		StopError("Process not locked with CreateThread");
 	}
-	
+
 	BOOL Status = pantheon::GetGlobalScheduler()->CreateThread(this, StartAddr, ThreadData, Priority);
 	return Status;
+}
+
+void pantheon::Process::CreateBlankPageTable()
+{
+	/* HACK: we need to properly devirtualize addresses! */
+	this->MemoryMap = PageTableAllocator.Allocate();
+	this->TTBR0 = (UINT64)this->MemoryMap;
+}
+
+void pantheon::Process::SetPageTable(pantheon::vmm::PageTable *Root, pantheon::vmm::PhysicalAddress PageTablePhysicalAddr)
+{
+	this->MemoryMap = Root;
+	this->TTBR0 = PageTablePhysicalAddr;
+}
+
+void pantheon::Process::MapPages(pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, pantheon::vmm::PageTableEntry *PageAttributes, UINT64 NumPages)
+{
+	for (UINT64 Num = 0; Num < NumPages; Num++)
+	{
+		PageTableAllocator.Map(this->MemoryMap, VAddresses[Num], PAddresses[Num], pantheon::vmm::SmallestPageSize, PageAttributes[Num]);
+	}
 }
 
 [[nodiscard]]
@@ -189,7 +219,7 @@ pantheon::Handle *pantheon::Process::GetHandle(UINT8 HandleID)
 }
 
 [[nodiscard]] 
-void *pantheon::Process::GetTTBR0() const
+pantheon::vmm::PhysicalAddress pantheon::Process::GetTTBR0() const
 {
 	return this->TTBR0;
 }
