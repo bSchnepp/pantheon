@@ -63,3 +63,9 @@ svc_Yield:
 	mov w8, #10
 	svc #0
 	ret
+
+.globl svc_ExitThread
+svc_ExitThread:
+	mov w8, #11
+	svc #0
+	ret

@@ -324,6 +324,25 @@ pantheon::Result pantheon::SVCYield()
 	return 0;
 }
 
+pantheon::Result pantheon::SVCExitThread()
+{
+	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+	pantheon::Process *CurProc = CurThread->MyProc();
+	pantheon::Scheduler *CurSched = pantheon::CPU::GetCurSched();
+	CurProc->Lock();
+	CurThread->Lock();
+	CurThread->SetState(pantheon::THREAD_STATE_TERMINATED);
+	CurThread->Unlock();
+
+	if (pantheon::GetGlobalScheduler()->CountThreads(CurThread->MyProc()->ProcessID()) == 0)
+	{
+		CurProc->SetState(pantheon::PROCESS_STATE_ZOMBIE);
+	}
+	CurProc->Unlock();
+	CurSched->Reschedule();
+	return 0;
+}
+
 void *syscall_table[] = 
 {
 	(void*)pantheon::SVCExitProcess, 
@@ -337,4 +356,5 @@ void *syscall_table[] =
 	(void*)pantheon::SVCResetEvent,
 	(void*)pantheon::SVCPollEvent,
 	(void*)pantheon::SVCYield,
+	(void*)pantheon::SVCExitThread,
 };
