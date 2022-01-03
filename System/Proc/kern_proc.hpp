@@ -52,8 +52,8 @@ public:
 
 	[[nodiscard]] const String &GetProcessString() const;
 	[[nodiscard]] UINT32 ProcessID() const;
-	BOOL CreateThread(void *StartAddr, void *ThreadData);
-	BOOL CreateThread(void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority);
+	pantheon::Thread *CreateThread(void *StartAddr, void *ThreadData);
+	pantheon::Thread *CreateThread(void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority);
 
 	[[nodiscard]] ProcessState MyState() const;
 	void SetState(ProcessState State);
@@ -63,7 +63,7 @@ public:
 	void MapPages(pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, pantheon::vmm::PageTableEntry *PageAttributes, UINT64 NumPages);
 
 	INT64 EncodeHandle(const pantheon::Handle &NewHand);
-	pantheon::Handle *GetHandle(UINT8 HandleID);
+	pantheon::Handle *GetHandle(UINT32 HandleID);
 	[[nodiscard]] pantheon::vmm::PhysicalAddress GetTTBR0() const;
 
 private:
@@ -77,7 +77,7 @@ private:
 	pantheon::vmm::PhysicalAddress TTBR0;
 	pantheon::vmm::PageTable *MemoryMap;
 
-	static constexpr UINT64 HandleTableSize = 64;
+	static constexpr UINT32 HandleTableSize = 64;
 	pantheon::Handle ProcHandleTable[HandleTableSize];
 };
 

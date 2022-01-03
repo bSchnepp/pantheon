@@ -19,6 +19,18 @@ pantheon::Handle::Handle(pantheon::ipc::WritableEvent *Evt)
 	this->Content.WriteEvent = Evt;
 }
 
+pantheon::Handle::Handle(pantheon::Process *Proc)
+{
+	this->Type = pantheon::HANDLE_TYPE_PROCESS;
+	this->Content.Process = Proc;
+}
+
+pantheon::Handle::Handle(pantheon::Thread *Thr)
+{
+	this->Type = pantheon::HANDLE_TYPE_THREAD;
+	this->Content.Thread = Thr;
+}
+
 pantheon::Handle::~Handle()
 {
 

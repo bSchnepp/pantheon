@@ -121,20 +121,19 @@ const pantheon::String &pantheon::Process::GetProcessString() const
 	return this->ProcessCommand;
 }
 
-BOOL pantheon::Process::CreateThread(void *StartAddr, void *ThreadData)
+pantheon::Thread *pantheon::Process::CreateThread(void *StartAddr, void *ThreadData)
 {
 	return this->CreateThread(StartAddr, ThreadData, pantheon::THREAD_PRIORITY_NORMAL);
 }
 
-BOOL pantheon::Process::CreateThread(void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority)
+pantheon::Thread *pantheon::Process::CreateThread(void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority)
 {
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("Process not locked with CreateThread");
 	}
 
-	BOOL Status = pantheon::GetGlobalScheduler()->CreateThread(this, StartAddr, ThreadData, Priority);
-	return Status;
+	return pantheon::GetGlobalScheduler()->CreateThread(this, StartAddr, ThreadData, Priority);
 }
 
 void pantheon::Process::CreateBlankPageTable()
@@ -198,7 +197,7 @@ INT64 pantheon::Process::EncodeHandle(const pantheon::Handle &NewHand)
 	return -1;
 }
 
-pantheon::Handle *pantheon::Process::GetHandle(UINT8 HandleID)
+pantheon::Handle *pantheon::Process::GetHandle(UINT32 HandleID)
 {
 	if (this->IsLocked() == FALSE)
 	{

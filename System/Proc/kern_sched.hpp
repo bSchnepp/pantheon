@@ -40,8 +40,8 @@ public:
 	void Init();
 
 	pantheon::Process *CreateProcess(pantheon::String ProcStr, void *StartAddr);
-	BOOL CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority);
-	BOOL CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority, void *StackTop);
+	pantheon::Thread *CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority);
+	pantheon::Thread *CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority, void *StackTop);
 
 	Thread* AcquireThread();
 	UINT64 CountThreads(UINT64 PID);

@@ -146,7 +146,7 @@ pantheon::GlobalScheduler::~GlobalScheduler()
  */
 pantheon::Process *pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *StartAddr)
 {
-	BOOL Value = FALSE;
+	pantheon::Thread *Value = nullptr;
 	
 	AccessSpinlock.Acquire();
 	UINT64 Index = this->ProcessList.Size();
@@ -164,23 +164,24 @@ pantheon::Process *pantheon::GlobalScheduler::CreateProcess(pantheon::String Pro
 	return nullptr;
 }
 
-BOOL pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority)
+pantheon::Thread *pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority)
 {
 	/* Attempt 4 pages of stack space for now... */
 	static constexpr UINT64 InitialThreadStackSize = pantheon::vmm::SmallestPageSize * 4;
 	pantheon::Thread T(Proc);
 
 	Optional<void*> StackSpace = BasicMalloc(InitialThreadStackSize);
+	pantheon::Thread *Result = nullptr;
 	if (StackSpace.GetOkay())
 	{
 		UINT64 IStackSpace = (UINT64)StackSpace();
 		IStackSpace += InitialThreadStackSize;
-		this->CreateThread(Proc, StartAddr, ThreadData, Priority, (void*)IStackSpace);
+		Result = this->CreateThread(Proc, StartAddr, ThreadData, Priority, (void*)IStackSpace);
 	}
-	return StackSpace.GetOkay();
+	return Result;
 }
 
-BOOL pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority, void *StackTop)
+pantheon::Thread *pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority, void *StackTop)
 {
 	Optional<void*> MaybeMem = BasicMalloc(sizeof(pantheon::Thread));
 	if (MaybeMem.GetOkay() == FALSE)
@@ -203,7 +204,7 @@ BOOL pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *Star
 	T->SetPriority(Priority);
 	this->ThreadList.Append(pantheon::LinkedList<pantheon::Thread>::CreateEntry(T));
 	T->Unlock();
-	return TRUE;
+	return T;
 }
 
 VOID pantheon::GlobalScheduler::Init()

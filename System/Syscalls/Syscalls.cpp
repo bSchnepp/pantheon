@@ -66,9 +66,21 @@ pantheon::Result pantheon::SVCCreateThread(
 		StopError("System call with no process");
 		return -1;
 	}
-	BOOL Status = pantheon::GetGlobalScheduler()->CreateThread(Proc, (void*)Entry, RESERVED, Priority, StackTop);
+	pantheon::Thread *Thr = pantheon::GetGlobalScheduler()->CreateThread(Proc, (void*)Entry, RESERVED, Priority, StackTop);
+	if (Thr == nullptr)
+	{
+		Proc->Unlock();
+		return -1;	
+	}
+
+	INT64 Result = Proc->EncodeHandle(pantheon::Handle(Thr));
 	Proc->Unlock();
-	return Status;
+
+	if (Result < 0)
+	{
+		return -1;
+	}
+	return (UINT32)Result;
 }
 
 
@@ -82,7 +94,7 @@ pantheon::Result pantheon::SVCCreateThread(
  * \~english @param[out] WriteHandle The handle of the process for the write area
  * \~english @param[out] ReadHandle The handle of the process for the read area
  */
-pantheon::Result pantheon::SVCCreateNamedEvent(const CHAR *Name, UINT8 *ReadHandle, UINT8 *WriteHandle)
+pantheon::Result pantheon::SVCCreateNamedEvent(const CHAR *Name, UINT32 *ReadHandle, UINT32 *WriteHandle)
 {
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	if (!CurThread)
@@ -133,7 +145,7 @@ pantheon::Result pantheon::SVCCreateNamedEvent(const CHAR *Name, UINT8 *ReadHand
 	return -1;
 }
 
-pantheon::Result pantheon::SVCSignalEvent(UINT8 WriteHandle)
+pantheon::Result pantheon::SVCSignalEvent(UINT32 WriteHandle)
 {
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	if (!CurThread)
@@ -179,7 +191,7 @@ pantheon::Result pantheon::SVCSignalEvent(UINT8 WriteHandle)
 	return 0;
 }
 
-pantheon::Result pantheon::SVCClearEvent(UINT8 WriteHandle)
+pantheon::Result pantheon::SVCClearEvent(UINT32 WriteHandle)
 {
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	if (!CurThread)
@@ -223,7 +235,7 @@ pantheon::Result pantheon::SVCClearEvent(UINT8 WriteHandle)
 	return 0;
 }
 
-pantheon::Result pantheon::SVCResetEvent(UINT8 ReadHandle)
+pantheon::Result pantheon::SVCResetEvent(UINT32 ReadHandle)
 {
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	if (!CurThread)
@@ -269,7 +281,7 @@ pantheon::Result pantheon::SVCResetEvent(UINT8 ReadHandle)
 	return -1;
 }
 
-pantheon::Result pantheon::SVCPollEvent(UINT8 Handle)
+pantheon::Result pantheon::SVCPollEvent(UINT32 Handle)
 {
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	if (!CurThread)
@@ -343,6 +355,60 @@ pantheon::Result pantheon::SVCExitThread()
 	return 0;
 }
 
+pantheon::Result pantheon::SVCExecute(UINT32 Handle)
+{
+	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+	if (!CurThread)
+	{
+		StopError("System call with no thread");
+		return -1;
+	}	
+	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+	if (Proc == nullptr)
+	{
+		StopError("System call with no process");
+		return -1;
+	}
+	CurThread->Lock();
+	Proc->Lock();
+
+	pantheon::Handle *Hand = Proc->GetHandle(Handle);
+	if (Hand == nullptr)
+	{
+		Proc->Unlock();
+		CurThread->Unlock();
+		return -1;
+	}
+	
+	/* Is this a handle to a process, or to a thread? */
+	if (Hand->GetType() == pantheon::HANDLE_TYPE_PROCESS)
+	{
+		pantheon::Process *Other = Hand->GetContent().Process;
+		Other->Lock();
+		Other->SetState(pantheon::PROCESS_STATE_RUNNING);
+		Other->Unlock();
+
+		Proc->Unlock();
+		CurThread->Unlock();
+		return 0;
+	}
+	else if (Hand->GetType() == pantheon::HANDLE_TYPE_THREAD)
+	{
+		pantheon::Thread *Other = Hand->GetContent().Thread;
+		Other->Lock();
+		Other->SetState(pantheon::THREAD_STATE_WAITING);
+		Other->Unlock();
+
+		Proc->Unlock();
+		CurThread->Unlock();
+		return 0;
+	}
+
+	Proc->Unlock();
+	CurThread->Unlock();
+	return -1;	
+}
+
 void *syscall_table[] = 
 {
 	(void*)pantheon::SVCExitProcess, 
@@ -357,4 +423,5 @@ void *syscall_table[] =
 	(void*)pantheon::SVCPollEvent,
 	(void*)pantheon::SVCYield,
 	(void*)pantheon::SVCExitThread,
+	(void*)pantheon::SVCExecute,
 };

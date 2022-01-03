@@ -19,13 +19,14 @@ Result SVCForkProcess();
 Result SVCLogText(const CHAR *Data);
 Result SVCAllocateBuffer(UINT64 Sz);
 Result SVCCreateThread(ThreadStartPtr Entry, VOID *RESERVED, void *StackTop, pantheon::ThreadPriority Priority);
-Result SVCCreateNamedEvent(const CHAR *Name, UINT8 *ReadHandle, UINT8 *WriteHandle);
-Result SVCSignalEvent(UINT8 WriteHandle);
-Result SVCClearEvent(UINT8 WriteHandle);
-Result SVCResetEvent(UINT8 ReadHandle);
-Result SVCPollEvent(UINT8 Handle);
+Result SVCCreateNamedEvent(const CHAR *Name, UINT32 *ReadHandle, UINT32 *WriteHandle);
+Result SVCSignalEvent(UINT32 WriteHandle);
+Result SVCClearEvent(UINT32 WriteHandle);
+Result SVCResetEvent(UINT32 ReadHandle);
+Result SVCPollEvent(UINT32 Handle);
 Result SVCYield();
 Result SVCExitThread();
+Result SVCExecute(UINT32 Handle);
 }
 
 #endif
