@@ -32,10 +32,10 @@ _cpu_start:
 	cbnz x0, go_kern_main
 	
 	/* x0 and x1 are unused. */
-	adrp x0, bss_begin
-	add x0, x0, :lo12:bss_begin
-	adrp x1, bss_end
-	add x1, x1, :lo12:bss_end
+	adrp x0, BSS_AREA
+	add x0, x0, :lo12:BSS_AREA
+	adrp x1, BSS_END
+	add x1, x1, :lo12:BSS_END
 	bl _zero_bss
 
 go_kern_main:
