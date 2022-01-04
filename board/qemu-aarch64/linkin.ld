@@ -4,10 +4,7 @@ SECTIONS
 {
 	/* On qemu-aarch64, this is the load address with -kernel */
 	BSP_LOAD_ADDRESS = 0x80000 + 0x40000000;
-
-	/* aarch64 load address */
-	VIRT_LOAD_ADDRESS = 0x80000 + 0x40000000;
-	. = VIRT_LOAD_ADDRESS;
+	. = BSP_LOAD_ADDRESS;
 
 	. = ALIGN(0x1000);
 	.text.early :
@@ -37,6 +34,9 @@ SECTIONS
 		Userland/libUserland.a*(*.bss*)
 	}
 	USER_END = .;
+
+	/* aarch64 load address */
+	VIRT_LOAD_ADDRESS = 0xFFFFFFF7FFC00000;
 
 	. = ALIGN(0x1000);
 	. = ALIGN(0x800);
