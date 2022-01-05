@@ -1,6 +1,6 @@
 #include <kern_runtime.hpp>
 #include <kern_datatypes.hpp>
-#include <board/qemu-aarch64/Board.hpp>
+#include <BoardSupport/qemu-aarch64/Board.hpp>
 
 /* On qemu-virt, we definitely have a uart. */
 #include <Devices/PL011/PL011.hpp>

@@ -1,7 +1,6 @@
 #include "kern_cpu.hpp"
-#include <kern_datatypes.hpp>
-
 #include <Boot/Boot.hpp>
+#include <kern_datatypes.hpp>
 #include <PhyMemory/kern_alloc.hpp>
 
 static pantheon::GlobalScheduler GlobalSched;

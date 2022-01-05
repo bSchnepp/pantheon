@@ -13,12 +13,11 @@
 
 #include <vmm/vmm.hpp>
 
-#include "Boot.hpp"
+#include "Boot/Boot.hpp"
 #include "mmu.hpp"
 
 #include "BootDriver.hpp"
 
-#ifndef ONLY_TESTING
 extern "C" CHAR *kern_begin;
 extern "C" CHAR *kern_end;
 extern "C" CHAR *USER_BEGIN;
@@ -35,25 +34,6 @@ extern "C" CHAR *DATA_END;
 extern "C" CHAR *BSS_AREA;
 extern "C" CHAR *BSS_PHY_AREA;
 extern "C" CHAR *BSS_END;
-#else
-static UINT8 Area[50000];
-UINT64 kern_begin = (UINT64)&Area;
-UINT64 kern_end = (UINT64)(&Area + 50000);
-static UINT64 USER_BEGIN = 0;
-static UINT64 USER_END = 0;
-static UINT64 TEXT_AREA = 0;
-static UINT64 TEXT_PHY_AREA = 0;
-static UINT64 TEXT_END = 0;
-static UINT64 RODATA_AREA = 0;
-static UINT64 RODATA_PHY_AREA = 0;
-static UINT64 RODATA_END = 0;
-static UINT64 DATA_AREA = 0;
-static UINT64 DATA_PHY_AREA = 0;
-static UINT64 DATA_END = 0;
-static UINT64 BSS_AREA = 0;
-static UINT64 BSS_PHY_AREA = 0;
-static UINT64 BSS_END = 0;
-#endif
 
 
 static InitialBootInfo InitBootInfo;
