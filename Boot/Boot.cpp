@@ -6,7 +6,7 @@
 
 #include <Proc/kern_cpu.hpp>
 #include <Devices/kern_drivers.hpp>
-#include <PhyProtocol/DeviceTree/DeviceTree.hpp>
+#include <DeviceTree/DeviceTree.hpp>
 
 #include <Common/Structures/kern_slab.hpp>
 #include <Common/Structures/kern_bitmap.hpp>
@@ -15,6 +15,8 @@
 
 #include "Boot.hpp"
 #include "mmu.hpp"
+
+#include "BootDriver.hpp"
 
 #ifndef ONLY_TESTING
 extern "C" CHAR *kern_begin;
@@ -564,8 +566,10 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 	PANTHEON_UNUSED(initial_load_addr);
 	PANTHEON_UNUSED(virt_load_addr);
 
-	pantheon::CPU::CLI();
-	UINT8 ProcNo = pantheon::CPU::GetProcessorNumber();
+	UINT64 ProcNo = 0;
+	asm volatile ("mrs %0, mpidr_el1\n" : "=r"(ProcNo) ::);
+	ProcNo &= 0xFF;
+
 	if (ProcNo == 0)
 	{
 		UINT64 InitAddr = (UINT64)initial_load_addr;

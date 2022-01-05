@@ -13,6 +13,9 @@ _cpu_start:
 	/* x0 must be preserved and passed to the kernel proper. */
 	adr x20, .
 
+	/* Make 100% sure interrupts are disabled first. */
+	msr daifset, #2
+
 	adrp x1, dtb_ptr
 	add x1, x1, :lo12:dtb_ptr
 	str x0, [x1]

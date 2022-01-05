@@ -1,7 +1,7 @@
 #include <kern_runtime.hpp>
 
 #include <kern_datatypes.hpp>
-#include <PhyProtocol/PSCI/PSCI.hpp>
+#include "PSCI/PSCI.hpp"
 
 
 typedef enum PSCIFunctionID : UINT32
