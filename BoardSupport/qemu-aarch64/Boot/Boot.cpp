@@ -1,4 +1,3 @@
-#include <arch.hpp>
 #include <kern_status.hpp>
 #include <kern_runtime.hpp>
 #include <kern_integers.hpp>
@@ -9,6 +8,7 @@
 #include <DeviceTree/DeviceTree.hpp>
 
 #include <arch/aarch64/mmu.hpp>
+#include <arch/aarch64/arch.hpp>
 #include <arch/aarch64/vmm/vmm.hpp>
 #include <Common/Structures/kern_slab.hpp>
 #include <Common/Structures/kern_bitmap.hpp>
@@ -40,8 +40,9 @@ static UINT64 KernSize = 0x00;
 static UINT64 KernBegin = 0x00;
 static UINT64 KernEnd = 0x00;
 static pantheon::Atomic<BOOL> PageTablesCreated = FALSE;
-static pantheon::vmm::PageTable *TTBR0 = nullptr;
-static pantheon::vmm::PageTable *TTBR1 = nullptr;
+
+alignas(0x1000) static pantheon::vmm::PageTable TTBR0;
+alignas(0x1000) static pantheon::vmm::PageTable TTBR1;
 
 InitialBootInfo *GetInitBootInfo()
 {
@@ -52,14 +53,10 @@ InitialBootInfo *GetInitBootInfo()
  * So, let's just identity map these, and just hope our boot code doesn't
  * need more than 2GB or something (which, if it does, we have very bad problems.)
  */
-alignas(0x1000) static pantheon::vmm::PageTable LowerHalfTables[32];
-alignas(0x1000) static pantheon::vmm::PageTable HigherHalfTables[32];
+alignas(0x1000) static pantheon::vmm::PageTable LowerHalfTables[4];
 
-void LoadTables()
-{
-	TTBR0 = &(LowerHalfTables[0]);
-	TTBR1 = &(HigherHalfTables[0]);
-}
+static constexpr UINT64 NumHigherHalfTables = 128;
+alignas(0x1000) static pantheon::vmm::PageTable HigherHalfTables[NumHigherHalfTables];
 
 static constexpr pantheon::vmm::PageTableEntry CreateTopLevelPageEntry()
 {
@@ -121,16 +118,22 @@ static constexpr void CreateInitialTables(pantheon::vmm::PageTable *RootTable)
 
 extern "C" void IdentityMapping()
 {
-	LoadTables();
-	CreateInitialTables(TTBR0);
+	CreateInitialTables(&TTBR0);
 }
 
 extern "C" void EnableIdentityMapping()
 {
-	LoadTables();
-	UINT64 TTBR0_Val = (UINT64)TTBR0;
+	while (PageTablesCreated.Load() == FALSE)
+	{
+
+	}
+
+	UINT64 TTBR0_Val = (UINT64)&TTBR0;
+	UINT64 TTBR1_Val = (UINT64)&TTBR1;
 
 	pantheon::CPUReg::W_TTBR0_EL1(TTBR0_Val);
+	pantheon::CPUReg::W_TTBR1_EL1(TTBR1_Val);
+	pantheon::Sync::ISB();
 
 	pantheon::arm::MAIRAttributes Attribs = 0;
 	Attribs |= pantheon::arm::AttributeToSlot(0x00, 0);
@@ -141,6 +144,44 @@ extern "C" void EnableIdentityMapping()
 	pantheon::CPUReg::W_MAIR_EL1(Attribs);
 	pantheon::CPUReg::W_TCR_EL1(pantheon::arm::DefaultTCRAttributes());
 	pantheon::Sync::ISB();
+
+	asm volatile(
+		"isb\n"
+		"tlbi vmalle1\n"
+		"dsb ish\n"
+		"dsb sy\n"
+		"isb\n" ::: "memory");
+
+	UINT64 SCTLRVal = 0x00;
+	asm volatile(
+		"isb\n"
+		"mrs %0, sctlr_el1\n"
+		"isb\n"
+		"dsb sy"
+		: "=r"(SCTLRVal) :: "memory"
+	);
+
+	/* These bits are architecturally required to be set. */
+	SCTLRVal |= 0xC00800;
+
+	/* Remove things not desired: thse will probably be helpful later, but not now. */
+	UINT64 DisableValues = 0;
+	DisableValues |= (pantheon::vmm::SCTLR_EE | pantheon::vmm::SCTLR_E0E);
+	DisableValues |= (pantheon::vmm::SCTLR_WXN | pantheon::vmm::SCTLR_I);
+	DisableValues |= (pantheon::vmm::SCTLR_SA0 | pantheon::vmm::SCTLR_SA);
+	DisableValues |= (pantheon::vmm::SCTLR_C | pantheon::vmm::SCTLR_A);
+
+	SCTLRVal &= ~DisableValues;
+
+	/* The MMU should be enabled though. */
+	SCTLRVal |= pantheon::vmm::SCTLR_M;
+
+	asm volatile(
+		"isb\n"		
+		"msr sctlr_el1, %0\n"
+		"isb\n"
+		"dsb sy"
+		:: "r"(SCTLRVal): "memory");
 }
 
 
@@ -478,10 +519,8 @@ static void SetupPageTables()
 	 * 	- Ensure we align MemArea to 4K
 	 * 	- Add the number of pages to handle there.
 	 */
-
-	constexpr UINT64 NumTables = static_cast<UINT64>(8 * 1024);
-	MemArea = Align<UINT64>(MemArea, pantheon::vmm::SmallestPageSize);
-	InitialPageTables = pantheon::vmm::PageAllocator((void*)MemArea, NumTables);
+	constexpr UINT64 NumTables = static_cast<UINT64>(NumHigherHalfTables);
+	InitialPageTables = pantheon::vmm::PageAllocator((void*)HigherHalfTables, NumTables);
 
 	/* Let's go ahead and map in everything in the lower table as-is. */
 	pantheon::vmm::PageTableEntry Entry;
@@ -516,11 +555,7 @@ static void SetupPageTables()
 	UINT64 UAddrBegin = (UINT64)&USER_BEGIN;
 	UINT64 UAddrEnd = (UINT64)&USER_END;
 	UINT64 UAddrSize = UAddrEnd - UAddrBegin;
-	InitialPageTables.Reprotect(TTBR0, UAddrBegin, UAddrSize, UEntry);
-
-
-	TTBR1 = InitialPageTables.Allocate();
-	ClearBuffer((CHAR*)TTBR1, sizeof(pantheon::vmm::PageTable));
+	InitialPageTables.Reprotect(&TTBR0, UAddrBegin, UAddrSize, UEntry);
 
 	/* 
 	 * TODO:
@@ -542,7 +577,7 @@ static void SetupPageTables()
 	pantheon::vmm::PhysicalAddress BaseAddrPhysText = reinterpret_cast<pantheon::vmm::PhysicalAddress>(&TEXT_PHY_AREA);
 	pantheon::vmm::VirtualAddress BaseAddrText = reinterpret_cast<pantheon::vmm::VirtualAddress>(&TEXT_AREA);
 	pantheon::vmm::VirtualAddress EndAddrText = reinterpret_cast<pantheon::vmm::VirtualAddress>(&TEXT_END);
-	InitialPageTables.Map(TTBR1, BaseAddrPhysText, BaseAddrText, EndAddrText - BaseAddrText, NoWrite);
+	InitialPageTables.Map(&TTBR1, BaseAddrPhysText, BaseAddrText, EndAddrText - BaseAddrText, NoWrite);
 
 	UINT64 NoExecutePermission = 0;
 	NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_KERN;
@@ -555,17 +590,17 @@ static void SetupPageTables()
 	pantheon::vmm::PhysicalAddress BaseAddrPhysRodata = reinterpret_cast<pantheon::vmm::PhysicalAddress>(&RODATA_PHY_AREA);
 	pantheon::vmm::VirtualAddress BaseAddrRodata = reinterpret_cast<pantheon::vmm::VirtualAddress>(&RODATA_AREA);
 	pantheon::vmm::VirtualAddress EndAddrRodata = reinterpret_cast<pantheon::vmm::VirtualAddress>(&RODATA_END);
-	InitialPageTables.Map(TTBR1, BaseAddrPhysRodata, BaseAddrRodata, EndAddrRodata - BaseAddrRodata, NoExecute);
+	InitialPageTables.Map(&TTBR1, BaseAddrPhysRodata, BaseAddrRodata, EndAddrRodata - BaseAddrRodata, NoExecute);
 
 	pantheon::vmm::PhysicalAddress BaseAddrPhysData = reinterpret_cast<pantheon::vmm::PhysicalAddress>(&DATA_PHY_AREA);
 	pantheon::vmm::VirtualAddress BaseAddrData = reinterpret_cast<pantheon::vmm::VirtualAddress>(&DATA_AREA);
 	pantheon::vmm::VirtualAddress EndAddrData = reinterpret_cast<pantheon::vmm::VirtualAddress>(&DATA_END);
-	InitialPageTables.Map(TTBR1, BaseAddrPhysData, BaseAddrData, EndAddrData - BaseAddrData, NoExecute);
+	InitialPageTables.Map(&TTBR1, BaseAddrPhysData, BaseAddrData, EndAddrData - BaseAddrData, NoExecute);
 
 	pantheon::vmm::PhysicalAddress BaseAddrPhysBSS = reinterpret_cast<pantheon::vmm::PhysicalAddress>(&BSS_PHY_AREA);
 	pantheon::vmm::VirtualAddress BaseAddrBSS = reinterpret_cast<pantheon::vmm::VirtualAddress>(&BSS_AREA);
 	pantheon::vmm::VirtualAddress EndAddrBSS = reinterpret_cast<pantheon::vmm::VirtualAddress>(&BSS_END);
-	InitialPageTables.Map(TTBR1, BaseAddrPhysBSS, BaseAddrBSS, EndAddrBSS - BaseAddrBSS, NoExecute);
+	InitialPageTables.Map(&TTBR1, BaseAddrPhysBSS, BaseAddrBSS, EndAddrBSS - BaseAddrBSS, NoExecute);
 
 	/* Run kernel constructors here */
 
@@ -575,7 +610,7 @@ static void SetupPageTables()
 	ROPagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_ONLY_USER;
 	ROPagePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_USER;
 	Entry.SetPagePermissions(ROPagePermission);
-	InitialPageTables.Reprotect(TTBR1, BaseAddrRodata, EndAddrRodata - BaseAddrRodata, Entry);
+	InitialPageTables.Reprotect(&TTBR1, BaseAddrRodata, EndAddrRodata - BaseAddrRodata, Entry);
 
 	PageTablesCreated.Store(TRUE);
 }
@@ -585,26 +620,7 @@ pantheon::vmm::PageAllocator *BaseAllocator()
 	return &InitialPageTables;
 }
 
-static void InstallPageTables()
-{
-	while (PageTablesCreated.Load() == FALSE)
-	{
-
-	}
-
-	UINT64 TTBR1_Val = (UINT64)TTBR1;
-	pantheon::CPUReg::W_TTBR1_EL1(TTBR1_Val);
-	pantheon::Sync::ISB();
-}
-
-static void SetupCore()
-{
-	InstallPageTables();
-	pantheon::vmm::InvalidateTLB();
-	pantheon::vmm::EnablePaging();
-}
-
-extern "C" void BoardInit(pantheon::vmm::PageAllocator &PageAllocator);
+extern "C" void BoardInit(pantheon::vmm::PageTable *TTBR1, pantheon::vmm::PageAllocator &PageAllocator);
 
 extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, void *virt_load_addr)
 {
@@ -618,7 +634,13 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 	if (ProcNo == 0)
 	{
 		IdentityMapping();
+		/* Ensure the appropriate page tables are made */
+		SetupPageTables();		
+	}
 
+	EnableIdentityMapping();
+	if (ProcNo == 0)
+	{
 		UINT64 InitAddr = (UINT64)initial_load_addr;
 
 		KernBegin = InitAddr;
@@ -636,9 +658,6 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 		 */
 		InitializeMemory(dtb);
 
-		/* Ensure the appropriate page tables are made */
-		SetupPageTables();
-
 		for (UINT64 Start = InitAddr; 
 			Start <= Align<UINT64>(MemArea, pantheon::vmm::SmallestPageSize);
 			Start += pantheon::vmm::SmallestPageSize)
@@ -647,15 +666,13 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 		}
 
 	}
-	EnableIdentityMapping();
-	SetupCore();
 	
 	if (ProcNo == 0)
 	{
 		/* At this point, paging should be set up so the kernel
 		 * gets the page tables expected...
 		 */
-		BoardInit(InitialPageTables);
+		BoardInit(&TTBR1, InitialPageTables);
 		Initialize(dtb, InitialPageTables);
 		PrintDTB(dtb);
 	}
