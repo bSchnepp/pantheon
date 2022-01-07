@@ -163,11 +163,11 @@ typedef UINT64 VirtualAddress;
 class PageTableEntry
 {
 public:
-	constexpr explicit PageTableEntry() noexcept : Raw(0) {}
-	constexpr explicit PageTableEntry(PageTableEntry &&Other) noexcept : Raw(Other.Raw){}
-	constexpr explicit PageTableEntry(const PageTableEntry &Other) noexcept : Raw(Other.Raw){}
-	constexpr explicit PageTableEntry(const PageTableEntry &Other, UINT64 Attr) noexcept : Raw(Other.Raw | Attr){}
-	~PageTableEntry(){};
+	constexpr PageTableEntry() noexcept : Raw(0) {}
+	constexpr PageTableEntry(PageTableEntry &&Other) noexcept : Raw(Other.Raw){}
+	constexpr PageTableEntry(const PageTableEntry &Other) noexcept : Raw(Other.Raw){}
+	constexpr PageTableEntry(const PageTableEntry &Other, UINT64 Attr) noexcept : Raw(Other.Raw | Attr){}
+	constexpr ~PageTableEntry(){};
 
 	/**
 	 * \~english @brief Determines if this page table entry is valid or not

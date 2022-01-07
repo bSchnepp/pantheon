@@ -8,14 +8,12 @@
 #include <Devices/kern_drivers.hpp>
 #include <DeviceTree/DeviceTree.hpp>
 
+#include <arch/aarch64/mmu.hpp>
+#include <arch/aarch64/vmm/vmm.hpp>
 #include <Common/Structures/kern_slab.hpp>
 #include <Common/Structures/kern_bitmap.hpp>
 
-#include <vmm/vmm.hpp>
-
 #include "Boot/Boot.hpp"
-#include "mmu.hpp"
-
 #include "BootDriver.hpp"
 
 extern "C" CHAR *kern_begin;
@@ -49,6 +47,102 @@ InitialBootInfo *GetInitBootInfo()
 {
 	return &InitBootInfo;
 }
+
+/* We know memory begins at 0x40000000 and can go for several GB.
+ * So, let's just identity map these, and just hope our boot code doesn't
+ * need more than 2GB or something (which, if it does, we have very bad problems.)
+ */
+alignas(0x1000) static pantheon::vmm::PageTable LowerHalfTables[32];
+alignas(0x1000) static pantheon::vmm::PageTable HigherHalfTables[32];
+
+void LoadTables()
+{
+	TTBR0 = &(LowerHalfTables[0]);
+	TTBR1 = &(HigherHalfTables[0]);
+}
+
+static constexpr pantheon::vmm::PageTableEntry CreateTopLevelPageEntry()
+{
+	pantheon::vmm::PageTableEntry Entry;
+	Entry.SetTable(TRUE);
+	Entry.SetMapped(TRUE);
+	return Entry;
+}
+
+static constexpr pantheon::vmm::PageTableEntry CreateHugePageEntry()
+{
+	pantheon::vmm::PageTableEntry Entry;
+	Entry.SetTable(TRUE);
+	Entry.SetMapped(TRUE);
+
+	/* We can use a counter from 0x00 in increments of 0x40000000 
+	 * to map 1GB sections at a time. */
+	Entry.SetBlock(TRUE);
+	Entry.SetMapped(TRUE);
+	Entry.SetUserNoExecute(TRUE);
+	Entry.SetKernelNoExecute(FALSE);
+
+	return Entry;
+}
+
+static constexpr void CreateInitialTables(pantheon::vmm::PageTable *RootTable)
+{
+	pantheon::vmm::PageTableEntry Entry = CreateTopLevelPageEntry();
+	RootTable->Entries[0] = Entry;
+	RootTable->Entries[0].SetPhysicalAddressArea((pantheon::vmm::PhysicalAddress)&LowerHalfTables[1]);
+	Entry = CreateHugePageEntry();
+
+	/* For now, allow anything since we don't have a real userland yet.
+	 * We'll need to create page allocators for userland at some point,
+	 * but for now let everything share the same address space.
+	 */
+	UINT64 PagePermission = 0;
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_KERN;
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_EXECUTE_KERN; 
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_USER;
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_EXECUTE_USER;
+	Entry.SetPagePermissions(PagePermission);
+
+	Entry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
+	Entry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
+	Entry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
+
+	using PhyAddr = pantheon::vmm::PhysicalAddress;
+	constexpr PhyAddr OneGB = (1ULL * 1024ULL * 1024ULL * 1024ULL);
+	for (PhyAddr Addr = 0x00; Addr < 8 * OneGB; Addr += OneGB)
+	{
+		UINT8 Index = Addr / OneGB;
+
+		/* Now, to actually map it in. */
+		LowerHalfTables[1].Entries[Index] = Entry;
+		LowerHalfTables[1].Entries[Index].SetPhysicalAddressArea(Addr);
+	}
+}
+
+extern "C" void IdentityMapping()
+{
+	LoadTables();
+	CreateInitialTables(TTBR0);
+}
+
+extern "C" void EnableIdentityMapping()
+{
+	LoadTables();
+	UINT64 TTBR0_Val = (UINT64)TTBR0;
+
+	pantheon::CPUReg::W_TTBR0_EL1(TTBR0_Val);
+
+	pantheon::arm::MAIRAttributes Attribs = 0;
+	Attribs |= pantheon::arm::AttributeToSlot(0x00, 0);
+	Attribs |= pantheon::arm::AttributeToSlot(
+		pantheon::arm::MAIR_ATTRIBUTE_NORMAL_INNER_NONCACHEABLE | 
+		pantheon::arm::MAIR_ATTRIBUTE_NORMAL_OUTER_NONCACHEABLE, 1);
+
+	pantheon::CPUReg::W_MAIR_EL1(Attribs);
+	pantheon::CPUReg::W_TCR_EL1(pantheon::arm::DefaultTCRAttributes());
+	pantheon::Sync::ISB();
+}
+
 
 void AllocateMemoryArea(UINT64 StartAddr, UINT64 Size);
 
@@ -389,12 +483,6 @@ static void SetupPageTables()
 	MemArea = Align<UINT64>(MemArea, pantheon::vmm::SmallestPageSize);
 	InitialPageTables = pantheon::vmm::PageAllocator((void*)MemArea, NumTables);
 
-	/* We'll need two top level page tables. */
-	TTBR0 = InitialPageTables.Allocate();
-	TTBR1 = InitialPageTables.Allocate();
-
-	ClearBuffer((CHAR*)TTBR1, sizeof(pantheon::vmm::PageTable));
-
 	/* Let's go ahead and map in everything in the lower table as-is. */
 	pantheon::vmm::PageTableEntry Entry;
 	Entry.SetBlock(TRUE);
@@ -417,18 +505,6 @@ static void SetupPageTables()
 	Entry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
 	Entry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
 
-	/* Memory is already obtained. First, map all of physical memory in.
-	 * Device MMIO mappings will be handled later, by device driver
-	 * initialization.
-	 */
-
-	for (UINT8 Index = 0; Index < InitBootInfo.NumMemoryAreas; ++Index)
-	{
-		UINT64 Size = InitBootInfo.InitMemoryAreas[Index].Size;
-		UINT64 BaseAddr = InitBootInfo.InitMemoryAreas[Index].BaseAddress;
-		InitialPageTables.Map(TTBR0, BaseAddr, BaseAddr, Size, Entry);
-	}
-
 
 	pantheon::vmm::PageTableEntry UEntry(Entry);
 	UEntry.SetPagePermissions(0b01 << 6);
@@ -441,6 +517,10 @@ static void SetupPageTables()
 	UINT64 UAddrEnd = (UINT64)&USER_END;
 	UINT64 UAddrSize = UAddrEnd - UAddrBegin;
 	InitialPageTables.Reprotect(TTBR0, UAddrBegin, UAddrSize, UEntry);
+
+
+	TTBR1 = InitialPageTables.Allocate();
+	ClearBuffer((CHAR*)TTBR1, sizeof(pantheon::vmm::PageTable));
 
 	/* 
 	 * TODO:
@@ -512,23 +592,8 @@ static void InstallPageTables()
 
 	}
 
-	UINT64 TTBR0_Val = (UINT64)TTBR0;
 	UINT64 TTBR1_Val = (UINT64)TTBR1;
-
-	pantheon::CPUReg::W_TTBR0_EL1(TTBR0_Val);
 	pantheon::CPUReg::W_TTBR1_EL1(TTBR1_Val);
-
-	pantheon::vmm::PageTableEntry Entry;
-	Entry.SetMapped(TRUE);
-
-	pantheon::arm::MAIRAttributes Attribs = 0;
-	Attribs |= pantheon::arm::AttributeToSlot(0x00, 0);
-	Attribs |= pantheon::arm::AttributeToSlot(
-		pantheon::arm::MAIR_ATTRIBUTE_NORMAL_INNER_NONCACHEABLE | 
-		pantheon::arm::MAIR_ATTRIBUTE_NORMAL_OUTER_NONCACHEABLE, 1);
-
-	pantheon::CPUReg::W_MAIR_EL1(Attribs);
-	pantheon::CPUReg::W_TCR_EL1(pantheon::arm::DefaultTCRAttributes());
 	pantheon::Sync::ISB();
 }
 
@@ -552,6 +617,8 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 
 	if (ProcNo == 0)
 	{
+		IdentityMapping();
+
 		UINT64 InitAddr = (UINT64)initial_load_addr;
 
 		KernBegin = InitAddr;
@@ -580,6 +647,7 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 		}
 
 	}
+	EnableIdentityMapping();
 	SetupCore();
 	
 	if (ProcNo == 0)
