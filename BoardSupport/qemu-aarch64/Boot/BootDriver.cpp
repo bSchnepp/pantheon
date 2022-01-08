@@ -67,7 +67,7 @@ void DriverHandleDTB(const CHAR *DriverName, DeviceTreeBlob *CurState)
 			{
 				UseGIC = TRUE;
 			}
-		}		
+		}
 	}
 	else if (StringCompare(DriverName, ("pcie"), 5))
 	{
@@ -88,7 +88,7 @@ void DriverHandleDTB(const CHAR *DriverName, DeviceTreeBlob *CurState)
 			{
 				UseECAM = TRUE;
 			}
-		}		
+		}
 	}
 }
 

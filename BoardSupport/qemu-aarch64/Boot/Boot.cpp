@@ -53,9 +53,9 @@ InitialBootInfo *GetInitBootInfo()
  * So, let's just identity map these, and just hope our boot code doesn't
  * need more than 2GB or something (which, if it does, we have very bad problems.)
  */
-alignas(0x1000) static pantheon::vmm::PageTable LowerHalfTables[4];
+alignas(0x1000) static pantheon::vmm::PageTable LowerHalfTables[2];
 
-static constexpr UINT64 NumHigherHalfTables = 128;
+static constexpr UINT64 NumHigherHalfTables = 32;
 alignas(0x1000) static pantheon::vmm::PageTable HigherHalfTables[NumHigherHalfTables];
 
 static constexpr pantheon::vmm::PageTableEntry CreateTopLevelPageEntry()
@@ -639,8 +639,16 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 	}
 
 	EnableIdentityMapping();
+
 	if (ProcNo == 0)
 	{
+		/* At this point, paging should be set up so the kernel
+		 * gets the page tables expected...
+		 */
+		BoardInit(&TTBR1, InitialPageTables);
+		Initialize(dtb, InitialPageTables);
+		PrintDTB(dtb);
+
 		UINT64 InitAddr = (UINT64)initial_load_addr;
 
 		KernBegin = InitAddr;
@@ -665,16 +673,6 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 			AllocatePage(Start);
 		}
 
-	}
-	
-	if (ProcNo == 0)
-	{
-		/* At this point, paging should be set up so the kernel
-		 * gets the page tables expected...
-		 */
-		BoardInit(&TTBR1, InitialPageTables);
-		Initialize(dtb, InitialPageTables);
-		PrintDTB(dtb);
 	}
 	return GetInitBootInfo();
 }
