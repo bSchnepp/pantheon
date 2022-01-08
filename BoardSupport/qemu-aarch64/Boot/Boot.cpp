@@ -58,19 +58,14 @@ alignas(0x1000) static pantheon::vmm::PageTable LowerHalfTables[2];
 static constexpr UINT64 NumHigherHalfTables = 32;
 alignas(0x1000) static pantheon::vmm::PageTable HigherHalfTables[NumHigherHalfTables];
 
-static constexpr pantheon::vmm::PageTableEntry CreateTopLevelPageEntry()
+static constexpr void CreateInitialTables(pantheon::vmm::PageTable *RootTable)
 {
 	pantheon::vmm::PageTableEntry Entry;
 	Entry.SetTable(TRUE);
 	Entry.SetMapped(TRUE);
-	return Entry;
-}
 
-static constexpr pantheon::vmm::PageTableEntry CreateHugePageEntry()
-{
-	pantheon::vmm::PageTableEntry Entry;
-	Entry.SetTable(TRUE);
-	Entry.SetMapped(TRUE);
+	RootTable->Entries[0] = Entry;
+	RootTable->Entries[0].SetPhysicalAddressArea((pantheon::vmm::PhysicalAddress)&LowerHalfTables[1]);
 
 	/* We can use a counter from 0x00 in increments of 0x40000000 
 	 * to map 1GB sections at a time. */
@@ -78,16 +73,6 @@ static constexpr pantheon::vmm::PageTableEntry CreateHugePageEntry()
 	Entry.SetMapped(TRUE);
 	Entry.SetUserNoExecute(TRUE);
 	Entry.SetKernelNoExecute(FALSE);
-
-	return Entry;
-}
-
-static constexpr void CreateInitialTables(pantheon::vmm::PageTable *RootTable)
-{
-	pantheon::vmm::PageTableEntry Entry = CreateTopLevelPageEntry();
-	RootTable->Entries[0] = Entry;
-	RootTable->Entries[0].SetPhysicalAddressArea((pantheon::vmm::PhysicalAddress)&LowerHalfTables[1]);
-	Entry = CreateHugePageEntry();
 
 	/* For now, allow anything since we don't have a real userland yet.
 	 * We'll need to create page allocators for userland at some point,
@@ -577,12 +562,11 @@ static void SetupPageTables()
 	pantheon::vmm::PhysicalAddress BaseAddrPhysText = reinterpret_cast<pantheon::vmm::PhysicalAddress>(&TEXT_PHY_AREA);
 	pantheon::vmm::VirtualAddress BaseAddrText = reinterpret_cast<pantheon::vmm::VirtualAddress>(&TEXT_AREA);
 	pantheon::vmm::VirtualAddress EndAddrText = reinterpret_cast<pantheon::vmm::VirtualAddress>(&TEXT_END);
-	InitialPageTables.Map(&TTBR1, BaseAddrPhysText, BaseAddrText, EndAddrText - BaseAddrText, NoWrite);
+	InitialPageTables.Map(&TTBR1, BaseAddrText, BaseAddrPhysText, EndAddrText - BaseAddrText, NoWrite);
 
 	UINT64 NoExecutePermission = 0;
 	NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_KERN;
 	NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_KERN; 
-	NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_READ_ONLY_USER;
 	NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_USER;
 	pantheon::vmm::PageTableEntry NoExecute(Entry);
 	NoExecute.SetPagePermissions(NoExecutePermission);
@@ -590,27 +574,21 @@ static void SetupPageTables()
 	pantheon::vmm::PhysicalAddress BaseAddrPhysRodata = reinterpret_cast<pantheon::vmm::PhysicalAddress>(&RODATA_PHY_AREA);
 	pantheon::vmm::VirtualAddress BaseAddrRodata = reinterpret_cast<pantheon::vmm::VirtualAddress>(&RODATA_AREA);
 	pantheon::vmm::VirtualAddress EndAddrRodata = reinterpret_cast<pantheon::vmm::VirtualAddress>(&RODATA_END);
-	InitialPageTables.Map(&TTBR1, BaseAddrPhysRodata, BaseAddrRodata, EndAddrRodata - BaseAddrRodata, NoExecute);
+	InitialPageTables.Map(&TTBR1, BaseAddrRodata, BaseAddrPhysRodata, EndAddrRodata - BaseAddrRodata, NoExecute);
 
 	pantheon::vmm::PhysicalAddress BaseAddrPhysData = reinterpret_cast<pantheon::vmm::PhysicalAddress>(&DATA_PHY_AREA);
 	pantheon::vmm::VirtualAddress BaseAddrData = reinterpret_cast<pantheon::vmm::VirtualAddress>(&DATA_AREA);
 	pantheon::vmm::VirtualAddress EndAddrData = reinterpret_cast<pantheon::vmm::VirtualAddress>(&DATA_END);
-	InitialPageTables.Map(&TTBR1, BaseAddrPhysData, BaseAddrData, EndAddrData - BaseAddrData, NoExecute);
+	InitialPageTables.Map(&TTBR1, BaseAddrData, BaseAddrPhysData, EndAddrData - BaseAddrData, NoExecute);
 
 	pantheon::vmm::PhysicalAddress BaseAddrPhysBSS = reinterpret_cast<pantheon::vmm::PhysicalAddress>(&BSS_PHY_AREA);
 	pantheon::vmm::VirtualAddress BaseAddrBSS = reinterpret_cast<pantheon::vmm::VirtualAddress>(&BSS_AREA);
 	pantheon::vmm::VirtualAddress EndAddrBSS = reinterpret_cast<pantheon::vmm::VirtualAddress>(&BSS_END);
-	InitialPageTables.Map(&TTBR1, BaseAddrPhysBSS, BaseAddrBSS, EndAddrBSS - BaseAddrBSS, NoExecute);
+	InitialPageTables.Map(&TTBR1, BaseAddrBSS, BaseAddrPhysBSS, EndAddrBSS - BaseAddrBSS, NoExecute);
 
 	/* Run kernel constructors here */
 
-	UINT64 ROPagePermission = 0;
-	ROPagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_ONLY_KERN;
-	ROPagePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_KERN; 
-	ROPagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_ONLY_USER;
-	ROPagePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_USER;
-	Entry.SetPagePermissions(ROPagePermission);
-	InitialPageTables.Reprotect(&TTBR1, BaseAddrRodata, EndAddrRodata - BaseAddrRodata, Entry);
+	/* TODO: make rodata actually read only */
 
 	PageTablesCreated.Store(TRUE);
 }

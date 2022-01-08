@@ -80,7 +80,7 @@ void kern_init(InitialBootInfo *InitBootInfo, void *initial_load_addr, void *vir
 		 * Without a spare thread, no scheduling ever occurs. FIXME!
 		 */
 		pantheon::GetGlobalScheduler()->Init();
-		pantheon::UnpackInitPrograms();
+		/* TODO: unpack initial programs properly */
 		pantheon::Process *sysm = pantheon::GetGlobalScheduler()->CreateProcess("sysm", (void*)kern_idle2);
 		pantheon::Process *prgm = pantheon::GetGlobalScheduler()->CreateProcess("prgm", (void*)kern_idle3);
 

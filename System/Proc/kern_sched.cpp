@@ -243,6 +243,8 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateProcessorIdleThread(UINT64 SP
  */
 pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 {
+	while (!this->Okay.Load()){}
+	
 	pantheon::Thread *Thr = nullptr;
 	pantheon::CPU::PUSHI();
 	while (Thr == nullptr)

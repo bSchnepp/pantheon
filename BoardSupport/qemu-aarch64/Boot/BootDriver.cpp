@@ -92,6 +92,13 @@ void DriverHandleDTB(const CHAR *DriverName, DeviceTreeBlob *CurState)
 	}
 }
 
+alignas(4096) static char BootStackArea[MAX_NUM_CPUS * DEFAULT_STACK_SIZE];
+static void *GetBootStackArea(UINT64 Core)
+{
+	return BootStackArea + static_cast<UINT64>(Core * DEFAULT_STACK_SIZE);
+}
+
+
 void FiniDriver(const CHAR *DriverName, UINT64 Address)
 {
 	PANTHEON_UNUSED(Address);
@@ -107,7 +114,7 @@ void FiniDriver(const CHAR *DriverName, UINT64 Address)
 				break;
 			}
 
-			void *StackPtr = pantheon::CPU::GetStackArea(Index);
+			void *StackPtr = GetBootStackArea(Index);
 			INT32 Result = psci::PSCICpuOn(Index, (UINT64)asm_kern_init_core, (UINT64)StackPtr);
 			
 			/* Then there are no more CPUs on this node. */

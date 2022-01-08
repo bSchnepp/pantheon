@@ -10,6 +10,29 @@ SECTIONS
 	.text.early :
 	{
 		*(.text.early)
+		BoardSupport/qemu-aarch64/libBoard.a*(*.text*)
+		BoardSupport/qemu-aarch64/Boot/libBoot.a*(*.text*)
+	}
+
+	. = ALIGN(0x1000);
+	.rodata.early :
+	{
+		*(.rodata.early)
+		BoardSupport/qemu-aarch64/libBoard.a*(*.rodata*)
+		BoardSupport/qemu-aarch64/Boot/libBoot.a*(*.rodata*)
+	}
+
+	.data.early :
+	{
+		. = ALIGN(0x1000);
+		*(.data.early)
+		BoardSupport/qemu-aarch64/libBoard.a*(*.data*)
+		BoardSupport/qemu-aarch64/Boot/libBoot.a*(*.data*)
+
+		. = ALIGN(0x1000);
+		*(.bss.early)
+		BoardSupport/qemu-aarch64/libBoard.a*(*.bss*)
+		BoardSupport/qemu-aarch64/Boot/libBoot.a*(*.bss*)
 	}
 
 	. = ALIGN(4 * 1024);
@@ -27,23 +50,20 @@ SECTIONS
 	.user.data : 
 	{
 		Userland/libUserland.a*(*.data*)
-	}
-
-	.user.bss : 
-	{
 		Userland/libUserland.a*(*.bss*)
 	}
 	USER_END = .;
 
 	/* aarch64 load address */
-	VIRT_LOAD_ADDRESS = 0xFFFFFFF7FFC00000;
+	VIRT_LOAD_ADDRESS = 0xFFFFFFFF70000000;
+	. += VIRT_LOAD_ADDRESS;
 
 	. = ALIGN(0x1000);
 	. = ALIGN(0x800);
 	TEXT_AREA = .;
-	TEXT_PHY_AREA = .;
+	TEXT_PHY_AREA = . - VIRT_LOAD_ADDRESS;
 	kern_begin = .;	
-	.text :
+	.text : AT(ADDR(.text) - VIRT_LOAD_ADDRESS)
 	{
 		*(.text.exceptions)
 		. = ALIGN(0x1000);
@@ -54,8 +74,8 @@ SECTIONS
 
 	. = ALIGN(0x1000);
 	RODATA_AREA = .;
-	RODATA_PHY_AREA = .;
-	.rodata :
+	RODATA_PHY_AREA = . - VIRT_LOAD_ADDRESS;
+	.rodata : AT(ADDR(.rodata) - VIRT_LOAD_ADDRESS)
 	{
 		*(.rodata*)
 	}
@@ -63,17 +83,17 @@ SECTIONS
 	RODATA_END = .;
 
 	. = ALIGN(0x1000);
-	.data :
+	.data : AT(ADDR(.data) - VIRT_LOAD_ADDRESS)
 	{
 		DATA_AREA = .;
-		DATA_PHY_AREA = .;
+		DATA_PHY_AREA = . - VIRT_LOAD_ADDRESS;
 		*(.data*)
 		. = ALIGN(0x1000);
 		DATA_END = .;
 
 		. = ALIGN(0x1000);
 		BSS_AREA = .;
-		BSS_PHY_AREA = .;
+		BSS_PHY_AREA = . - VIRT_LOAD_ADDRESS;
 		*(.bss.early)
 		*(.bss*)
 

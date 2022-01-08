@@ -90,54 +90,6 @@ INT8  ReadMMIOS8(UINT64 Addr)
 	return *(volatile INT8*)Addr;
 }
 
-BOOL StringCompare(const CHAR *Arg1, const CHAR *Arg2, UINT64 Amt)
-{
-	for (UINT64 Index = 0; Index < Amt; ++Index)
-	{
-		if (Arg1[Index] != Arg2[Index])
-		{
-			return FALSE;
-		}
-
-		if (Arg1[Index] == 0)
-		{
-			break;
-		}
-	}
-	return TRUE;
-}
-
-void SetBufferBytes(CHAR *Location, UINT8 Value, UINT32 Amount)
-{
-	UINT32 Index = 0;
-
-	UINT64 *AsUINT64 = (UINT64*)Location;
-	for (Index = 0; Index < Amount; Index += 8)
-	{
-		AsUINT64[Index / 8] = 0;
-	}
-
-	for (; Index < Amount; ++Index)
-	{
-		Location[Index] = Value;
-	}
-}
-
-void ClearBuffer(CHAR *Location, UINT32 Amount)
-{
-	SetBufferBytes(Location, 0x00, Amount);
-}
-
-void CopyMemory(VOID *Dest, VOID *Src, UINT64 Amt)
-{
-	CHAR *DestAsChar = reinterpret_cast<CHAR*>(Dest);
-	CHAR *SrcAsChar = reinterpret_cast<CHAR*>(Src);
-	for (UINT64 Index = 0; Index < Amt; ++Index)
-	{
-		DestAsChar[Index] = SrcAsChar[Index];
-	}
-}
-
 void SERIAL_LOG_UNSAFE(const char *Fmt, ...)
 {
 	if (pantheon::Panicked())
@@ -176,16 +128,16 @@ void pantheon::StopError(const char *Reason, void *Source)
 	{
 		if (Source)
 		{
-			SERIAL_LOG_UNSAFE("panic: %s [source: %x, core %x]\n", Reason, Source, pantheon::CPU::GetProcessorNumber());
+			SERIAL_LOG_UNSAFE("panic: %s [source: %lx, core %x]\n", Reason, Source, pantheon::CPU::GetProcessorNumber());
 		}
 		else
 		{
-			SERIAL_LOG_UNSAFE("panic: %s [core %x]\n", Reason, pantheon::CPU::GetProcessorNumber());
+			SERIAL_LOG_UNSAFE("panic: %s [core %lx]\n", Reason, pantheon::CPU::GetProcessorNumber());
 		}
 	}
 	else
 	{
-		SERIAL_LOG_UNSAFE("panic: %s [core %x]\n", "unknown reason", pantheon::CPU::GetProcessorNumber());
+		SERIAL_LOG_UNSAFE("panic: %s [core %lx]\n", "unknown reason", pantheon::CPU::GetProcessorNumber());
 	}
 	
 	/* TODO: stop other cores */

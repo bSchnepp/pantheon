@@ -29,7 +29,7 @@ void WriteString(const CHAR *String);
 
 
 template <typename T>
-T CharStarNumberAtoi(const CHAR *Input)
+T FORCE_INLINE CharStarNumberAtoi(const CHAR *Input)
 {
 	T Result = 0;
 	UINT64 Index = 0;
@@ -49,7 +49,7 @@ T CharStarNumberAtoi(const CHAR *Input)
 }
 
 template <typename T>
-T CharStarNumberAtoiB16(const CHAR *Input)
+T FORCE_INLINE CharStarNumberAtoiB16(const CHAR *Input)
 {
 	T Result = 0;
 	UINT64 Index = 0;
@@ -97,25 +97,25 @@ T CharStarNumberAtoiB16(const CHAR *Input)
 
 
 template<typename T>
-T Max(T L, T R)
+T FORCE_INLINE Max(T L, T R)
 {
 	return (L > R) ? L : R;
 }
 
 template<typename T>
-T Min(T L, T R)
+T FORCE_INLINE Min(T L, T R)
 {
 	return (L > R) ? R : L;
 }
 
 template<typename T>
-constexpr T Align(T Amt, T Align)
+constexpr FORCE_INLINE T Align(T Amt, T Align)
 {
 	return ~(Align - 1) & (((Amt) + (Align - 1)));
 }
 
 template<typename T>
-constexpr BOOL IsAligned(T Val, T AlignVal)
+constexpr FORCE_INLINE BOOL IsAligned(T Val, T AlignVal)
 {
 	return Align(Val, AlignVal) == Val;
 }
@@ -128,10 +128,53 @@ extern "C"
 	void _putchar(char c);
 }
 
-BOOL StringCompare(const CHAR *Arg1, const CHAR *Arg2, UINT64 Amt);
-void ClearBuffer(CHAR *Location, UINT32 Amount);
-void SetBufferBytes(CHAR *Location, UINT8 Value, UINT32 Amount);
-void CopyMemory(VOID *Dest, VOID *Src, UINT64 Amt);
+BOOL FORCE_INLINE StringCompare(const CHAR *Arg1, const CHAR *Arg2, UINT64 Amt)
+{
+	for (UINT64 Index = 0; Index < Amt; ++Index)
+	{
+		if (Arg1[Index] != Arg2[Index])
+		{
+			return FALSE;
+		}
+
+		if (Arg1[Index] == 0)
+		{
+			break;
+		}
+	}
+	return TRUE;
+}
+
+void FORCE_INLINE SetBufferBytes(CHAR *Location, UINT8 Value, UINT32 Amount)
+{
+	UINT32 Index = 0;
+
+	UINT64 *AsUINT64 = (UINT64*)Location;
+	for (Index = 0; Index < Amount; Index += 8)
+	{
+		AsUINT64[Index / 8] = 0;
+	}
+
+	for (; Index < Amount; ++Index)
+	{
+		Location[Index] = Value;
+	}
+}
+
+void FORCE_INLINE ClearBuffer(CHAR *Location, UINT32 Amount)
+{
+	SetBufferBytes(Location, 0x00, Amount);
+}
+
+void FORCE_INLINE CopyMemory(VOID *Dest, VOID *Src, UINT64 Amt)
+{
+	CHAR *DestAsChar = reinterpret_cast<CHAR*>(Dest);
+	CHAR *SrcAsChar = reinterpret_cast<CHAR*>(Src);
+	for (UINT64 Index = 0; Index < Amt; ++Index)
+	{
+		DestAsChar[Index] = SrcAsChar[Index];
+	}
+}
 
 constexpr UINT32 ConstStrLen(const CHAR *Str)
 {

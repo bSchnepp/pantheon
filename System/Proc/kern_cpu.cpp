@@ -94,3 +94,10 @@ void *pantheon::CPU::GetStackArea(UINT64 Core)
 {
 	return StackArea + static_cast<UINT64>(Core * DEFAULT_STACK_SIZE);
 }
+
+
+extern "C" void *get_stack_area()
+{
+	UINT8 CpuNo = pantheon::CPU::GetProcessorNumber();
+	return pantheon::CPU::GetStackArea(CpuNo);
+}
