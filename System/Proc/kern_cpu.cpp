@@ -79,8 +79,11 @@ BOOL pantheon::CPU::DropToUsermode(UINT64 PC)
 	pantheon::CPU::GetCurThread()->SetUserStackAddr(StackArea);
 
 	/* TODO: actually get this process' TTBR0 */
+	alignas(0x1000) static pantheon::vmm::PageTable UserStacks[128];
+	static pantheon::vmm::PageAllocator BaseAllocator(UserStacks, 128);
+
 	pantheon::vmm::PageTable *PT = (pantheon::vmm::PageTable *)pantheon::CPUReg::R_TTBR0_EL1();
-	BaseAllocator()->Reprotect(PT, StackArea, pantheon::vmm::BlockSize::L3BlockSize, UEntry);
+	BaseAllocator.Reprotect(PT, StackArea, pantheon::vmm::BlockSize::L3BlockSize, UEntry);
 
 	StackArea += pantheon::vmm::BlockSize::L3BlockSize;
 	pantheon::CPU::GetCurThread()->Unlock();

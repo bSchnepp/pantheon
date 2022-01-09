@@ -184,10 +184,11 @@ VOID pantheon::Thread::CountTick()
 		StopError("CountTicks without lock");
 	}
 
-	if (this->RemainingTicks)
+	if (this->RemainingTicks == 0)
 	{
-		this->RemainingTicks--;
+		return;
 	}
+	this->RemainingTicks--;
 }
 
 [[nodiscard]]
