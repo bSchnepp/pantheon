@@ -169,7 +169,9 @@ Optional<void*> BasicMalloc(UINT64 Amt)
 			LinkFreeList(Next);
 
 			Final = Current;
-			SetBufferBytes((CHAR*)Final, 0x3D, Amount);
+			#if POISON_MEMORY
+				SetBufferBytes((CHAR*)Final, 0x3D, Amount);
+			#endif
 			break;
 		}
 	}

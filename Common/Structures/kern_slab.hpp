@@ -1,3 +1,4 @@
+#include <kern.h>
 #include <kern_runtime.hpp>
 #include <kern_datatypes.hpp>
 
@@ -33,7 +34,11 @@ public:
 	SlabCache(VOID *Area, UINT16 Count = 64)
 	{
 		this->Area = reinterpret_cast<T*>(Area);
-		ClearBuffer((char*)this->Area, Count * sizeof(T));
+		#if POISON_MEMORY
+			ClearBuffer((char*)this->Area, Count * sizeof(T));
+		#else
+			SetBufferBytes((char*)this->Area, 0xDF, Count * sizeof(T));
+		#endif
 		this->Size = Count;
 		this->Used = 0;
 		this->FreeList = nullptr;
