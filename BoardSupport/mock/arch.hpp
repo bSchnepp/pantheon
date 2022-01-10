@@ -4,12 +4,6 @@
 #ifndef MOCK_ARCH_HPP_
 #define MOCK_ARCH_HPP_
 
-typedef struct PagingInfo
-{
-	UINT64 TTBR0;
-	UINT64 TTBR1;
-}PagingInfo;
-
 namespace pantheon
 {
 	struct CpuContext;

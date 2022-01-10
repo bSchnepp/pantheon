@@ -6,6 +6,7 @@
 
 #include <Proc/kern_cpu.hpp>
 #include <Devices/kern_drivers.hpp>
+#include <System/PhyMemory/kern_alloc.hpp>
 #include <System/Exec/kern_initialprograms.hpp>
 
 #include <Boot/Boot.hpp>
@@ -72,6 +73,7 @@ void kern_init(InitialBootInfo *InitBootInfo, void *initial_load_addr, void *vir
 	{
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);
 		pantheon::InitBasicRuntime();
+		pantheon::PageAllocator::InitPageAllocator(InitBootInfo);
 		pantheon::InitBasicMemory();
 		pantheon::InitProcessTables();
 		pantheon::ipc::InitEventSystem();

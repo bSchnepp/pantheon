@@ -1,4 +1,6 @@
 #include "kern_cpu.hpp"
+
+#include <vmm/vmm.hpp>
 #include <Boot/Boot.hpp>
 #include <kern_datatypes.hpp>
 #include <PhyMemory/kern_alloc.hpp>

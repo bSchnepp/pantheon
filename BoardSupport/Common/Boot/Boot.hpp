@@ -10,11 +10,12 @@
 #ifndef _PANTHEON_BOOT_HPP_
 #define _PANTHEON_BOOT_HPP_
 
+#define NUM_BOOT_MEMORY_AREAS (16ULL)
+
 typedef struct InitialMemoryArea
 {
 	UINT64 BaseAddress;
 	UINT64 Size;
-	pantheon::RawBitmap Map;
 }InitialMemoryArea;
 
 typedef struct InitialBootInfo
@@ -22,17 +23,11 @@ typedef struct InitialBootInfo
 	UINT64 LoadedPhysAddr;
 	UINT64 LoadedVirtAddr;
 
-	/* Assume a hard maximum of 64 memory regions. */	
+	/* Assume a hard maximum of NUM_BOOT_MEMORY_AREAS memory regions. */	
 	UINT8 NumMemoryAreas;
-	InitialMemoryArea InitMemoryAreas[64];
-
-	PagingInfo PageInfo;
+	InitialMemoryArea InitMemoryAreas[NUM_BOOT_MEMORY_AREAS];
 }InitialBootInfo;
 
 InitialBootInfo *GetInitBootInfo();
-
-UINT64 FindPage();
-void AllocatePage(UINT64 Addr);
-void FreePage(UINT64 Addr);
 
 #endif

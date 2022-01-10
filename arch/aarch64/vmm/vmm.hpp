@@ -410,14 +410,14 @@ static_assert(sizeof(PageTableEntry) == sizeof(PageTableEntryRaw));
 class PageAllocator
 {
 public:
-	PageAllocator() : PageAllocator(nullptr, 0) {}
+	FORCE_INLINE PageAllocator() : PageAllocator(nullptr, 0) {}
 
-	PageAllocator(VOID *Area, UINT64 Pages)
+	FORCE_INLINE PageAllocator(VOID *Area, UINT64 Pages)
 	{
 		this->Allocator = pantheon::mm::SlabCache<pantheon::vmm::PageTable>(Area, Pages);
 	}
 	
-	~PageAllocator()
+	FORCE_INLINE ~PageAllocator()
 	{
 
 	}

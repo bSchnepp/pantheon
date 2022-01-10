@@ -155,5 +155,4 @@ void pantheon::InitBasicRuntime()
 {
 	PrintMutex = pantheon::Spinlock("print_mutex");
 	PanickedState = 0;
-	pantheon::PageAllocator::InitPageAllocator();
 }

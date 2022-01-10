@@ -1,3 +1,4 @@
+#include <kern_runtime.hpp>
 #include <kern_datatypes.hpp>
 
 #ifndef _KERN_ATOMIC_HPP_
@@ -11,17 +12,17 @@ class Atomic
 {
 
 public:
-	Atomic()
+	FORCE_INLINE Atomic()
 	{
 		this->Content = T();
 	}
 
-	Atomic(T Item)
+	FORCE_INLINE Atomic(T Item)
 	{
 		this->Store(Item);
 	}
 
-	T Load()
+	FORCE_INLINE T Load()
 	{
 		T RetVal;
 		#ifndef ONLY_TESTS
@@ -32,7 +33,7 @@ public:
 		return RetVal;
 	}
 
-	void Store(T Item)
+	FORCE_INLINE void Store(T Item)
 	{
 		#ifndef ONLY_TESTS
 		__atomic_store(&(this->Content), &Item, __ATOMIC_SEQ_CST);

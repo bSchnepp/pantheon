@@ -6,6 +6,7 @@ SECTIONS
 	BSP_LOAD_ADDRESS = 0x80000 + 0x40000000;
 	. = BSP_LOAD_ADDRESS;
 
+	PRE_KERN_AREA = .;
 	. = ALIGN(0x1000);
 	.text.early :
 	{
@@ -34,6 +35,7 @@ SECTIONS
 		BoardSupport/qemu-aarch64/libBoard.a*(*.bss*)
 		BoardSupport/qemu-aarch64/Boot/libBoot.a*(*.bss*)
 	}
+	PRE_KERN_END = .;
 
 	. = ALIGN(4 * 1024);
 	USER_BEGIN = .;

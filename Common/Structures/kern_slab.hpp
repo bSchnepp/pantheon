@@ -23,7 +23,7 @@ class SlabCache
 public:
 	static_assert(sizeof(T) >= sizeof(SlabNext<T>));
 
-	SlabCache()
+	FORCE_INLINE SlabCache()
 	{
 		this->Size = 0;
 		this->Used = 0;
@@ -31,13 +31,13 @@ public:
 		this->Area = nullptr;
 	}
 
-	SlabCache(VOID *Area, UINT16 Count = 64)
+	FORCE_INLINE SlabCache(VOID *Area, UINT16 Count = 64)
 	{
 		this->Area = reinterpret_cast<T*>(Area);
 		#if POISON_MEMORY
-			ClearBuffer((char*)this->Area, Count * sizeof(T));
-		#else
 			SetBufferBytes((char*)this->Area, 0xDF, Count * sizeof(T));
+		#else
+			ClearBuffer((char*)this->Area, Count * sizeof(T));
 		#endif
 		this->Size = Count;
 		this->Used = 0;
@@ -56,7 +56,7 @@ public:
 		this->FreeList = reinterpret_cast<SlabNext<T>*>(this->Area);
 	}
 
-	~SlabCache()
+	FORCE_INLINE ~SlabCache()
 	{
 
 	}
