@@ -1,5 +1,6 @@
 #include <mmu.hpp>
 #include <vmm/vmm.hpp>
+#include <vmm/pte.hpp>
 
 #include <kern_runtime.hpp>
 #include <kern_datatypes.hpp>

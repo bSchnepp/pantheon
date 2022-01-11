@@ -1,6 +1,8 @@
 #include <stddef.h>
 
 #include <arch.hpp>
+#include <cpureg.hpp>
+#include <vmm/pte.hpp>
 #include <kern_datatypes.hpp>
 #include <Sync/kern_spinlock.hpp>
 

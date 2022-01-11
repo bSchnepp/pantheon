@@ -1,4 +1,4 @@
-#include <vmm/vmm.hpp>
+#include <vmm/pte.hpp>
 #include <Boot/Boot.hpp>
 #include <Sync/kern_spinlock.hpp>
 #include <System/PhyMemory/kern_alloc.hpp>

@@ -1,3 +1,4 @@
+#include <vmm/pte.hpp>
 #include <vmm/vmm.hpp>
 #include <kern_datatypes.hpp>
 #include <Sync/kern_spinlock.hpp>

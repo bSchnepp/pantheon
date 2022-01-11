@@ -1,5 +1,7 @@
 #include <arch.hpp>
 
+#include <vmm/pte.hpp>
+
 #include <kern_string.hpp>
 #include <kern_datatypes.hpp>
 #include <kern_container.hpp>
