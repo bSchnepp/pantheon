@@ -103,6 +103,7 @@ void SERIAL_LOG_UNSAFE(const char *Fmt, ...)
 	va_end(Args);	
 }
 
+static pantheon::Spinlock PanicMutex;
 static pantheon::Spinlock PrintMutex;
 static BOOL PanickedState;
 
@@ -122,8 +123,10 @@ void SERIAL_LOG(const char *Fmt, ...)
 	PrintMutex.Release();
 }
 
+[[noreturn]]
 void pantheon::StopError(const char *Reason, void *Source)
 {
+	PanicMutex.Acquire();
 	if (Reason)
 	{
 		if (Source)
@@ -142,6 +145,24 @@ void pantheon::StopError(const char *Reason, void *Source)
 	
 	/* TODO: stop other cores */
 	PanickedState = TRUE;
+	PanicMutex.Release();
+	pantheon::CPU::CLI();
+	for (;;){};
+}
+
+[[noreturn]]
+void pantheon::StopErrorFmt(const char *Fmt, ...)
+{
+	PanicMutex.Acquire();
+	SERIAL_LOG_UNSAFE("panic: ");
+	va_list Args;
+	va_start(Args, Fmt);
+	vprintf(Fmt, Args);
+	va_end(Args);
+
+	/* TODO: stop other cores */
+	PanickedState = TRUE;
+	PanicMutex.Release();
 	pantheon::CPU::CLI();
 	for (;;){};
 }
@@ -154,5 +175,6 @@ BOOL pantheon::Panicked()
 void pantheon::InitBasicRuntime()
 {
 	PrintMutex = pantheon::Spinlock("print_mutex");
+	PanicMutex = pantheon::Spinlock("panic_mutex");
 	PanickedState = 0;
 }

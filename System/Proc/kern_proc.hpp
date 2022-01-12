@@ -28,6 +28,7 @@ typedef enum ProcessState
 	PROCESS_STATE_BLOCKED,
 	PROCESS_STATE_ZOMBIE,
 	PROCESS_STATE_TERMINATED,
+	PROCESS_STATE_MAX,
 }ProcessState;
 
 typedef enum ProcessPriority

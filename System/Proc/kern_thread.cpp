@@ -132,6 +132,11 @@ pantheon::ThreadState pantheon::Thread::MyState()
 	{
 		StopError("MyState without lock");
 	}
+	UINT64 State = this->State;	/* ubsan says this is a problem. */
+	if (State > pantheon::THREAD_STATE_MAX)
+	{
+		StopErrorFmt("Invalid thread state: got 0x%lx\n", this->State);
+	}
 	return this->State;
 }
 

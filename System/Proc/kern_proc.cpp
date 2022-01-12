@@ -168,6 +168,11 @@ UINT32 pantheon::Process::ProcessID() const
 [[nodiscard]] 
 pantheon::ProcessState pantheon::Process::MyState() const
 {
+	/* ubsan says there is an error here */
+	if (this->CurState > pantheon::PROCESS_STATE_MAX)
+	{
+		StopErrorFmt("Invalid process state: got 0x%lx\n", this->CurState);
+	}
 	return this->CurState;
 }
 

@@ -1,3 +1,4 @@
+#include <kern.h>
 #include "kern_cpu.hpp"
 
 #include <vmm/pte.hpp>
@@ -40,6 +41,10 @@ void pantheon::CPU::InitCoreInfo(UINT8 CoreNo)
 		SERIAL_LOG("%s\n", "unable to malloc scheduler!!!!");
 		return;
 	}
+
+	#ifdef POISON_MEMORY
+	SetBufferBytes((CHAR*)MaybeAddr, 0xAF, sizeof(pantheon::Scheduler));
+	#endif
 
 	PerCoreInfo[CoreNo].CurSched = reinterpret_cast<Scheduler*>(MaybeAddr);
 	(*PerCoreInfo[CoreNo].CurSched) = pantheon::Scheduler();

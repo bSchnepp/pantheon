@@ -20,6 +20,7 @@ typedef enum ThreadState
 	THREAD_STATE_RUNNING,
 	THREAD_STATE_WAITING,
 	THREAD_STATE_TERMINATED,
+	THREAD_STATE_MAX,
 }ThreadState;
 
 typedef enum ThreadPriority
@@ -29,6 +30,7 @@ typedef enum ThreadPriority
 	THREAD_PRIORITY_NORMAL = 2,
 	THREAD_PRIORITY_HIGH = 3,
 	THREAD_PRIORITY_VERYHIGH = 4,
+	THREAD_PRIORITY_MAX,
 }ThreadPriority;
 
 class Process;

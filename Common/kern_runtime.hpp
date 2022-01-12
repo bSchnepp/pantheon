@@ -194,7 +194,8 @@ namespace pantheon
 
 void InitBasicRuntime();
 void InitBasicMemory();
-void StopError(const char *Reason, void *Source = nullptr);
+[[noreturn]] void StopError(const char *Reason, void *Source = nullptr);
+[[noreturn]] void StopErrorFmt(const char *Reason, ...);
 BOOL Panicked();
 
 }

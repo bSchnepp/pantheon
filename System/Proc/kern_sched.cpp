@@ -1,3 +1,4 @@
+#include <kern.h>
 #include <stddef.h>
 
 #include <arch.hpp>
@@ -46,6 +47,10 @@ pantheon::Scheduler::Scheduler()
 	/* hackishly create an idle thread */
 	UINT64 SP = (UINT64)((BasicMalloc(4096)())) + 4096;
 	UINT64 IP = (UINT64)proc_idle;
+
+	#ifdef POISON_MEMORY
+	SetBufferBytes((CHAR*)SP-4096, 0xAF, 4096);
+	#endif
 
 	this->CurThread = pantheon::GetGlobalScheduler()->CreateProcessorIdleThread(SP, IP);
 }
@@ -177,6 +182,9 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateThread(pantheon::Process *Pro
 	if (StackSpace.GetOkay())
 	{
 		UINT64 IStackSpace = (UINT64)StackSpace();
+		#ifdef POISON_MEMORY
+		SetBufferBytes((CHAR*)IStackSpace, 0xAF, InitialThreadStackSize);
+		#endif
 		IStackSpace += InitialThreadStackSize;
 		Result = this->CreateThread(Proc, StartAddr, ThreadData, Priority, (void*)IStackSpace);
 	}
@@ -212,7 +220,7 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateThread(pantheon::Process *Pro
 VOID pantheon::GlobalScheduler::Init()
 {
 	this->ThreadList = pantheon::LinkedList<Thread>();
-	this->ProcessList = ArrayList<Process>();
+	this->ProcessList = ArrayList<Process>(30);
 	AccessSpinlock = Spinlock("access_spinlock");
 
 	pantheon::Process Idle;
@@ -225,6 +233,9 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateProcessorIdleThread(UINT64 SP
 	while (!this->Okay.Load()){}
 
 	pantheon::Thread *CurThread = static_cast<pantheon::Thread*>(BasicMalloc(sizeof(pantheon::Thread))());
+	#ifdef POISON_MEMORY
+		SetBufferBytes((CHAR*)CurThread, 0xDA, sizeof(pantheon::Thread));
+	#endif
 	*CurThread = pantheon::Thread(pantheon::GetGlobalScheduler()->ObtainProcessByID(0), pantheon::THREAD_PRIORITY_NORMAL);
 	CurThread->Lock();
 	CurThread->GetRegisters()->SetSP(SP);
@@ -267,11 +278,20 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 				continue;
 			}
 
-			if (MaybeThr.MyProc()->MyState() != pantheon::PROCESS_STATE_RUNNING)
+			pantheon::Process *ThrProc = MaybeThr.MyProc();
+			if (ThrProc == nullptr)
 			{
+				StopErrorFmt("Invalid Process: %lx\n", ThrProc);
+			}
+
+			ThrProc->Lock();
+			if (ThrProc->MyState() != pantheon::PROCESS_STATE_RUNNING)
+			{
+				ThrProc->Unlock();
 				MaybeThr.Unlock();
 				continue;
 			}
+			ThrProc->Unlock();
 
 			UINT64 TickCount = MaybeThr.TicksLeft();
 			pantheon::ThreadState State = MaybeThr.MyState();
