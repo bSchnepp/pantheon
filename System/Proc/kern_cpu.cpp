@@ -103,7 +103,7 @@ alignas(4096) static char StackArea[MAX_NUM_CPUS * DEFAULT_STACK_SIZE];
 
 void *pantheon::CPU::GetStackArea(UINT64 Core)
 {
-	return StackArea + static_cast<UINT64>(Core * DEFAULT_STACK_SIZE);
+	return StackArea + static_cast<UINT64>(Core * DEFAULT_STACK_SIZE) + DEFAULT_STACK_SIZE;
 }
 
 

@@ -39,17 +39,13 @@ public:
 	}
 
 	[[nodiscard]] UINT64 Size() const 
-	{ 
-		if (this->Value == nullptr)
+	{
+		UINT64 Count = 0;
+		for (const LinkedList<T> *Cur = this; Cur != nullptr; Cur = Cur->NextInList)
 		{
-			return 0;
+			Count++;
 		}
-
-		if (this->NextInList == nullptr)
-		{
-			return 1;
-		}
-		return 1 + this->NextInList->Size(); 
+		return Count;
 	}
 
 	[[nodiscard]] BOOL End() const

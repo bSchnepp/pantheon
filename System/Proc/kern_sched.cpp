@@ -268,6 +268,7 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 			break;
 		}
 
+		this->AccessSpinlock.Acquire();
 		UINT64 MaxTicks = 0;
 		for (pantheon::Thread &MaybeThr : this->ThreadList)
 		{
@@ -313,6 +314,7 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 
 		if (Thr)
 		{
+			this->AccessSpinlock.Release();
 			break;
 		}
 		
@@ -323,6 +325,7 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 			MaybeThr.RefreshTicks();
 			MaybeThr.Unlock();
 		}
+		this->AccessSpinlock.Release();
 	}
 	pantheon::CPU::POPI();
 	return Thr;
