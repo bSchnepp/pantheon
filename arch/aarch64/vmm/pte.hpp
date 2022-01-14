@@ -337,7 +337,7 @@ protected:
 	{
 		/* Enforce offset and count can not be any more than 64 bits. */
 		Offset = ((Offset <= 64) * (Offset)) + static_cast<UINT64>((Offset > 64) * (64));
-		Count = ((Count <= 64) * (Count)) + (static_cast<UINT64>((Count > 64)) * (64));
+		Count = ((Count <= 64) * (Count)) + (static_cast<UINT64>((Count > 64)) * (0));
 		UINT64 Mask = (1ULL << Count) - 1;
 		UINT64 Shifted = (this->Raw >> Offset);
 		return Shifted & Mask;
@@ -348,7 +348,7 @@ protected:
 	{
 		/* Enforce offset and count can not be any more than 64 bits. */
 		Offset = ((Offset <= 64) * (Offset)) + static_cast<UINT64>((Offset > 64) * (64));
-		Count = ((Count <= 64) * (Count)) + (static_cast<UINT64>((Count > 64)) * (64));
+		Count = ((Count <= 64) * (Count)) + (static_cast<UINT64>((Count > 64)) * (0));
 		UINT64 Mask = (1ULL << Count) - 1;
 		return (this->Raw) & ((Mask << Offset) & Mask);
 	}
@@ -357,7 +357,7 @@ protected:
 	{
 		/* Enforce offset and count can not be any more than 64 bits. */
 		Offset = ((Offset <= 64) * (Offset)) + static_cast<UINT64>((Offset > 64) * (64));
-		Count = ((Count <= 64) * (Count)) + (static_cast<UINT64>((Count > 64)) * (64));
+		Count = ((Count <= 64) * (Count)) + (static_cast<UINT64>((Count > 64)) * (0));
 		const UINT64 Mask = ((1ULL << Count) - 1);
 		this->Raw &= ~(Mask << Offset);
 		Value &= Mask;
@@ -368,7 +368,7 @@ protected:
 	{
 		/* Enforce offset and count can not be any more than 64 bits. */
 		Offset = ((Offset <= 64) * (Offset)) + static_cast<UINT64>((Offset > 64) * (64));
-		Count = ((Count <= 64) * (Count)) + (static_cast<UINT64>((Count > 64)) * (64));
+		Count = ((Count <= 64) * (Count)) + (static_cast<UINT64>((Count > 64)) * (0));
 		const UINT64 Mask = ((1ULL << Count) - 1);	/* ubsan does not like this. */
 		this->Raw &= ~(Mask << Offset);
 		this->Raw |= (Value & (Mask << Offset));

@@ -60,21 +60,20 @@ pantheon::Result pantheon::SVCCreateThread(
 	void *StackTop, pantheon::ThreadPriority Priority)
 {
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
-	Proc->Lock();
 	if (Proc == nullptr)
 	{
 		StopError("System call with no process");
 		return -1;
 	}
+
+	pantheon::ScopedLock SL(Proc);
 	pantheon::Thread *Thr = pantheon::GetGlobalScheduler()->CreateThread(Proc, (void*)Entry, RESERVED, Priority, StackTop);
 	if (Thr == nullptr)
 	{
-		Proc->Unlock();
 		return -1;	
 	}
 
 	INT64 Result = Proc->EncodeHandle(pantheon::Handle(Thr));
-	Proc->Unlock();
 
 	if (Result < 0)
 	{
@@ -102,16 +101,16 @@ pantheon::Result pantheon::SVCCreateNamedEvent(const CHAR *Name, UINT32 *ReadHan
 		StopError("System call with no thread");
 		return -1;
 	}
+	pantheon::ScopedLock ScopeLockThread(CurThread);
+
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
 	if (Proc == nullptr)
 	{
 		StopError("System call with no process");
 		return -1;
 	}
+	pantheon::ScopedLock ScopeLockProc(Proc);
 	pantheon::String EvtName(Name);
-
-	CurThread->Lock();
-	Proc->Lock();
 
 	pantheon::ipc::NamedEvent *Evt = pantheon::ipc::LookupEvent(EvtName);
 	if (Evt != nullptr)
@@ -121,8 +120,6 @@ pantheon::Result pantheon::SVCCreateNamedEvent(const CHAR *Name, UINT32 *ReadHan
 
 		*WriteHandle = Write;
 		*ReadHandle = Read;
-		Proc->Unlock();
-		CurThread->Unlock();
 		return 0;
 	}
 
@@ -136,12 +133,8 @@ pantheon::Result pantheon::SVCCreateNamedEvent(const CHAR *Name, UINT32 *ReadHan
 
 		*WriteHandle = Write;
 		*ReadHandle = Read;
-		Proc->Unlock();
-		CurThread->Unlock();
 		return 0;
 	}
-	Proc->Unlock();
-	CurThread->Unlock();
 	return -1;
 }
 
@@ -153,27 +146,24 @@ pantheon::Result pantheon::SVCSignalEvent(UINT32 WriteHandle)
 		StopError("System call with no thread");
 		return -1;
 	}
+	pantheon::ScopedLock ScopeLockThread(CurThread);
+
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
 	if (Proc == nullptr)
 	{
 		StopError("System call with no process");
 		return -1;
 	}
-	CurThread->Lock();
-	Proc->Lock();
+	pantheon::ScopedLock ScopeLockProc(Proc);
 
 	pantheon::Handle *Hand = Proc->GetHandle(WriteHandle);
 	if (Hand == nullptr)
 	{
-		Proc->Unlock();
-		CurThread->Unlock();
 		return -1;
 	}
 
 	if (Hand->GetType() != pantheon::HANDLE_TYPE_WRITE_SIGNAL)
 	{
-		Proc->Unlock();
-		CurThread->Unlock();
 		return -1;
 	}
 
@@ -186,8 +176,6 @@ pantheon::Result pantheon::SVCSignalEvent(UINT32 WriteHandle)
 	}
 
 	/* TODO: wakeup every process waiting on it */
-	Proc->Unlock();
-	CurThread->Unlock();
 	return 0;
 }
 
@@ -198,28 +186,25 @@ pantheon::Result pantheon::SVCClearEvent(UINT32 WriteHandle)
 	{
 		StopError("System call with no thread");
 		return -1;
-	}	
+	}
+	pantheon::ScopedLock ScopeLockThread(CurThread);
+
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
 	if (Proc == nullptr)
 	{
 		StopError("System call with no process");
 		return -1;
 	}
-	CurThread->Lock();
-	Proc->Lock();
+	pantheon::ScopedLock ScopeLockProc(Proc);
 
 	pantheon::Handle *Hand = Proc->GetHandle(WriteHandle);
 	if (Hand == nullptr)
 	{
-		Proc->Unlock();
-		CurThread->Unlock();
 		return -1;
 	}
 	
 	if (Hand->GetType() != pantheon::HANDLE_TYPE_WRITE_SIGNAL)
 	{
-		Proc->Unlock();
-		CurThread->Unlock();
 		return -1;
 	}
 
@@ -230,8 +215,6 @@ pantheon::Result pantheon::SVCClearEvent(UINT32 WriteHandle)
 		Evt->Parent->Readable->Clearer = Proc;
 		Evt->Parent->Status = pantheon::ipc::EVENT_TYPE_UNSIGNALED;
 	}
-	Proc->Unlock();
-	CurThread->Unlock();
 	return 0;
 }
 
@@ -242,28 +225,25 @@ pantheon::Result pantheon::SVCResetEvent(UINT32 ReadHandle)
 	{
 		StopError("System call with no thread");
 		return -1;
-	}	
+	}
+	pantheon::ScopedLock ScopeLockThread(CurThread);
+
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
 	if (Proc == nullptr)
 	{
 		StopError("System call with no process");
 		return -1;
 	}
-	CurThread->Lock();
-	Proc->Lock();
+	pantheon::ScopedLock ScopeLockProc(Proc);
 
 	pantheon::Handle *Hand = Proc->GetHandle(ReadHandle);
 	if (Hand == nullptr)
 	{
-		Proc->Unlock();
-		CurThread->Unlock();
 		return -1;
 	}
 	
 	if (Hand->GetType() != pantheon::HANDLE_TYPE_READ_SIGNAL)
 	{
-		Proc->Unlock();
-		CurThread->Unlock();
 		return -1;
 	}
 
@@ -272,12 +252,8 @@ pantheon::Result pantheon::SVCResetEvent(UINT32 ReadHandle)
 	{
 		Evt->Clearer = Proc;
 		Evt->Parent->Status = pantheon::ipc::EVENT_TYPE_UNSIGNALED;
-		Proc->Unlock();
-		CurThread->Unlock();
 		return 0;
 	}
-	Proc->Unlock();
-	CurThread->Unlock();
 	return -1;
 }
 
@@ -288,27 +264,25 @@ pantheon::Result pantheon::SVCPollEvent(UINT32 Handle)
 	{
 		StopError("System call with no thread");
 		return -1;
-	}	
+	}
+	pantheon::ScopedLock ScopeLockThread(CurThread);
+
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
 	if (Proc == nullptr)
 	{
 		StopError("System call with no process");
 		return -1;
 	}
-	CurThread->Lock();
-	Proc->Lock();
+	pantheon::ScopedLock ScopeLockProc(Proc);
+
 	pantheon::Handle *Hand = Proc->GetHandle(Handle);
 	if (Hand == nullptr)
 	{
-		Proc->Unlock();
-		CurThread->Unlock();
 		return -1;
 	}
 	
 	if (Hand->GetType() != pantheon::HANDLE_TYPE_READ_SIGNAL)
 	{
-		Proc->Unlock();
-		CurThread->Unlock();
 		return -1;
 	}
 
@@ -316,22 +290,19 @@ pantheon::Result pantheon::SVCPollEvent(UINT32 Handle)
 	if (Evt)
 	{
 		BOOL Result = Evt->Parent->Status == pantheon::ipc::EVENT_TYPE_SIGNALED;
-		Proc->Unlock();
-		CurThread->Unlock();
 		return Result;
 	}
-	Proc->Unlock();
-	CurThread->Unlock();
 	return -1;
 }
 
 pantheon::Result pantheon::SVCYield()
 {
-	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	pantheon::Scheduler *CurSched = pantheon::CPU::GetCurSched();
-	CurThread->Lock();
-	CurThread->SetTicks(0);
-	CurThread->Unlock();
+	{
+		pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+		pantheon::ScopedLock ScopeLockThread(CurThread);
+		CurThread->SetTicks(0);
+	}
 	CurSched->Reschedule();
 	return 0;
 }

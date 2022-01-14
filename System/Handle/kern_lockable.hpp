@@ -50,6 +50,23 @@ private:
 	pantheon::Spinlock ObjLock;
 };
 
+class ScopedLock
+{
+public:
+	ScopedLock(Lockable *Lk) : Lock(Lk)
+	{
+		Lock->Lock();
+	}
+
+	~ScopedLock()
+	{
+		Lock->Unlock();
+	}
+	
+private:
+	Lockable *Lock;
+};
+
 }
 
 #endif
