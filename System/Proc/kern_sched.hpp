@@ -56,7 +56,7 @@ private:
 	Atomic<BOOL> Okay;
 	Spinlock AccessSpinlock;
 	ArrayList<Process> ProcessList;
-	pantheon::LinkedList<Thread> ThreadList;
+	ArrayList<Thread> ThreadList;
 };
 
 UINT32 AcquireProcessID();

@@ -193,33 +193,27 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateThread(pantheon::Process *Pro
 
 pantheon::Thread *pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority, void *StackTop)
 {
-	Optional<void*> MaybeMem = BasicMalloc(sizeof(pantheon::Thread));
-	if (MaybeMem.GetOkay() == FALSE)
-	{
-		return FALSE;
-	}
-
-	void *Mem = MaybeMem.GetValue();
-	pantheon::Thread *T = static_cast<pantheon::Thread*>(Mem);
-	*T = pantheon::Thread(Proc);
-	T->Lock();
+	pantheon::Thread T(Proc);
+	T.Lock();
 
 	UINT64 IStartAddr = (UINT64)StartAddr;
 	UINT64 IThreadData = (UINT64)ThreadData;
 	UINT64 IStackSpace = (UINT64)StackTop;
 
-	pantheon::CpuContext *Regs = T->GetRegisters();
+	pantheon::CpuContext *Regs = T.GetRegisters();
 	Regs->SetInitContext(IStartAddr, IThreadData, IStackSpace);
-	T->SetState(pantheon::THREAD_STATE_WAITING);
-	T->SetPriority(Priority);
-	this->ThreadList.PushFront(T);
-	T->Unlock();
-	return T;
+	T.SetState(pantheon::THREAD_STATE_WAITING);
+	T.SetPriority(Priority);
+	T.Unlock();
+
+	UINT64 Index = this->ThreadList.Size();
+	this->ThreadList.Add(T);
+	return &this->ThreadList[Index];
 }
 
 VOID pantheon::GlobalScheduler::Init()
 {
-	this->ThreadList = pantheon::LinkedList<Thread>();
+	this->ThreadList = ArrayList<Thread>(120);
 	this->ProcessList = ArrayList<Process>(30);
 	AccessSpinlock = Spinlock("access_spinlock");
 
@@ -232,20 +226,17 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateProcessorIdleThread(UINT64 SP
 {
 	while (!this->Okay.Load()){}
 
-	pantheon::Thread *CurThread = static_cast<pantheon::Thread*>(BasicMalloc(sizeof(pantheon::Thread))());
-	#ifdef POISON_MEMORY
-		SetBufferBytes((CHAR*)CurThread, 0xDA, sizeof(pantheon::Thread));
-	#endif
-	*CurThread = pantheon::Thread(pantheon::GetGlobalScheduler()->ObtainProcessByID(0), pantheon::THREAD_PRIORITY_NORMAL);
-	CurThread->Lock();
-	CurThread->GetRegisters()->SetSP(SP);
-	CurThread->GetRegisters()->SetPC(IP);
-	CurThread->SetState(pantheon::THREAD_STATE_RUNNING);
-	CurThread->Unlock();
+	pantheon::Thread CurThread(pantheon::GetGlobalScheduler()->ObtainProcessByID(0), pantheon::THREAD_PRIORITY_NORMAL);
+	CurThread.Lock();
+	CurThread.GetRegisters()->SetSP(SP);
+	CurThread.GetRegisters()->SetPC(IP);
+	CurThread.SetState(pantheon::THREAD_STATE_RUNNING);
+	CurThread.Unlock();
 	this->AccessSpinlock.Acquire();
-	this->ThreadList.PushFront(CurThread);
+	UINT64 Index = this->ThreadList.Size();
+	this->ThreadList.Add(CurThread);
 	this->AccessSpinlock.Release();
-	return CurThread;
+	return  &this->ThreadList[Index];
 }
 
 
@@ -262,7 +253,7 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 	pantheon::CPU::PUSHI();
 	while (Thr == nullptr)
 	{
-		UINT64 TListSize = this->ThreadList.GetSize();
+		UINT64 TListSize = this->ThreadList.Size();
 		if (TListSize == 0)
 		{
 			break;
