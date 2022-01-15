@@ -63,6 +63,30 @@ void kern_init_core()
 	pantheon::CPU::STI();
 }
 
+static void kern_basic_init(InitialBootInfo *InitBootInfo)
+{
+	pantheon::InitBasicRuntime();
+	pantheon::PageAllocator::InitPageAllocator(InitBootInfo);
+	pantheon::InitBasicMemory();
+	pantheon::InitProcessTables();
+	pantheon::ipc::InitEventSystem();
+	pantheon::GetGlobalScheduler()->Init();
+}
+
+static void kern_stage2_init()
+{
+	/* TODO: unpack initial programs properly */
+	pantheon::Process *sysm = pantheon::GetGlobalScheduler()->CreateProcess("sysm", (void*)kern_idle2);
+	sysm->Lock();
+	sysm->SetState(pantheon::PROCESS_STATE_RUNNING);
+	sysm->Unlock();
+
+	pantheon::Process *prgm = pantheon::GetGlobalScheduler()->CreateProcess("prgm", (void*)kern_idle3);
+	prgm->Lock();
+	prgm->SetState(pantheon::PROCESS_STATE_RUNNING);
+	prgm->Unlock();
+}
+
 void kern_init(InitialBootInfo *InitBootInfo, void *initial_load_addr, void *virt_load_addr)
 {
 	PANTHEON_UNUSED(InitBootInfo);
@@ -71,26 +95,10 @@ void kern_init(InitialBootInfo *InitBootInfo, void *initial_load_addr, void *vir
 	
 	if (pantheon::CPU::GetProcessorNumber() == 0)
 	{
-		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);
-		pantheon::InitBasicRuntime();
-		pantheon::PageAllocator::InitPageAllocator(InitBootInfo);
-		pantheon::InitBasicMemory();
-		pantheon::InitProcessTables();
-		pantheon::ipc::InitEventSystem();
-		pantheon::GetGlobalScheduler()->Init();
+		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);		
+		kern_basic_init(InitBootInfo);
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_SECOND_STAGE);
-
-		/* TODO: unpack initial programs properly */
-		pantheon::Process *sysm = pantheon::GetGlobalScheduler()->CreateProcess("sysm", (void*)kern_idle2);
-		sysm->Lock();
-		sysm->SetState(pantheon::PROCESS_STATE_RUNNING);
-		sysm->Unlock();
-
-		pantheon::Process *prgm = pantheon::GetGlobalScheduler()->CreateProcess("prgm", (void*)kern_idle3);
-		prgm->Lock();
-		prgm->SetState(pantheon::PROCESS_STATE_RUNNING);
-		prgm->Unlock();
-
+		kern_stage2_init();
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_OK);
 	}
 	kern_init_core();

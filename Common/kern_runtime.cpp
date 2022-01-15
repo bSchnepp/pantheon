@@ -105,7 +105,6 @@ void SERIAL_LOG_UNSAFE(const char *Fmt, ...)
 
 static pantheon::Spinlock PanicMutex;
 static pantheon::Spinlock PrintMutex;
-static BOOL PanickedState;
 
 void SERIAL_LOG(const char *Fmt, ...)
 {
@@ -144,7 +143,7 @@ void pantheon::StopError(const char *Reason, void *Source)
 	}
 	
 	/* TODO: stop other cores */
-	PanickedState = TRUE;
+	pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_PANIC);
 	PanicMutex.Release();
 	pantheon::CPU::CLI();
 	for (;;){};
@@ -161,7 +160,7 @@ void pantheon::StopErrorFmt(const char *Fmt, ...)
 	va_end(Args);
 
 	/* TODO: stop other cores */
-	PanickedState = TRUE;
+	pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_PANIC);
 	PanicMutex.Release();
 	pantheon::CPU::CLI();
 	for (;;){};
@@ -169,12 +168,11 @@ void pantheon::StopErrorFmt(const char *Fmt, ...)
 
 BOOL pantheon::Panicked()
 {
-	return PanickedState;
+	return pantheon::GetKernelStatus() == KERNEL_STATUS_PANIC;
 }
 
 void pantheon::InitBasicRuntime()
 {
 	PrintMutex = pantheon::Spinlock("print_mutex");
 	PanicMutex = pantheon::Spinlock("panic_mutex");
-	PanickedState = 0;
 }
