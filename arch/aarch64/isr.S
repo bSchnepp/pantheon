@@ -65,10 +65,10 @@ disable_interrupts:
 spin:
 	b spin
 
-.extern enable_interrupts
 .globl _asm_sync_handler_el0
 _asm_sync_handler_el0:
 	kern_entry 0
+	
 	mrs x20, esr_el1
 	lsr x19, x20, #26	/* To find exception reason, this is needed */
 	cmp x19, #0x15
@@ -82,14 +82,18 @@ _asm_sync_handler_el0:
 	 * Since sizeof(UINT_PTR) == 8, the offset used needs to be at
 	 * the syscall table + (8 * index), which is the same as lsl 3.
 	 */
-	ldr x9, [x25, x26, lsl #3]
+	ldr x19, [x25, x26, lsl #3]
+
 	bl enable_interrupts
 	mov x0, sp
-	blr x9
+	bl write_trap_frame
+	
+	blr x19		/* Actually issue the syscall */
+
+	mov x0, xzr
+	bl write_trap_frame
 	bl disable_interrupts
 
-	/* x0 is the top of the stack. x1-x8 should also be sent maybe? */
-	str x0, [sp, #(0 * 8)]
 _sync_handler_el0_exit:
 	kern_exit 0
 
