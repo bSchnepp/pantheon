@@ -148,7 +148,14 @@ typedef struct TrapFrame
 	{
 		this->PSTATE = PSTATE_MODE_KERN;
 	}
+
+	UINT64 &GetIntArgument(UINT8 Index)
+	{
+		return this->Regs[Index];
+	}
 }TrapFrame;
+
+static_assert(sizeof(TrapFrame) == (16ULL*17ULL));
 
 }
 

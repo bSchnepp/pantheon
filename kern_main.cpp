@@ -52,13 +52,13 @@ void kern_init_core()
 
 	pantheon::CPU::InitCoreInfo(CpuNo);
 	PerCoreInit();
-	SERIAL_LOG("Pantheon booted with core %hhu\n", CpuNo);
 
 	while (pantheon::GetKernelStatus() < pantheon::KERNEL_STATUS_OK)
 	{
 		/* Loop until core 0 finished kernel setup */
 	}
-
+	
+	SERIAL_LOG("Pantheon booted with core %hhu\n", CpuNo);
 	pantheon::RearmSystemTimer(1000);
 	pantheon::CPU::STI();
 }
@@ -87,12 +87,8 @@ static void kern_stage2_init()
 	prgm->Unlock();
 }
 
-void kern_init(InitialBootInfo *InitBootInfo, void *initial_load_addr, void *virt_load_addr)
+void kern_init(InitialBootInfo *InitBootInfo)
 {
-	PANTHEON_UNUSED(InitBootInfo);
-	PANTHEON_UNUSED(virt_load_addr);
-	PANTHEON_UNUSED(initial_load_addr);
-	
 	if (pantheon::CPU::GetProcessorNumber() == 0)
 	{
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);		

@@ -85,17 +85,20 @@ SECTIONS
 	RODATA_END = .;
 
 	. = ALIGN(0x1000);
+	DATA_AREA = .;
+	DATA_PHY_AREA = . - VIRT_LOAD_ADDRESS;
 	.data : AT(ADDR(.data) - VIRT_LOAD_ADDRESS)
 	{
-		DATA_AREA = .;
-		DATA_PHY_AREA = . - VIRT_LOAD_ADDRESS;
 		*(.data*)
 		. = ALIGN(0x1000);
-		DATA_END = .;
+	}
+	DATA_END = .;
 
+	BSS_AREA = .;
+	BSS_PHY_AREA = . - VIRT_LOAD_ADDRESS;
+	.bss : AT(ADDR(.bss) - VIRT_LOAD_ADDRESS)
+	{
 		. = ALIGN(0x1000);
-		BSS_AREA = .;
-		BSS_PHY_AREA = . - VIRT_LOAD_ADDRESS;
 		*(.bss.early)
 		*(.bss*)
 
@@ -106,10 +109,10 @@ SECTIONS
 		kern_stack_size = kern_stack_end - kern_stack_begin;
 		. += 0x1000;	/* Add extra space just in case... */
 		. = ALIGN(4 * 1024);
-		kern_end = .;
-		BSS_END = .;
-		BSS_SIZE = BSS_END - BSS_AREA;
+		kern_end = .;	
 	}
+	BSS_END = .;
+	BSS_SIZE = BSS_END - BSS_AREA;
 
 	/DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }	
 }

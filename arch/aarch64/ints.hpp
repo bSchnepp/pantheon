@@ -27,7 +27,7 @@ extern "C" void sync_handler_el1(pantheon::arm::TrapFrame *Frame);
 extern "C" void err_handler_el1(pantheon::arm::TrapFrame *Frame);
 extern "C" void fiq_handler_el1(pantheon::arm::TrapFrame *Frame);
 extern "C" void irq_handler_handler_el1(pantheon::arm::TrapFrame *Frame);
-extern "C" void sync_handler_el0(pantheon::arm::TrapFrame *Frame);
+extern "C" void sync_handler_el0(pantheon::arm::TrapFrame *Frame, UINT64 ESR);
 extern "C" void err_handler_el0(pantheon::arm::TrapFrame *Frame);
 extern "C" void fiq_handler_el0(pantheon::arm::TrapFrame *Frame);
 extern "C" void irq_handler_handler_el0(pantheon::arm::TrapFrame *Frame);

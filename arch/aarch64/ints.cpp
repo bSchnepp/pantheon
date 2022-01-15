@@ -70,9 +70,6 @@ extern "C" void irq_handler_el1(pantheon::TrapFrame *Frame)
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
-
-/* sync_handler_el0 is entirely in asm */
-
 extern "C" void err_handler_el0(pantheon::TrapFrame *Frame)
 {
 	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
@@ -119,6 +116,11 @@ extern "C" void irq_handler_el0_32(pantheon::TrapFrame *Frame)
 	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: IRQ HANDLER EL0_32");
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
+}
+
+extern "C" void write_trap_frame(pantheon::TrapFrame *Frame)
+{
+	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
 }
 
 VOID pantheon::arm::LoadInterruptTable(VOID *Table)

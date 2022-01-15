@@ -5,7 +5,7 @@
 .macro DEFINE_ISR func
 .align 7
 	kern_entry 1
-	add x0, sp, #TRAP_SZ
+	mov x0, sp
 	bl \func
 	b exit_isr
 .endm
@@ -17,7 +17,7 @@ exit_isr:
 .macro DEFINE_ISR_EL0 func
 .align 7
 	kern_entry 0
-	add x0, sp, #TRAP_SZ
+	mov x0, sp
 	bl \func
 	b exit_isr_el0
 .endm
@@ -46,10 +46,21 @@ exit_isr_el0:
 .extern fiq_handler_el0_32
 .extern irq_handler_el0_32
 
+.extern write_trap_frame
 .extern syscall_table
 
-.section ".text.exceptions"
+.section ".text"
+.globl enable_interrupts
+enable_interrupts:
+	msr daifclr, #2
+	ret
 
+.globl disable_interrupts
+disable_interrupts:
+	msr daifset, #2
+	ret
+
+.section ".text.exceptions"
 
 spin:
 	b spin
@@ -65,15 +76,15 @@ _asm_sync_handler_el0:
 	adr x25, syscall_table	/* x25 holds the syscall table pointer */
 	uxtw x26, w8		/* unsigned extend to word for x26 with syscall no */
 	mov x27, #SYSCALL_AMT	/* Is this number valid? */
-	bl enable_interrupts
 	cmp x26, x27		/* Is this syscall number valid? */
 	bhs _sync_handler_el0_exit	/* If not, exit again */
-
 	/* Load the syscall pointer. 
 	 * Since sizeof(UINT_PTR) == 8, the offset used needs to be at
 	 * the syscall table + (8 * index), which is the same as lsl 3.
 	 */
 	ldr x9, [x25, x26, lsl #3]
+	bl enable_interrupts
+	mov x0, sp
 	blr x9
 	bl disable_interrupts
 
