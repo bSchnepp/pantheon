@@ -55,9 +55,10 @@ extern "C" void BoardInit(pantheon::vmm::PageTable *TTBR1, pantheon::vmm::PageAl
 	DeviceMMIOEntry.SetPagePermissions(pantheon::vmm::PAGE_PERMISSION_KERNEL_RW);
 	DeviceMMIOEntry.SetMAIREntry(pantheon::vmm::MAIREntry_0);
 
-	PageAllocator.Map(TTBR1, DEVICE_TYPE_UART, 0x09000000, pantheon::vmm::BlockSize::L3BlockSize, DeviceMMIOEntry);
-	PageAllocator.Map(TTBR1, DEVICE_TYPE_GIC_DIST, 0x08000000, pantheon::vmm::BlockSize::L3BlockSize, DeviceMMIOEntry);
-	PageAllocator.Map(TTBR1, DEVICE_TYPE_GIC_CPU, 0x08010000, pantheon::vmm::BlockSize::L3BlockSize, DeviceMMIOEntry);
+	/* This seems odd, but must use MapLower since higher half isn't executing yet. */
+	PageAllocator.MapLower(TTBR1, DEVICE_TYPE_UART, 0x09000000, pantheon::vmm::BlockSize::L3BlockSize, DeviceMMIOEntry);
+	PageAllocator.MapLower(TTBR1, DEVICE_TYPE_GIC_DIST, 0x08000000, pantheon::vmm::BlockSize::L3BlockSize, DeviceMMIOEntry);
+	PageAllocator.MapLower(TTBR1, DEVICE_TYPE_GIC_CPU, 0x08010000, pantheon::vmm::BlockSize::L3BlockSize, DeviceMMIOEntry);
 
 	pantheon::pl011::PL011Init(DEVICE_TYPE_UART, 0);
 

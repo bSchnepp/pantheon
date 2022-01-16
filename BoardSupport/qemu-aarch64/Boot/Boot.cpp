@@ -480,7 +480,7 @@ static void SetupPageTables()
 	UINT64 UAddrBegin = (UINT64)&USER_BEGIN;
 	UINT64 UAddrEnd = (UINT64)&USER_END;
 	UINT64 UAddrSize = UAddrEnd - UAddrBegin;
-	InitialPageTables.Reprotect(&TTBR0, UAddrBegin, UAddrSize, UEntry);
+	InitialPageTables.ReprotectLower(&TTBR0, UAddrBegin, UAddrSize, UEntry);
 
 	/* 
 	 * TODO:
@@ -502,7 +502,7 @@ static void SetupPageTables()
 	pantheon::vmm::PhysicalAddress BaseAddrPhysText = reinterpret_cast<pantheon::vmm::PhysicalAddress>(&TEXT_PHY_AREA);
 	pantheon::vmm::VirtualAddress BaseAddrText = reinterpret_cast<pantheon::vmm::VirtualAddress>(&TEXT_AREA);
 	pantheon::vmm::VirtualAddress EndAddrText = reinterpret_cast<pantheon::vmm::VirtualAddress>(&TEXT_END);
-	InitialPageTables.Map(&TTBR1, BaseAddrText, BaseAddrPhysText, EndAddrText - BaseAddrText, NoWrite);
+	InitialPageTables.MapLower(&TTBR1, BaseAddrText, BaseAddrPhysText, EndAddrText - BaseAddrText, NoWrite);
 
 	UINT64 NoExecutePermission = 0;
 	NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_KERN;
@@ -514,17 +514,17 @@ static void SetupPageTables()
 	pantheon::vmm::PhysicalAddress BaseAddrPhysRodata = reinterpret_cast<pantheon::vmm::PhysicalAddress>(&RODATA_PHY_AREA);
 	pantheon::vmm::VirtualAddress BaseAddrRodata = reinterpret_cast<pantheon::vmm::VirtualAddress>(&RODATA_AREA);
 	pantheon::vmm::VirtualAddress EndAddrRodata = reinterpret_cast<pantheon::vmm::VirtualAddress>(&RODATA_END);
-	InitialPageTables.Map(&TTBR1, BaseAddrRodata, BaseAddrPhysRodata, EndAddrRodata - BaseAddrRodata, NoExecute);
+	InitialPageTables.MapLower(&TTBR1, BaseAddrRodata, BaseAddrPhysRodata, EndAddrRodata - BaseAddrRodata, NoExecute);
 
 	pantheon::vmm::PhysicalAddress BaseAddrPhysData = reinterpret_cast<pantheon::vmm::PhysicalAddress>(&DATA_PHY_AREA);
 	pantheon::vmm::VirtualAddress BaseAddrData = reinterpret_cast<pantheon::vmm::VirtualAddress>(&DATA_AREA);
 	pantheon::vmm::VirtualAddress EndAddrData = reinterpret_cast<pantheon::vmm::VirtualAddress>(&DATA_END);
-	InitialPageTables.Map(&TTBR1, BaseAddrData, BaseAddrPhysData, EndAddrData - BaseAddrData, NoExecute);
+	InitialPageTables.MapLower(&TTBR1, BaseAddrData, BaseAddrPhysData, EndAddrData - BaseAddrData, NoExecute);
 
 	pantheon::vmm::PhysicalAddress BaseAddrPhysBSS = reinterpret_cast<pantheon::vmm::PhysicalAddress>(&BSS_PHY_AREA);
 	pantheon::vmm::VirtualAddress BaseAddrBSS = reinterpret_cast<pantheon::vmm::VirtualAddress>(&BSS_AREA);
 	pantheon::vmm::VirtualAddress EndAddrBSS = reinterpret_cast<pantheon::vmm::VirtualAddress>(&BSS_END);
-	InitialPageTables.Map(&TTBR1, BaseAddrBSS, BaseAddrPhysBSS, EndAddrBSS - BaseAddrBSS, NoExecute);
+	InitialPageTables.MapLower(&TTBR1, BaseAddrBSS, BaseAddrPhysBSS, EndAddrBSS - BaseAddrBSS, NoExecute);
 
 	/* Run kernel constructors here */
 
