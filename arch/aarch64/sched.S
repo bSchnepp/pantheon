@@ -11,6 +11,7 @@ _hang:
 createprocess_tail:
 	bl FinishThread
 	mov x0, x20
+	mov x1, x21
 	blr x19
 
 

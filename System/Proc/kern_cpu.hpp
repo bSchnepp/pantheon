@@ -53,8 +53,6 @@ pantheon::TrapFrame *GetCurFrame();
 
 void *GetStackArea(UINT64 Core);
 
-BOOL DropToUsermode(UINT64 PC);
-
 }
 
 }

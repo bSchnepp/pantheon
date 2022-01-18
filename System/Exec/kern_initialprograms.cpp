@@ -73,7 +73,7 @@ static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, pantheon::Pr
 			UEntry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
 			UEntry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
 
-			Proc->MapPages(&TargetVAddr, &NewPage, &UEntry, 1);
+			Proc->MapPages(&TargetVAddr, &NewPage, UEntry, 1);
 		}
 	}
 	/* Set the process to running here... 

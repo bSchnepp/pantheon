@@ -28,8 +28,7 @@ pantheon::Process::Process() : pantheon::Lockable("Process")
 	this->PID = 0;
 	/* TODO: Create new page tables, instead of reusing old stuff. */
 	this->TTBR0 = pantheon::CPUReg::R_TTBR0_EL1();
-	this->MemoryMap = nullptr;
-	
+	this->MemoryMap = reinterpret_cast<pantheon::vmm::PageTable*>(pantheon::vmm::PhysicalToVirtualAddress(this->TTBR0));
 }
 
 pantheon::Process::Process(const char *CommandString) : pantheon::Lockable("Process")
@@ -40,8 +39,7 @@ pantheon::Process::Process(const char *CommandString) : pantheon::Lockable("Proc
 	this->PID = pantheon::AcquireProcessID();
 	/* TODO: Create new page tables, instead of reusing old stuff. */
 	this->TTBR0 = pantheon::CPUReg::R_TTBR0_EL1();
-	this->MemoryMap = nullptr;
-	
+	this->MemoryMap = reinterpret_cast<pantheon::vmm::PageTable*>(pantheon::vmm::PhysicalToVirtualAddress(this->TTBR0));
 }
 
 pantheon::Process::Process(pantheon::String &CommandString) : pantheon::Lockable("Process")
@@ -52,8 +50,7 @@ pantheon::Process::Process(pantheon::String &CommandString) : pantheon::Lockable
 	this->PID = pantheon::AcquireProcessID();
 	/* TODO: Create new page tables, instead of reusing old stuff. */
 	this->TTBR0 = pantheon::CPUReg::R_TTBR0_EL1();
-	this->MemoryMap = nullptr;
-	
+	this->MemoryMap = reinterpret_cast<pantheon::vmm::PageTable*>(pantheon::vmm::PhysicalToVirtualAddress(this->TTBR0));
 }
 
 pantheon::Process::Process(const Process &Other) noexcept : pantheon::Lockable("Process")
@@ -151,11 +148,11 @@ void pantheon::Process::SetPageTable(pantheon::vmm::PageTable *Root, pantheon::v
 	this->TTBR0 = PageTablePhysicalAddr;
 }
 
-void pantheon::Process::MapPages(pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, pantheon::vmm::PageTableEntry *PageAttributes, UINT64 NumPages)
+void pantheon::Process::MapPages(pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages)
 {
 	for (UINT64 Num = 0; Num < NumPages; Num++)
 	{
-		PageTableAllocator.Map(this->MemoryMap, VAddresses[Num], PAddresses[Num], pantheon::vmm::SmallestPageSize, PageAttributes[Num]);
+		PageTableAllocator.Map(this->MemoryMap, VAddresses[Num], PAddresses[Num], pantheon::vmm::SmallestPageSize, PageAttributes);
 	}
 }
 

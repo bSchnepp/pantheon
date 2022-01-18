@@ -15,26 +15,6 @@
 extern "C" void sysm_Main();
 extern "C" void prgm_Main();
 
-void kern_idle2(void *unused)
-{
-	PANTHEON_UNUSED(unused);
-	pantheon::CPU::DropToUsermode((UINT64)sysm_Main);
-	for (;;)
-	{
-		SERIAL_LOG("%s\n", "STUCK IN KERNEL SPACE");
-	}
-}
-
-void kern_idle3(void *unused)
-{
-	PANTHEON_UNUSED(unused);
-	pantheon::CPU::DropToUsermode((UINT64)prgm_Main);
-	for (;;)
-	{
-		SERIAL_LOG("%s\n", "STUCK IN KERNEL SPACE");
-	}
-}
-
 /* clang-format: off */
 #ifdef __cplusplus
 extern "C"
@@ -76,12 +56,12 @@ static void kern_basic_init(InitialBootInfo *InitBootInfo)
 static void kern_stage2_init()
 {
 	/* TODO: unpack initial programs properly */
-	pantheon::Process *sysm = pantheon::GetGlobalScheduler()->CreateProcess("sysm", (void*)kern_idle2);
+	pantheon::Process *sysm = pantheon::GetGlobalScheduler()->CreateProcess("sysm", (void*)sysm_Main);
 	sysm->Lock();
 	sysm->SetState(pantheon::PROCESS_STATE_RUNNING);
 	sysm->Unlock();
 
-	pantheon::Process *prgm = pantheon::GetGlobalScheduler()->CreateProcess("prgm", (void*)kern_idle3);
+	pantheon::Process *prgm = pantheon::GetGlobalScheduler()->CreateProcess("prgm", (void*)prgm_Main);
 	prgm->Lock();
 	prgm->SetState(pantheon::PROCESS_STATE_RUNNING);
 	prgm->Unlock();

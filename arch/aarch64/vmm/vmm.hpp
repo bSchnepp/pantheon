@@ -11,6 +11,8 @@
 #ifndef _AARCH64_VIRT_MEM_HPP_
 #define _AARCH64_VIRT_MEM_HPP_
 
+extern CHAR *VIRT_LOAD_ADDRESS;
+
 namespace pantheon::vmm
 {
 
@@ -118,7 +120,7 @@ public:
 		return this->Allocator.SlabCount() - this->SpaceLeft();
 	}
 
-	FORCE_INLINE BOOL Map(pantheon::vmm::PageTable *TTBR, pantheon::vmm::VirtualAddress VirtAddr, pantheon::vmm::PhysicalAddress PhysAddr, UINT64 Size, const pantheon::vmm::PageTableEntry &Permissions)
+	BOOL Map(pantheon::vmm::PageTable *TTBR, pantheon::vmm::VirtualAddress VirtAddr, pantheon::vmm::PhysicalAddress PhysAddr, UINT64 Size, const pantheon::vmm::PageTableEntry &Permissions)
 	{
 		if (Size == 0)
 		{
@@ -149,7 +151,7 @@ public:
 			if (L0Entry->IsMapped() == FALSE)
 			{
 				/* Allocate a new L0, and write it in. */
-				CreateTable(L0Entry, TTBR);
+				CreateTable(L0Entry);
 			}
 
 			/* We can't have L0 blocks, so don't try to fit it in: this would
@@ -160,6 +162,10 @@ public:
 			/* TODO: We need to handle virtual addresses!!! These pointers are physical memory pointers. */
 			UINT16 L1Index = VirtAddrToPageTableIndex(VirtAddr, 1);
 			pantheon::vmm::PageTable *L1 = (pantheon::vmm::PageTable*)PhysicalToVirtualAddress(L0Entry->GetPhysicalAddressArea());
+			if (L1 == nullptr)
+			{
+				StopError("invalid L1 page table?");
+			}			
 			pantheon::vmm::PageTableEntry *L1Entry = &(L1->Entries[L1Index]);
 
 
@@ -173,11 +179,15 @@ public:
 			if (L1Entry->IsMapped() == FALSE)
 			{
 				/* Allocate a new L1, and write it in. */
-				CreateTable(L1Entry, TTBR);		
+				CreateTable(L1Entry);		
 			}
 
 			UINT16 L2Index = VirtAddrToPageTableIndex(VirtAddr, 2);
 			pantheon::vmm::PageTable *L2 = (pantheon::vmm::PageTable*)PhysicalToVirtualAddress(L1Entry->GetPhysicalAddressArea());
+			if (L2 == nullptr)
+			{
+				StopError("invalid L2 page table?");
+			}
 			pantheon::vmm::PageTableEntry *L2Entry = &(L2->Entries[L2Index]);
 
 			/* We have a (greedy) opportunity to save page tables. Try making this a block if we can. */
@@ -189,11 +199,15 @@ public:
 			if (L2Entry->IsMapped() == FALSE)
 			{
 				/* Allocate a new L2, and write it in. */
-				CreateTable(L2Entry, TTBR);
+				CreateTable(L2Entry);
 			}
 
 			UINT16 L3Index = VirtAddrToPageTableIndex(VirtAddr, 3);
 			pantheon::vmm::PageTable *L3 = (pantheon::vmm::PageTable*)PhysicalToVirtualAddress(L2Entry->GetPhysicalAddressArea());
+			if (L3 == nullptr)
+			{
+				StopError("invalid L3 page table?");
+			}
 			pantheon::vmm::PageTableEntry *L3Entry = &(L3->Entries[L3Index]);
 
 			/* We can't make a "bigger" chunk from L3: L3 is already the smallest size. */
@@ -210,7 +224,7 @@ public:
 		return TRUE;
 	}
 
-	FORCE_INLINE BOOL Reprotect(pantheon::vmm::PageTable *TTBR, pantheon::vmm::VirtualAddress VirtAddr, UINT64 Size, const pantheon::vmm::PageTableEntry &Permissions)
+	BOOL Reprotect(pantheon::vmm::PageTable *TTBR, pantheon::vmm::VirtualAddress VirtAddr, UINT64 Size, const pantheon::vmm::PageTableEntry &Permissions)
 	{
 		if (Size == 0)
 		{
@@ -650,10 +664,10 @@ private:
 		pantheon::Sync::DSBISH();
 	}
 
-	FORCE_INLINE void CreateTable(pantheon::vmm::PageTableEntry *Entry, pantheon::vmm::PageTable *TTBR)
+	FORCE_INLINE void CreateTable(pantheon::vmm::PageTableEntry *Entry)
 	{
 		pantheon::vmm::PageTable *Table = this->Allocate();
-		Entry->SetPhysicalAddressArea(VirtualToPhysicalAddress(TTBR, (UINT64)Table));
+		Entry->SetPhysicalAddressArea(VirtualToPhysicalAddress((pantheon::vmm::PageTable*)pantheon::CPUReg::R_TTBR1_EL1(), (UINT64)Table));
 		Entry->SetTable(TRUE);
 		Entry->SetMapped(TRUE);
 		pantheon::Sync::DSBISH();

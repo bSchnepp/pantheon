@@ -139,6 +139,14 @@ pantheon::GlobalScheduler::~GlobalScheduler()
 	/* NYI */
 }
 
+extern "C" VOID drop_usermode(UINT64 PC, UINT64 PSTATE, UINT64 SP);
+
+static void true_drop_process(void *StartAddress, pantheon::vmm::VirtualAddress StackAddr)
+{
+	/* This gets usermode for aarch64, needs to be abstracted! */
+	drop_usermode((UINT64)StartAddress, 0x00, StackAddr);
+}
+
 /**
  * \~english @brief Creates a process, visible globally, from a name and address.
  * \~english @details A process is created, such that it can be run on any
@@ -158,9 +166,54 @@ pantheon::Process *pantheon::GlobalScheduler::CreateProcess(pantheon::String Pro
 	AccessSpinlock.Acquire();
 	UINT64 Index = this->ProcessList.Size();
 	pantheon::Process NewProc(ProcStr);
+
+	/* For the initial stack, it will be at 0x7FC0000000, 
+	 * which should be ASLRed later. This is a very high virtual address!
+	 * The initial user stack will be 4 pages.
+	 */
+
+	static constexpr pantheon::vmm::VirtualAddress StackAddr = 0x7FC0000000;
+	static constexpr UINT8 NumInitStackPages = 4;
+	pantheon::vmm::VirtualAddress VAddrs[NumInitStackPages];
+	pantheon::vmm::PhysicalAddress PAddrs[NumInitStackPages];
+
+	for (UINT8 Index = 0; Index < NumInitStackPages; Index++)
+	{
+		PAddrs[Index] = pantheon::PageAllocator::Alloc();
+		VAddrs[Index] = StackAddr - pantheon::vmm::SmallestPageSize * Index;
+	}
+
+	/* If we do, say, an rv64 port, this needs to be abtracted, 
+	 * since MAIR doesnt make sense on other hardware. */
+	pantheon::vmm::PageTableEntry UStackEntry;
+	UStackEntry.SetBlock(TRUE);
+	UStackEntry.SetMapped(TRUE);
+	UStackEntry.SetUserNoExecute(TRUE);
+	UStackEntry.SetKernelNoExecute(TRUE);
+
+	UINT64 PagePermission = 0;
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_ONLY_KERN;
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_KERN; 
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_USER;
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_USER;
+	UStackEntry.SetPagePermissions(PagePermission);
+
+	UStackEntry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
+	UStackEntry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
+	UStackEntry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
+
+	NewProc.MapPages(VAddrs, PAddrs, UStackEntry, NumInitStackPages);
+
 	this->ProcessList.Add(NewProc);
 	this->ProcessList[Index].Lock();
-	Value = this->ProcessList[Index].CreateThread(StartAddr, nullptr);
+	Value = this->ProcessList[Index].CreateThread((VOID*)true_drop_process, nullptr);
+	if (Value != nullptr)
+	{
+		Value->Lock();
+		Value->GetRegisters()->x20 = (UINT64)StartAddr;
+		Value->GetRegisters()->x21 = (UINT64)StackAddr;
+		Value->Unlock();
+	}
 	this->ProcessList[Index].Unlock();
 	AccessSpinlock.Release();
 	

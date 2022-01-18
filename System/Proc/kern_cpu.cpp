@@ -70,42 +70,12 @@ pantheon::TrapFrame *pantheon::CPU::GetCurFrame()
 	return pantheon::CPU::GetCoreInfo()->CurFrame;
 }
 
-
-extern "C" VOID drop_usermode(UINT64 PC, UINT64 PSTATE, UINT64 SP);
-BOOL pantheon::CPU::DropToUsermode(UINT64 PC)
-{
-	pantheon::CPU::GetCurThread()->Lock();
-	pantheon::vmm::PageTableEntry UEntry;
-	UEntry.SetPagePermissions(0b01 << 6);
-	UEntry.SetKernelNoExecute(TRUE);
-	UEntry.SetUserNoExecute(TRUE);
-	UEntry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
-	UEntry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
-	UEntry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
-
-	UINT64 StackArea = pantheon::PageAllocator::Alloc();
-	pantheon::CPU::GetCurThread()->SetUserStackAddr(StackArea);
-
-	/* TODO: actually get this process' TTBR0 */
-	alignas(0x1000) static pantheon::vmm::PageTable UserStacks[128];
-	static pantheon::vmm::PageAllocator BaseAllocator(UserStacks, 128);
-
-	pantheon::vmm::PageTable *PT = (pantheon::vmm::PageTable *)pantheon::CPUReg::R_TTBR0_EL1();
-	BaseAllocator.Reprotect(PT, StackArea, pantheon::vmm::BlockSize::L3BlockSize, UEntry);
-
-	StackArea += pantheon::vmm::BlockSize::L3BlockSize;
-	pantheon::CPU::GetCurThread()->Unlock();
-	drop_usermode(PC, 0, StackArea);
-	return TRUE;
-}
-
 alignas(4096) static char StackArea[MAX_NUM_CPUS * DEFAULT_STACK_SIZE];
 
 void *pantheon::CPU::GetStackArea(UINT64 Core)
 {
 	return StackArea + static_cast<UINT64>(Core * DEFAULT_STACK_SIZE) + DEFAULT_STACK_SIZE;
 }
-
 
 extern "C" void *get_stack_area()
 {
