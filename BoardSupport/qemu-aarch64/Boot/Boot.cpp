@@ -18,8 +18,6 @@
 
 extern "C" CHAR *kern_begin;
 extern "C" CHAR *kern_end;
-extern "C" CHAR *USER_BEGIN;
-extern "C" CHAR *USER_END;
 extern "C" CHAR *TEXT_AREA;
 extern "C" CHAR *TEXT_PHY_AREA;
 extern "C" CHAR *TEXT_END;
@@ -468,19 +466,6 @@ static void SetupPageTables()
 	Entry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
 	Entry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
 	Entry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
-
-
-	pantheon::vmm::PageTableEntry UEntry(Entry);
-	UEntry.SetPagePermissions(0b01 << 6);
-	UEntry.SetKernelNoExecute(TRUE);
-	UEntry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
-	UEntry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
-	UEntry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
-
-	UINT64 UAddrBegin = (UINT64)&USER_BEGIN;
-	UINT64 UAddrEnd = (UINT64)&USER_END;
-	UINT64 UAddrSize = UAddrEnd - UAddrBegin;
-	InitialPageTables.ReprotectLower(&TTBR0, UAddrBegin, UAddrSize, UEntry);
 
 	/* 
 	 * TODO:

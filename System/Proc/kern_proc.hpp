@@ -69,6 +69,8 @@ public:
 	pantheon::Handle *GetHandle(UINT32 HandleID);
 	[[nodiscard]] pantheon::vmm::PhysicalAddress GetTTBR0() const;
 
+	static const constexpr pantheon::vmm::VirtualAddress StackAddr = 0x7FC0000000;
+
 private:
 	UINT32 PID;
 	String ProcessCommand;

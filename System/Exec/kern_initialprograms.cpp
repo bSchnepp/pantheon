@@ -17,10 +17,6 @@ static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, pantheon::Pr
 {
 	Proc->Lock();
 
-	/* We need to create a new page table for this. This is a hack for now, 
-	 * since we dont really properly handle virtual memory yet. */
-	Proc->CreateBlankPageTable();
-
 	ELFProgramHeader64 *PrgHeaderTable = (ELFProgramHeader64*)(ElfLocation + Header.e_phoff);
 	UINT64 NumPrg = Header.e_phnum;
 	
@@ -41,27 +37,22 @@ static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, pantheon::Pr
 		}
 
 		UINT64 NumPages = Align<UINT64>(CurSize, pantheon::vmm::SmallestPageSize);
+		const char *ProgramLocation = ElfLocation + PrgHeaderTable[Index].p_offset;
 		for (UINT64 Count = 0; Count < NumPages / pantheon::vmm::SmallestPageSize; Count++)
 		{
 			/* Create a new page for every part of the program section... */
 			pantheon::vmm::PhysicalAddress NewPage = pantheon::PageAllocator::Alloc();
 			/* TODO: virtualize this address for kernel space! */
-			if (CurSize > pantheon::vmm::SmallestPageSize)
-			{
-				const char *FinalLocation = (ElfLocation + (pantheon::vmm::SmallestPageSize * Count));
-				CopyMemory((void*)NewPage, (void*)FinalLocation, pantheon::vmm::SmallestPageSize);
-				CurSize -= pantheon::vmm::SmallestPageSize;
-			}
-			else
-			{
-				const char *FinalLocation = (ElfLocation + (pantheon::vmm::SmallestPageSize * Count));
-				CopyMemory((void*)NewPage, (void*)FinalLocation, CurSize);
-				CurSize = 0;
-			}
+
+			const char *FinalLocation = (ProgramLocation + (pantheon::vmm::SmallestPageSize * Count));
+			UINT64 TargetSize = (CurSize > pantheon::vmm::SmallestPageSize) ? pantheon::vmm::SmallestPageSize : CurSize;
+			/* Clear the page first before we use it. */
+			SetBufferBytes((CHAR*)NewPage, 0x00, pantheon::vmm::SmallestPageSize);
+			CopyMemory((void*)NewPage, (void*)FinalLocation, TargetSize);
+			CurSize -= TargetSize;
 
 			/* Map this page in now... */
 			UINT64 TargetVAddr = BaseVAddr + (pantheon::vmm::SmallestPageSize * Count);
-
 
 			/* Let's go ahead and map in everything in the lower table as-is. */
 			pantheon::vmm::PageTableEntry UEntry;
@@ -69,10 +60,10 @@ static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, pantheon::Pr
 			UEntry.SetMapped(TRUE);
 			UEntry.SetPagePermissions(0b01 << 6);
 			UEntry.SetKernelNoExecute(TRUE);
+			UEntry.SetUserNoExecute(FALSE);
 			UEntry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
 			UEntry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
 			UEntry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
-
 			Proc->MapPages(&TargetVAddr, &NewPage, UEntry, 1);
 		}
 	}
@@ -80,6 +71,7 @@ static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, pantheon::Pr
 	 * Until we properly have a higher half kernel, 
 	 * this is unsafe, since we could change memory from under the kernel
 	 * while it's still in use. */
+	Proc->SetState(pantheon::PROCESS_STATE_RUNNING);
 	Proc->Unlock();
 }
 
