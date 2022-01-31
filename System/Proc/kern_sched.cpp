@@ -4,6 +4,7 @@
 #include <arch.hpp>
 #include <cpureg.hpp>
 #include <vmm/pte.hpp>
+#include <vmm/vmm.hpp>
 #include <kern_datatypes.hpp>
 #include <Sync/kern_spinlock.hpp>
 
@@ -159,7 +160,7 @@ static void true_drop_process(void *StartAddress, pantheon::vmm::VirtualAddress 
  * \~english @return TRUE is the process was sucessfully created, false otherwise.
  * \~english @author Brian Schnepp
  */
-pantheon::Process *pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *StartAddr)
+UINT32 pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *StartAddr)
 {
 	pantheon::Thread *Value = nullptr;
 	
@@ -172,19 +173,18 @@ pantheon::Process *pantheon::GlobalScheduler::CreateProcess(pantheon::String Pro
 	Value = this->ProcessList[Index].CreateThread((VOID*)true_drop_process, nullptr);
 	if (Value != nullptr)
 	{
+		/* TODO: Handle abstraction for different architectures */
 		Value->Lock();
 		Value->GetRegisters()->x20 = (UINT64)StartAddr;
 		Value->GetRegisters()->x21 = (UINT64)pantheon::Process::StackAddr;
 		Value->Unlock();
 	}
+
+	UINT32 Result = this->ProcessList[Index].ProcessID();
 	this->ProcessList[Index].Unlock();
 	AccessSpinlock.Release();
 	
-	if (Value)
-	{
-		return &this->ProcessList[Index];
-	}
-	return nullptr;
+	return Result;
 }
 
 pantheon::Thread *pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority)
@@ -468,4 +468,38 @@ void pantheon::AttemptReschedule()
 extern "C" VOID FinishThread()
 {
 	pantheon::CPU::GetCurThread()->EnableScheduling();
+}
+
+BOOL pantheon::GlobalScheduler::MapPages(UINT32 PID, pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages)
+{
+	BOOL Success = FALSE;
+	AccessSpinlock.Acquire();
+	for (pantheon::Process &Proc : this->ProcessList)
+	{
+		if (Proc.ProcessID() == PID)
+		{
+			Proc.MapPages(VAddresses, PAddresses, PageAttributes, NumPages);
+			Success = TRUE;
+		}
+	}
+	AccessSpinlock.Release();
+	return Success;
+}
+
+BOOL pantheon::GlobalScheduler::SetState(UINT32 PID, pantheon::ProcessState State)
+{
+	BOOL Success = FALSE;
+	AccessSpinlock.Acquire();
+	for (pantheon::Process &Proc : this->ProcessList)
+	{
+		Proc.Lock();
+		if (Proc.ProcessID() == PID)
+		{
+			Proc.SetState(State);
+			Success = TRUE;
+		}
+		Proc.Unlock();
+	}
+	AccessSpinlock.Release();
+	return Success;	
 }

@@ -56,15 +56,13 @@ static void kern_basic_init(InitialBootInfo *InitBootInfo)
 static void kern_stage2_init()
 {
 	/* TODO: unpack initial programs properly */
-	pantheon::Process *sysm = pantheon::GetGlobalScheduler()->CreateProcess("sysm", (void*)sysm_Main);
-	sysm->Lock();
-	sysm->SetState(pantheon::PROCESS_STATE_RUNNING);
-	sysm->Unlock();
+	pantheon::GlobalScheduler *Sched = pantheon::GetGlobalScheduler();
 
-	pantheon::Process *prgm = pantheon::GetGlobalScheduler()->CreateProcess("prgm", (void*)prgm_Main);
-	prgm->Lock();
-	prgm->SetState(pantheon::PROCESS_STATE_RUNNING);
-	prgm->Unlock();
+	UINT32 sysm = Sched->CreateProcess("sysm", (void*)sysm_Main);
+	UINT32 prgm = Sched->CreateProcess("prgm", (void*)prgm_Main);
+
+	Sched->SetState(sysm, pantheon::PROCESS_STATE_RUNNING);
+	Sched->SetState(prgm, pantheon::PROCESS_STATE_RUNNING);
 }
 
 void kern_init(InitialBootInfo *InitBootInfo)

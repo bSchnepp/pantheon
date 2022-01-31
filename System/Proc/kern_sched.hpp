@@ -39,7 +39,7 @@ public:
 
 	void Init();
 
-	pantheon::Process *CreateProcess(pantheon::String ProcStr, void *StartAddr);
+	UINT32 CreateProcess(pantheon::String ProcStr, void *StartAddr);
 	pantheon::Thread *CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority);
 	pantheon::Thread *CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority, void *StackTop);
 
@@ -51,6 +51,9 @@ public:
 	pantheon::Thread *ObtainThreadByID(UINT64 TID);
 
 	pantheon::Thread *CreateProcessorIdleThread(UINT64 SP, UINT64 IP);
+
+	BOOL SetState(UINT32 PID, pantheon::ProcessState State);
+	BOOL MapPages(UINT32 PID, pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages);
 
 private:
 	Atomic<BOOL> Okay;

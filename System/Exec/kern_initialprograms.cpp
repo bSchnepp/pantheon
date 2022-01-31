@@ -13,31 +13,32 @@
 extern char *sysm_location;
 extern char *prgm_location;
 
-static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, pantheon::Process *Proc)
+static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, UINT32 Proc)
 {
-	Proc->Lock();
-
 	ELFProgramHeader64 *PrgHeaderTable = (ELFProgramHeader64*)(ElfLocation + Header.e_phoff);
 	UINT64 NumPrg = Header.e_phnum;
 	
 	/* Map in everything and all. */
 	for (UINT64 Index = 0; Index < NumPrg; Index++)
 	{
-		if (PrgHeaderTable[Index].p_type == 0)
+		/* Is this loadable? */
+		if (PrgHeaderTable[Index].p_type != PT_LOAD)
 		{
 			continue;
 		}
 
+		/* What address do we need to load this at? */
 		UINT64 BaseVAddr = PrgHeaderTable[Index].p_vaddr;
 		UINT64 CurSize = PrgHeaderTable[Index].p_filesz;
 
+		/* If this program section is really empty, don't bother doing anything. */
 		if (CurSize == 0)
 		{
 			continue;
 		}
 
-		UINT64 NumPages = Align<UINT64>(CurSize, pantheon::vmm::SmallestPageSize);
 		const char *ProgramLocation = ElfLocation + PrgHeaderTable[Index].p_offset;
+		UINT64 NumPages = Align<UINT64>(CurSize, pantheon::vmm::SmallestPageSize);
 		for (UINT64 Count = 0; Count < NumPages / pantheon::vmm::SmallestPageSize; Count++)
 		{
 			/* Create a new page for every part of the program section... */
@@ -46,6 +47,7 @@ static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, pantheon::Pr
 
 			const char *FinalLocation = (ProgramLocation + (pantheon::vmm::SmallestPageSize * Count));
 			UINT64 TargetSize = (CurSize > pantheon::vmm::SmallestPageSize) ? pantheon::vmm::SmallestPageSize : CurSize;
+			
 			/* Clear the page first before we use it. */
 			SetBufferBytes((CHAR*)NewPage, 0x00, pantheon::vmm::SmallestPageSize);
 			CopyMemory((void*)NewPage, (void*)FinalLocation, TargetSize);
@@ -54,37 +56,33 @@ static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, pantheon::Pr
 			/* Map this page in now... */
 			UINT64 TargetVAddr = BaseVAddr + (pantheon::vmm::SmallestPageSize * Count);
 
-			/* Let's go ahead and map in everything in the lower table as-is. */
+			/* Go ahead and make the section in */
 			pantheon::vmm::PageTableEntry UEntry;
 			UEntry.SetBlock(TRUE);
 			UEntry.SetMapped(TRUE);
-			UEntry.SetPagePermissions(0b01 << 6);
+			UEntry.SetPagePermissions(0b11 << 6);
 			UEntry.SetKernelNoExecute(TRUE);
 			UEntry.SetUserNoExecute(FALSE);
 			UEntry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
 			UEntry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
 			UEntry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
-			Proc->MapPages(&TargetVAddr, &NewPage, UEntry, 1);
+
+			pantheon::GetGlobalScheduler()->MapPages(Proc, &TargetVAddr, &NewPage, UEntry, 1);
 		}
 	}
-	/* Set the process to running here... 
-	 * Until we properly have a higher half kernel, 
-	 * this is unsafe, since we could change memory from under the kernel
-	 * while it's still in use. */
-	Proc->SetState(pantheon::PROCESS_STATE_RUNNING);
-	Proc->Unlock();
+	pantheon::GetGlobalScheduler()->SetState(Proc, pantheon::PROCESS_STATE_RUNNING);
 }
 
 static void RunSysm(ELFFileHeader64 Header, const char *ElfLocation)
 {
-	pantheon::Process *sysm = pantheon::GetGlobalScheduler()->CreateProcess("sysm", (void*)Header.e_entry);
-	RunElf(Header, ElfLocation, sysm);
+	UINT32 PID = pantheon::GetGlobalScheduler()->CreateProcess("sysm", (void*)Header.e_entry);
+	RunElf(Header, ElfLocation, PID);
 }
 
 static void RunPrgm(ELFFileHeader64 Header, const char *ElfLocation)
 {
-	pantheon::Process *prgm = pantheon::GetGlobalScheduler()->CreateProcess("prgm", (void*)Header.e_entry);
-	RunElf(Header, ElfLocation, prgm);
+	UINT32 PID = pantheon::GetGlobalScheduler()->CreateProcess("prgm", (void*)Header.e_entry);
+	RunElf(Header, ElfLocation, PID);
 }
 
 void pantheon::UnpackInitPrograms()
