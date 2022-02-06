@@ -1,5 +1,6 @@
 #include <SDK/pantheon.h>
 
+
 extern "C" void prgm_Main()
 {
 	svc_LogText("program manager started");
