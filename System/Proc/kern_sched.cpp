@@ -242,17 +242,27 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateProcessorIdleThread(UINT64 SP
 {
 	while (!this->Okay.Load()){}
 
-	pantheon::Thread CurThread(pantheon::GetGlobalScheduler()->ObtainProcessByID(0), pantheon::THREAD_PRIORITY_NORMAL);
-	CurThread.Lock();
-	CurThread.GetRegisters()->SetSP(SP);
-	CurThread.GetRegisters()->SetPC(IP);
-	CurThread.SetState(pantheon::THREAD_STATE_RUNNING);
-	CurThread.Unlock();
 	this->AccessSpinlock.Acquire();
-	UINT64 Index = this->ThreadList.Size();
-	this->ThreadList.Add(CurThread);
+	for (pantheon::Process &Proc : this->ProcessList)
+	{
+		if (Proc.ProcessID() == 0)
+		{
+			pantheon::Thread CurThread(&Proc, pantheon::THREAD_PRIORITY_NORMAL);
+			CurThread.Lock();
+			CurThread.GetRegisters()->SetSP(SP);
+			CurThread.GetRegisters()->SetPC(IP);
+			CurThread.SetState(pantheon::THREAD_STATE_RUNNING);
+			CurThread.Unlock();
+
+			UINT64 Index = this->ThreadList.Size();
+			this->ThreadList.Add(CurThread);
+
+			this->AccessSpinlock.Release();
+			return &this->ThreadList[Index];
+		}
+	}
 	this->AccessSpinlock.Release();
-	return  &this->ThreadList[Index];
+	return nullptr;
 }
 
 
@@ -361,41 +371,6 @@ void pantheon::GlobalScheduler::ReleaseThread(Thread *T)
 		StopError("releasing thread without lock");
 	}
 	T->SetState(pantheon::THREAD_STATE_WAITING);
-}
-
-pantheon::Process *pantheon::GlobalScheduler::ObtainProcessByID(UINT64 PID)
-{
-	pantheon::Process *Result = nullptr;
-	for (pantheon::Process &Proc : this->ProcessList)
-	{
-		Proc.Lock();
-		if (Proc.ProcessID() == PID)
-		{
-			Result = &Proc;
-		}
-		Proc.Unlock();
-
-		if (Result)
-		{
-			break;
-		}
-	}
-	return Result;
-}
-
-pantheon::Thread *pantheon::GlobalScheduler::ObtainThreadByID(UINT64 TID)
-{
-	for (pantheon::Thread &Thr : this->ThreadList)
-	{
-		Thr.Lock();
-		if (Thr.ThreadID() == TID)
-		{
-			Thr.Unlock();
-			return &Thr;
-		}
-		Thr.Unlock();
-	}
-	return nullptr;
 }
 
 static pantheon::GlobalScheduler GlobalSched;

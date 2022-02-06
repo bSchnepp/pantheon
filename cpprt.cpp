@@ -77,6 +77,18 @@ extern "C" void *memset(void *dest, int v, unsigned long int n)
 	return AsCharDst;
 }
 
+/* Assume we're ever only going to run on 64-bit systems. 
+ * Aarch32 (A-class) is getting rarer, and support has been dropped in kernel
+ * mode since the A76 anyway.
+ */
+
+uintptr_t __stack_chk_guard = 0xDEADC0DEDEADBEEF;
+
+[[noreturn]] VOID __stack_chk_fail(void)
+{
+	pantheon::StopErrorFmt("Stop error: stack canary was smashed\n");
+}
+
 }
 #endif
 

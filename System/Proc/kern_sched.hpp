@@ -47,9 +47,6 @@ public:
 	UINT64 CountThreads(UINT64 PID);
 	void ReleaseThread(Thread *T);
 
-	pantheon::Process *ObtainProcessByID(UINT64 PID);
-	pantheon::Thread *ObtainThreadByID(UINT64 TID);
-
 	pantheon::Thread *CreateProcessorIdleThread(UINT64 SP, UINT64 IP);
 
 	BOOL SetState(UINT32 PID, pantheon::ProcessState State);
