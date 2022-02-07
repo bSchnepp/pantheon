@@ -170,7 +170,7 @@ UINT32 pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *
 
 	this->ProcessList.Add(NewProc);
 	this->ProcessList[Index].Lock();
-	Value = this->ProcessList[Index].CreateThread((VOID*)true_drop_process, nullptr);
+	Value = pantheon::GetGlobalScheduler()->CreateThread(&this->ProcessList[Index], (VOID*)true_drop_process, nullptr);
 	if (Value != nullptr)
 	{
 		/* TODO: Handle abstraction for different architectures */

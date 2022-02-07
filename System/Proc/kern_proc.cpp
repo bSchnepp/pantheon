@@ -116,21 +116,6 @@ const pantheon::String &pantheon::Process::GetProcessString() const
 	return this->ProcessCommand;
 }
 
-pantheon::Thread *pantheon::Process::CreateThread(void *StartAddr, void *ThreadData)
-{
-	return this->CreateThread(StartAddr, ThreadData, pantheon::THREAD_PRIORITY_NORMAL);
-}
-
-pantheon::Thread *pantheon::Process::CreateThread(void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority)
-{
-	if (this->IsLocked() == FALSE)
-	{
-		StopError("Process not locked with CreateThread");
-	}
-
-	return pantheon::GetGlobalScheduler()->CreateThread(this, StartAddr, ThreadData, Priority);
-}
-
 extern "C" CHAR *USER_BEGIN;
 extern "C" CHAR *USER_END;
 

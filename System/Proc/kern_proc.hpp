@@ -55,13 +55,10 @@ public:
 
 	[[nodiscard]] const String &GetProcessString() const;
 	[[nodiscard]] UINT32 ProcessID() const;
-	pantheon::Thread *CreateThread(void *StartAddr, void *ThreadData);
-	pantheon::Thread *CreateThread(void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority);
 
 	[[nodiscard]] ProcessState MyState() const;
 	void SetState(ProcessState State);
 
-	void CreateBlankPageTable();
 	void SetPageTable(pantheon::vmm::PageTable *Root, pantheon::vmm::PhysicalAddress PageTablePhysicalAddr);
 	void MapPages(pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages);
 
@@ -84,6 +81,10 @@ private:
 
 	static constexpr UINT32 HandleTableSize = 64;
 	pantheon::Handle ProcHandleTable[HandleTableSize];
+
+private:
+	void CreateBlankPageTable();
+
 };
 
 void InitProcessTables();
