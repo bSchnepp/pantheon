@@ -460,8 +460,9 @@ BOOL pantheon::GlobalScheduler::MapPages(UINT32 PID, pantheon::vmm::VirtualAddre
 	{
 		if (Proc.ProcessID() == PID)
 		{
-			Proc.MapPages(VAddresses, PAddresses, PageAttributes, NumPages);
+			Proc.MapAddresses(VAddresses, PAddresses, PageAttributes, NumPages);
 			Success = TRUE;
+			break;
 		}
 	}
 	AccessSpinlock.Release();
@@ -474,13 +475,14 @@ BOOL pantheon::GlobalScheduler::SetState(UINT32 PID, pantheon::ProcessState Stat
 	AccessSpinlock.Acquire();
 	for (pantheon::Process &Proc : this->ProcessList)
 	{
-		Proc.Lock();
 		if (Proc.ProcessID() == PID)
 		{
+			Proc.Lock();
 			Proc.SetState(State);
 			Success = TRUE;
+			Proc.Unlock();
+			break;
 		}
-		Proc.Unlock();
 	}
 	AccessSpinlock.Release();
 	return Success;	

@@ -170,13 +170,18 @@ public:
 			return *(this->Loc->GetValue()); 
 		}
 
-		LinkedListIterator<K> &operator++()
+		LinkedListIterator<K> &Next()
 		{
 			if (this->Loc)
 			{
 				this->Loc = this->Loc->GetNext();
 			}
 			return *this;
+		}
+
+		LinkedListIterator<K> &operator++()
+		{
+			return this->Next();
 		}
 
 		friend bool operator==(const LinkedListIterator<K> &L, const LinkedListIterator<K> &R)

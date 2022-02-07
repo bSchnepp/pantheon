@@ -2,8 +2,8 @@ ENTRY(_start)
 
 SECTIONS
 {
-	/* Start at 1MB */
-	. = 1 * 1024 * 1024;
+	/* Start at 4MB */
+	. = 4 * 1024 * 1024;
 
 	. = ALIGN(0x1000);
 	.text :

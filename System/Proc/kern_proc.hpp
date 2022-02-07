@@ -61,7 +61,7 @@ public:
 	void SetState(ProcessState State);
 
 	void SetPageTable(pantheon::vmm::PageTable *Root, pantheon::vmm::PhysicalAddress PageTablePhysicalAddr);
-	void MapPages(pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages);
+	void MapAddresses(pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages);
 
 	INT64 EncodeHandle(const pantheon::Handle &NewHand);
 	pantheon::Handle *GetHandle(INT32 HandleID);

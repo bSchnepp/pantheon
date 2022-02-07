@@ -148,16 +148,6 @@ void pantheon::Process::CreateBlankPageTable()
 	Entry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
 
 
-	pantheon::vmm::PageTableEntry UEntry(Entry);
-	UEntry.SetPagePermissions(0b01 << 6);
-	UEntry.SetKernelNoExecute(TRUE);
-	UEntry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
-	UEntry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
-	UEntry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
-
-	UINT64 UAddrBegin = (UINT64)&USER_BEGIN;
-	UINT64 UAddrEnd = (UINT64)&USER_END;
-
 	/* For the initial stack, it will be at 0x7FC0000000, 
 	 * which should be ASLRed later. This is a very high virtual address!
 	 * The initial user stack will be 4 pages.
@@ -191,12 +181,7 @@ void pantheon::Process::CreateBlankPageTable()
 	UStackEntry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
 	UStackEntry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
 
-	this->MapPages(VAddrs, PAddrs, UStackEntry, NumInitStackPages);
-
-	for (UINT64 Address = UAddrBegin; Address <= UAddrEnd; Address += pantheon::vmm::SmallestPageSize)
-	{
-		this->MapPages(&Address, &Address, UEntry, 1);
-	}	
+	this->MapAddresses(VAddrs, PAddrs, UStackEntry, NumInitStackPages);	
 }
 
 void pantheon::Process::SetPageTable(pantheon::vmm::PageTable *Root, pantheon::vmm::PhysicalAddress PageTablePhysicalAddr)
@@ -205,12 +190,14 @@ void pantheon::Process::SetPageTable(pantheon::vmm::PageTable *Root, pantheon::v
 	this->TTBR0 = PageTablePhysicalAddr;
 }
 
-void pantheon::Process::MapPages(pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages)
+void pantheon::Process::MapAddresses(pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages)
 {
+	this->Lock();
 	for (UINT64 Num = 0; Num < NumPages; Num++)
 	{
 		PageTableAllocator.Map(this->MemoryMap, VAddresses[Num], PAddresses[Num], pantheon::vmm::SmallestPageSize, PageAttributes);
 	}
+	this->Unlock();
 }
 
 [[nodiscard]]
