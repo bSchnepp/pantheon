@@ -6,6 +6,8 @@
 
 #include <Sync/kern_atomic.hpp>
 #include <System/Proc/kern_proc.hpp>
+
+#include <Common/Structures/kern_slab.hpp>
 #include <Common/Structures/kern_linkedlist.hpp>
 
 #ifndef _KERN_SCHED_HPP_
@@ -55,8 +57,19 @@ public:
 private:
 	Atomic<BOOL> Okay;
 	Spinlock AccessSpinlock;
-	ArrayList<Process> ProcessList;
-	ArrayList<Thread> ThreadList;
+
+	LinkedList<Process> ProcessList;
+	LinkedList<Thread> ThreadList;
+
+	/* TODO: make these into SlabAllocators! */
+	pantheon::mm::SlabCache<Process> ProcAllocator;
+	pantheon::mm::SlabCache<Thread> ThreadAllocator;
+
+	static constexpr UINT16 NumProcs = 128;
+	static constexpr UINT16 NumThreads = 4 * NumProcs;
+
+	Process ArrayProcs[NumProcs];
+	Thread ArrayThreads[NumThreads];
 };
 
 UINT32 AcquireProcessID();

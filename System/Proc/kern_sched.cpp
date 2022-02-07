@@ -165,12 +165,12 @@ UINT32 pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *
 	pantheon::Thread *Value = nullptr;
 	
 	AccessSpinlock.Acquire();
-	UINT64 Index = this->ProcessList.Size();
-	pantheon::Process NewProc(ProcStr);
+	pantheon::Process *NewProc = this->ProcAllocator.AllocateNoCtor();
+	*NewProc = Process(ProcStr);
 
-	this->ProcessList.Add(NewProc);
-	this->ProcessList[Index].Lock();
-	Value = pantheon::GetGlobalScheduler()->CreateThread(&this->ProcessList[Index], (VOID*)true_drop_process, nullptr);
+	this->ProcessList.PushFront(NewProc);
+	NewProc->Lock();
+	Value = pantheon::GetGlobalScheduler()->CreateThread(NewProc, (VOID*)true_drop_process, nullptr);
 	if (Value != nullptr)
 	{
 		/* TODO: Handle abstraction for different architectures */
@@ -180,8 +180,8 @@ UINT32 pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *
 		Value->Unlock();
 	}
 
-	UINT32 Result = this->ProcessList[Index].ProcessID();
-	this->ProcessList[Index].Unlock();
+	UINT32 Result = NewProc->ProcessID();
+	NewProc->Unlock();
 	AccessSpinlock.Release();
 	
 	return Result;
@@ -209,32 +209,39 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateThread(pantheon::Process *Pro
 
 pantheon::Thread *pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority, void *StackTop)
 {
-	pantheon::Thread T(Proc);
-	T.Lock();
+	pantheon::Thread *T = this->ThreadAllocator.AllocateNoCtor();
+	*T = pantheon::Thread(Proc);
+
+	T->Lock();
 
 	UINT64 IStartAddr = (UINT64)StartAddr;
 	UINT64 IThreadData = (UINT64)ThreadData;
 	UINT64 IStackSpace = (UINT64)StackTop;
 
-	pantheon::CpuContext *Regs = T.GetRegisters();
+	pantheon::CpuContext *Regs = T->GetRegisters();
 	Regs->SetInitContext(IStartAddr, IThreadData, IStackSpace);
-	T.SetState(pantheon::THREAD_STATE_WAITING);
-	T.SetPriority(Priority);
-	T.Unlock();
+	T->SetState(pantheon::THREAD_STATE_WAITING);
+	T->SetPriority(Priority);
+	T->Unlock();
 
-	UINT64 Index = this->ThreadList.Size();
-	this->ThreadList.Add(T);
-	return &this->ThreadList[Index];
+	this->ThreadList.PushFront(T);
+	return T;
 }
 
+
+static pantheon::Process IdleProc;
 VOID pantheon::GlobalScheduler::Init()
 {
-	this->ThreadList = ArrayList<Thread>(120);
-	this->ProcessList = ArrayList<Process>(30);
-	AccessSpinlock = Spinlock("access_spinlock");
+	this->ThreadList = LinkedList<Thread>();
+	this->ProcessList = LinkedList<Process>();
 
-	pantheon::Process Idle;
-	this->ProcessList.Add(Idle);
+	this->ProcAllocator = pantheon::mm::SlabCache<Process>(this->ArrayProcs, GlobalScheduler::NumProcs);
+	this->ThreadAllocator = pantheon::mm::SlabCache<Thread>(this->ArrayThreads, GlobalScheduler::NumThreads);
+
+	AccessSpinlock = Spinlock("access_spinlock");
+	IdleProc = pantheon::Process();
+
+	this->ProcessList.PushFront(&IdleProc);
 	this->Okay.Store(TRUE);
 }
 
@@ -247,18 +254,18 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateProcessorIdleThread(UINT64 SP
 	{
 		if (Proc.ProcessID() == 0)
 		{
-			pantheon::Thread CurThread(&Proc, pantheon::THREAD_PRIORITY_NORMAL);
-			CurThread.Lock();
-			CurThread.GetRegisters()->SetSP(SP);
-			CurThread.GetRegisters()->SetPC(IP);
-			CurThread.SetState(pantheon::THREAD_STATE_RUNNING);
-			CurThread.Unlock();
+			pantheon::Thread *CurThread = this->ThreadAllocator.AllocateNoCtor();
+			*CurThread = Thread(&Proc, pantheon::THREAD_PRIORITY_NORMAL);
+			CurThread->Lock();
+			CurThread->GetRegisters()->SetSP(SP);
+			CurThread->GetRegisters()->SetPC(IP);
+			CurThread->SetState(pantheon::THREAD_STATE_RUNNING);
+			CurThread->Unlock();
 
-			UINT64 Index = this->ThreadList.Size();
-			this->ThreadList.Add(CurThread);
+			this->ThreadList.PushFront(CurThread);
 
 			this->AccessSpinlock.Release();
-			return &this->ThreadList[Index];
+			return CurThread;
 		}
 	}
 	this->AccessSpinlock.Release();

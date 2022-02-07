@@ -115,7 +115,7 @@ public:
 	LinkedList(LinkedListItem<T> *ListRoot) : Root(ListRoot)
 	{
 		/* Size is either 0 or 1, depending on if Root is valid. */
-		this->Size = (Root != nullptr);
+		this->NumElem = (Root != nullptr);
 	}
 
 	void PushFront(T *Item)
@@ -123,21 +123,21 @@ public:
 		LinkedListItem<T> *NewEntry = LinkedListItem<T>::CreateEntry(Item);
 		if (this->Root == nullptr)
 		{
-			Size = 1;
+			this->NumElem = 1;
 			Root = NewEntry;
 			return;
 		}
 
 		NewEntry->SetNext(this->Root);
 		this->Root = NewEntry;
-		this->Size++;
+		this->NumElem++;
 	}
 
 	T *PopFront()
 	{
 		LinkedListItem<T> *OldRoot = this->Root;
 		this->Root = this->Root->GetNext();
-		this->Size--;
+		this->NumElem--;
 
 		T *Item = OldRoot->GetValue();
 		LinkedListItem<T>::DestroyEntry(OldRoot);
@@ -154,9 +154,9 @@ public:
 		return LinkedListIterator<T>(nullptr);
 	}
 
-	[[nodiscard]] UINT64 GetSize() const
+	[[nodiscard]] UINT64 Size() const
 	{
-		return this->Size;
+		return this->NumElem;
 	}
 
 	template<typename K>
@@ -194,7 +194,7 @@ public:
 	};
 
 private:
-	UINT64 Size;
+	UINT64 NumElem;
 	LinkedListItem<T> *Root;
 };
 
