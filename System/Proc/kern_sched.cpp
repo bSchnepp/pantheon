@@ -477,7 +477,7 @@ BOOL pantheon::GlobalScheduler::SetState(UINT32 PID, pantheon::ProcessState Stat
 	{
 		if (Proc.ProcessID() == PID)
 		{
-			Proc.Lock();
+			Proc.Lock();	
 			Proc.SetState(State);
 			Success = TRUE;
 			Proc.Unlock();

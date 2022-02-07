@@ -26,10 +26,15 @@ static UINT64 ReadArgumentAsInteger(UINT64 Val)
 VOID pantheon::SVCExitProcess()
 {
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+	CurThread->MyProc()->Lock();
+	CurThread->MyProc()->SetState(pantheon::PROCESS_STATE_ZOMBIE);
+	CurThread->MyProc()->Unlock();
+
 	CurThread->Lock();
 	pantheon::GetGlobalScheduler()->ReleaseThread(CurThread);
-	CurThread->MyProc()->SetState(pantheon::PROCESS_STATE_ZOMBIE);
+	CurThread->SetState(pantheon::THREAD_STATE_DEAD);
 	CurThread->Unlock();
+	
 	pantheon::CPU::GetCoreInfo()->CurSched->Reschedule();
 }
 
