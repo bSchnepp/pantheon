@@ -139,11 +139,11 @@ pantheon::Result pantheon::SVCCreateNamedEvent()
 	const CHAR *Name = nullptr;
 	Name = ReadArgumentAsCharPointer(CurFrame->GetIntArgument(0));
 	
-	UINT32 *ReadHandle = nullptr;
-	ReadHandle = ReadArgument<UINT32*>(CurFrame->GetIntArgument(1));
+	INT32 *ReadHandle = nullptr;
+	ReadHandle = ReadArgument<INT32*>(CurFrame->GetIntArgument(1));
 
-	UINT32 *WriteHandle = nullptr;
-	WriteHandle = ReadArgument<UINT32*>(CurFrame->GetIntArgument(2));
+	INT32 *WriteHandle = nullptr;
+	WriteHandle = ReadArgument<INT32*>(CurFrame->GetIntArgument(2));
 
 	if (Name == nullptr || ReadHandle == nullptr || WriteHandle == nullptr)
 	{
@@ -197,7 +197,7 @@ pantheon::Result pantheon::SVCCreateNamedEvent()
 pantheon::Result pantheon::SVCSignalEvent()
 {
 	pantheon::TrapFrame *CurFrame = pantheon::CPU::GetCurFrame();
-	UINT32 WriteHandle = CurFrame->GetIntArgument(0);
+	INT32 WriteHandle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 
 
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
@@ -242,7 +242,7 @@ pantheon::Result pantheon::SVCSignalEvent()
 pantheon::Result pantheon::SVCClearEvent()
 {
 	pantheon::TrapFrame *CurFrame = pantheon::CPU::GetCurFrame();
-	UINT32 WriteHandle = CurFrame->GetIntArgument(0);
+	INT32 WriteHandle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	if (!CurThread)
@@ -284,7 +284,7 @@ pantheon::Result pantheon::SVCClearEvent()
 pantheon::Result pantheon::SVCResetEvent()
 {
 	pantheon::TrapFrame *CurFrame = pantheon::CPU::GetCurFrame();
-	UINT32 ReadHandle = CurFrame->GetIntArgument(0);
+	INT32 ReadHandle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	if (!CurThread)
@@ -326,7 +326,7 @@ pantheon::Result pantheon::SVCResetEvent()
 pantheon::Result pantheon::SVCPollEvent()
 {
 	pantheon::TrapFrame *CurFrame = pantheon::CPU::GetCurFrame();
-	UINT32 Handle = CurFrame->GetIntArgument(0);
+	INT32 Handle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	if (!CurThread)
@@ -398,7 +398,7 @@ pantheon::Result pantheon::SVCExitThread()
 pantheon::Result pantheon::SVCExecute()
 {
 	pantheon::TrapFrame *CurFrame = pantheon::CPU::GetCurFrame();
-	UINT32 Handle = CurFrame->GetIntArgument(0);
+	INT32 Handle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	if (!CurThread)
 	{

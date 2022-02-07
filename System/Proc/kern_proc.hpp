@@ -12,6 +12,7 @@
 #include <Proc/kern_thread.hpp>
 #include <Handle/kern_handle.hpp>
 #include <Handle/kern_lockable.hpp>
+#include <Handle/kern_handletable.hpp>
 
 #ifndef _KERN_PROC_HPP_
 #define _KERN_PROC_HPP_
@@ -63,7 +64,7 @@ public:
 	void MapPages(pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages);
 
 	INT64 EncodeHandle(const pantheon::Handle &NewHand);
-	pantheon::Handle *GetHandle(UINT32 HandleID);
+	pantheon::Handle *GetHandle(INT32 HandleID);
 	[[nodiscard]] pantheon::vmm::PhysicalAddress GetTTBR0() const;
 
 	static const constexpr pantheon::vmm::VirtualAddress StackAddr = 0x7FC0000000;
@@ -78,9 +79,7 @@ private:
 	/* Note that TTBR0 refers to the physical address of MemoryMap. */
 	pantheon::vmm::PhysicalAddress TTBR0;
 	pantheon::vmm::PageTable *MemoryMap;
-
-	static constexpr UINT32 HandleTableSize = 64;
-	pantheon::Handle ProcHandleTable[HandleTableSize];
+	pantheon::HandleTable HandTable;
 
 private:
 	void CreateBlankPageTable();

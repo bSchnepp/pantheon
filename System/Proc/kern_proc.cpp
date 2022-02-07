@@ -28,7 +28,6 @@ pantheon::Process::Process() : pantheon::Lockable("Process")
 	this->Priority = pantheon::PROCESS_PRIORITY_VERYLOW;
 	this->ProcessCommand = "idle";
 	this->PID = 0;
-	this->CreateBlankPageTable();
 }
 
 pantheon::Process::Process(const char *CommandString) : pantheon::Lockable("Process")
@@ -247,36 +246,17 @@ INT64 pantheon::Process::EncodeHandle(const pantheon::Handle &NewHand)
 	{
 		StopError("Process not locked with EncodeHandle");
 	}
-
-	for (UINT64 Index = 0; Index < pantheon::Process::HandleTableSize; Index++)
-	{
-		if (this->ProcHandleTable[Index].IsValid() == FALSE)
-		{
-			this->ProcHandleTable[Index] = NewHand;
-			return static_cast<INT64>(Index);
-		}
-	}
-	return -1;
+	return this->HandTable.Create(NewHand);
 }
 
-pantheon::Handle *pantheon::Process::GetHandle(UINT32 HandleID)
+pantheon::Handle *pantheon::Process::GetHandle(INT32 HandleID)
 {
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("Process not locked with GetHandle");
 	}
 
-	if (HandleID > pantheon::Process::HandleTableSize)
-	{
-		return nullptr;
-	}
-
-	pantheon::Handle *CurHandle = &(this->ProcHandleTable[HandleID]);
-	if (CurHandle->IsValid())
-	{
-		return CurHandle;
-	}
-	return nullptr;
+	return this->HandTable.Get(HandleID);
 }
 
 [[nodiscard]] 
