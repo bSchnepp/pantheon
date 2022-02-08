@@ -81,10 +81,10 @@ ELSE()
 	SET_TARGET_PROPERTIES(pantheon PROPERTIES LINK_DEPENDS ${LINKER_SCRIPT})
 ENDIF()
 
-TARGET_LINK_LIBRARIES(pantheon Userland)
-
 # ArchLib doesn't make sense without at least initial userland.
-ADD_DEPENDENCIES(ArchLibProper Userland)
+# But we no longer need to link to libUserland.a, since these are separate ELFs.
+ADD_DEPENDENCIES(ArchLibProper sysm)
+ADD_DEPENDENCIES(ArchLibProper prgm)
 
 TARGET_LINK_LIBRARIES(pantheon ArchLib)
 TARGET_LINK_LIBRARIES(pantheon Common)

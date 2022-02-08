@@ -73,39 +73,43 @@ static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, UINT32 Proc)
 	pantheon::GetGlobalScheduler()->SetState(Proc, pantheon::PROCESS_STATE_RUNNING);
 }
 
-static void RunSysm(ELFFileHeader64 Header, const char *ElfLocation)
+static void RunSysm(void)
 {
-	UINT32 PID = pantheon::GetGlobalScheduler()->CreateProcess("sysm", (void*)Header.e_entry);
-	RunElf(Header, ElfLocation, PID);
-}
-
-static void RunPrgm(ELFFileHeader64 Header, const char *ElfLocation)
-{
-	UINT32 PID = pantheon::GetGlobalScheduler()->CreateProcess("prgm", (void*)Header.e_entry);
-	RunElf(Header, ElfLocation, PID);
-}
-
-void pantheon::UnpackInitPrograms()
-{
-	Optional<ELFFileHeader64> SysmHeader = pantheon::exec::ParseElfFileHeader((void*)&sysm_location);
-	Optional<ELFFileHeader64> PrgmHeader = pantheon::exec::ParseElfFileHeader((void*)&prgm_location);
-
-	if (SysmHeader.GetOkay() == FALSE || PrgmHeader.GetOkay() == FALSE)
+	void *ElfLocation = (void*)&sysm_location;
+	Optional<ELFFileHeader64> SysmHeader = pantheon::exec::ParseElfFileHeader(ElfLocation);
+	if (SysmHeader.GetOkay() == FALSE)
 	{
-		pantheon::StopError("unable to unpack initial programs");
+		pantheon::StopError("unable to unpack sysm");
 	}
-
 	/* Okay, now make sure these are actually executables... */
 	if (SysmHeader().e_type != ET_REL && SysmHeader().e_type != ET_EXEC)
 	{
 		pantheon::StopError("sysm not an executable");
 	}
+	UINT32 PID = pantheon::GetGlobalScheduler()->CreateProcess("sysm", (void*)SysmHeader().e_entry);
+	RunElf(SysmHeader(), (const char*)ElfLocation, PID);
+}
 
+static void RunPrgm(void)
+{
+	void *ElfLocation = (void*)&prgm_location;
+	Optional<ELFFileHeader64> PrgmHeader = pantheon::exec::ParseElfFileHeader(ElfLocation);
+	if (PrgmHeader.GetOkay() == FALSE)
+	{
+		pantheon::StopError("unable to unpack prgm");
+	}
+	/* Okay, now make sure these are actually executables... */
 	if (PrgmHeader().e_type != ET_REL && PrgmHeader().e_type != ET_EXEC)
 	{
 		pantheon::StopError("prgm not an executable");
 	}
+	UINT32 PID = pantheon::GetGlobalScheduler()->CreateProcess("prgm", (void*)PrgmHeader().e_entry);
+	RunElf(PrgmHeader(), (const char*)ElfLocation, PID);
+}
 
-	RunSysm(SysmHeader(), (char*)&sysm_location);
-	RunPrgm(PrgmHeader(), (char*)&prgm_location);
+void pantheon::UnpackInitPrograms()
+{
+
+	RunPrgm();
+	RunSysm();
 }

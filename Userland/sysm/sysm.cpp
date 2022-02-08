@@ -1,7 +1,19 @@
 #include <SDK/pantheon.h>
 
-/* Hack until proper loader is ready */
-extern "C" void sysm_Main();
+void sysm_Main()
+{
+	svc_LogText("system manager started");
+
+	UINT8 Read;
+	UINT8 Write;
+
+	svc_CreateNamedEvent("signal", &Read, &Write);
+	for (;;)
+	{
+		svc_SignalEvent(Write);
+		svc_LogText("IN USERSPACE [sysm]");
+	}
+}
 
 extern "C"
 {
@@ -19,5 +31,7 @@ uintptr_t __stack_chk_guard = 0xDEADBEEFDEADC0DE;
 
 extern "C" void main()
 {
+	svc_LogText("sysm began in main");
 	sysm_Main();
+	svc_LogText("sysm returned from main");
 }
