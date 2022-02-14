@@ -41,35 +41,34 @@ public:
 
 	void Init();
 
-	UINT32 CreateProcess(pantheon::String ProcStr, void *StartAddr);
-	pantheon::Thread *CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority = pantheon::THREAD_PRIORITY_NORMAL);
-	pantheon::Thread *CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority, void *StackTop);
+	static UINT32 CreateProcess(pantheon::String ProcStr, void *StartAddr);
+	static pantheon::Thread *CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority = pantheon::THREAD_PRIORITY_NORMAL);
+	static pantheon::Thread *CreateUserThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority = pantheon::THREAD_PRIORITY_NORMAL);
 
-	Thread* AcquireThread();
-	UINT64 CountThreads(UINT64 PID);
-	void ReleaseThread(Thread *T);
+	static UINT64 CountThreads(UINT64 PID);
 
-	pantheon::Thread *CreateProcessorIdleThread(UINT64 SP, UINT64 IP);
+	static pantheon::Thread *AcquireThread();
+	static pantheon::Thread *CreateProcessorIdleThread(UINT64 SP, UINT64 IP);
 
-	BOOL SetState(UINT32 PID, pantheon::ProcessState State);
-	BOOL MapPages(UINT32 PID, pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages);
+	static BOOL SetState(UINT32 PID, pantheon::ProcessState State);
+	static BOOL MapPages(UINT32 PID, pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages);
 
 private:
-	Atomic<BOOL> Okay;
-	Spinlock AccessSpinlock;
+	inline static Atomic<BOOL> Okay;
+	inline static Spinlock AccessSpinlock;
 
-	LinkedList<Process> ProcessList;
-	LinkedList<Thread> ThreadList;
+	inline static LinkedList<Process> ProcessList;
+	inline static LinkedList<Thread> ThreadList;
 
 	/* TODO: make these into SlabAllocators! */
-	pantheon::mm::SlabCache<Process> ProcAllocator;
-	pantheon::mm::SlabCache<Thread> ThreadAllocator;
+	inline static pantheon::mm::SlabCache<Process> ProcAllocator;
+	inline static pantheon::mm::SlabCache<Thread> ThreadAllocator;
 
 	static constexpr UINT16 NumProcs = 128;
 	static constexpr UINT16 NumThreads = 4 * NumProcs;
 
-	Process ArrayProcs[NumProcs];
-	Thread ArrayThreads[NumThreads];
+	inline static Process ArrayProcs[NumProcs];
+	inline static Thread ArrayThreads[NumThreads];
 };
 
 UINT32 AcquireProcessID();

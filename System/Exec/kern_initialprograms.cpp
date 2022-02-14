@@ -16,20 +16,19 @@ extern char *prgm_location;
 static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, UINT32 Proc)
 {
 	ELFProgramHeader64 *PrgHeaderTable = (ELFProgramHeader64*)(ElfLocation + Header.e_phoff);
-	UINT64 NumPrg = Header.e_phnum;
 	
 	/* Map in everything and all. */
-	for (UINT64 Index = 0; Index < NumPrg; Index++)
+	for (UINT64 Index = 0; Index < Header.e_phnum; Index++)
 	{
+		/* What address do we need to load this at? */
+		UINT64 BaseVAddr = PrgHeaderTable[Index].p_vaddr;
+		UINT64 CurSize = PrgHeaderTable[Index].p_filesz;
+
 		/* Is this loadable? */
 		if (PrgHeaderTable[Index].p_type != PT_LOAD)
 		{
 			continue;
 		}
-
-		/* What address do we need to load this at? */
-		UINT64 BaseVAddr = PrgHeaderTable[Index].p_vaddr;
-		UINT64 CurSize = PrgHeaderTable[Index].p_filesz;
 
 		/* If this program section is really empty, don't bother doing anything. */
 		if (CurSize == 0)
@@ -38,8 +37,8 @@ static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, UINT32 Proc)
 		}
 
 		const char *ProgramLocation = ElfLocation + PrgHeaderTable[Index].p_offset;
-		UINT64 NumPages = Align<UINT64>(CurSize, pantheon::vmm::SmallestPageSize);
-		for (UINT64 Count = 0; Count < NumPages / pantheon::vmm::SmallestPageSize; Count++)
+		UINT64 NumPages = Align<UINT64>(CurSize, pantheon::vmm::SmallestPageSize) / pantheon::vmm::SmallestPageSize;
+		for (UINT64 Count = 0; Count < NumPages; Count++)
 		{
 			/* Create a new page for every part of the program section... */
 			pantheon::vmm::PhysicalAddress NewPage = pantheon::PageAllocator::Alloc();
@@ -70,7 +69,6 @@ static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, UINT32 Proc)
 			pantheon::GetGlobalScheduler()->MapPages(Proc, &TargetVAddr, &NewPage, UEntry, 1);
 		}
 	}
-	pantheon::GetGlobalScheduler()->SetState(Proc, pantheon::PROCESS_STATE_RUNNING);
 }
 
 static void RunSysm(void)
@@ -88,6 +86,7 @@ static void RunSysm(void)
 	}
 	UINT32 PID = pantheon::GetGlobalScheduler()->CreateProcess("sysm", (void*)SysmHeader().e_entry);
 	RunElf(SysmHeader(), (const char*)ElfLocation, PID);
+	pantheon::GetGlobalScheduler()->SetState(PID, pantheon::PROCESS_STATE_RUNNING);
 }
 
 static void RunPrgm(void)
@@ -105,11 +104,11 @@ static void RunPrgm(void)
 	}
 	UINT32 PID = pantheon::GetGlobalScheduler()->CreateProcess("prgm", (void*)PrgmHeader().e_entry);
 	RunElf(PrgmHeader(), (const char*)ElfLocation, PID);
+	pantheon::GetGlobalScheduler()->SetState(PID, pantheon::PROCESS_STATE_RUNNING);
 }
 
 void pantheon::UnpackInitPrograms()
 {
-
-	RunPrgm();
 	RunSysm();
+	RunPrgm();
 }

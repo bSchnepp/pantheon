@@ -31,7 +31,7 @@ VOID pantheon::SVCExitProcess()
 	CurThread->MyProc()->Unlock();
 
 	CurThread->Lock();
-	pantheon::GetGlobalScheduler()->ReleaseThread(CurThread);
+	CurThread->SetState(pantheon::THREAD_STATE_TERMINATED);
 	CurThread->SetState(pantheon::THREAD_STATE_DEAD);
 	CurThread->Unlock();
 	
@@ -86,45 +86,8 @@ typedef void (*ThreadStartPtr)(void*);
  */
 pantheon::Result pantheon::SVCCreateThread()
 {
-	pantheon::TrapFrame *CurFrame = pantheon::CPU::GetCurFrame();
-	ThreadStartPtr Entry = nullptr;
-	Entry = ReadArgument<ThreadStartPtr>(CurFrame->GetIntArgument(0));
-
-	VOID *RESERVED = nullptr;
-	RESERVED = ReadArgument<VOID*>(CurFrame->GetIntArgument(1));
-
-	VOID *StackTop = nullptr;
-	StackTop = ReadArgument<VOID*>(CurFrame->GetIntArgument(2));
-
-	pantheon::ThreadPriority Priority = pantheon::THREAD_PRIORITY_NORMAL;
-	Priority = (pantheon::ThreadPriority)CurFrame->GetIntArgument(3);
-
-	if (Entry == nullptr || StackTop == nullptr)
-	{
-		return -1;
-	}
-
-	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
-	if (Proc == nullptr)
-	{
-		StopError("System call with no process");
-		return -1;
-	}
-
-	pantheon::ScopedLock SL(Proc);
-	pantheon::Thread *Thr = pantheon::GetGlobalScheduler()->CreateThread(Proc, (void*)Entry, RESERVED, Priority, StackTop);
-	if (Thr == nullptr)
-	{
-		return -1;	
-	}
-
-	INT64 Result = Proc->EncodeHandle(pantheon::Handle(Thr));
-
-	if (Result < 0)
-	{
-		return -1;
-	}
-	return (UINT32)Result;
+	/* Not yet implemented! */
+	return 0;
 }
 
 

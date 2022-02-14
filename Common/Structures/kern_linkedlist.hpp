@@ -133,6 +133,11 @@ public:
 		this->NumElem++;
 	}
 
+	T *Front()
+	{
+		return this->Root->GetValue();
+	}
+
 	T *PopFront()
 	{
 		LinkedListItem<T> *OldRoot = this->Root;
