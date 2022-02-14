@@ -14,7 +14,7 @@
 #include <Common/Structures/kern_bitmap.hpp>
 
 #include "Boot/Boot.hpp"
-#include "BootDriver.hpp"
+#include "Boot/BootDriver.hpp"
 
 extern "C" CHAR *kern_begin;
 extern "C" CHAR *kern_end;
