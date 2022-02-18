@@ -19,6 +19,8 @@ static pantheon::vmm::PageAllocator PageTableAllocator;
 
 void pantheon::InitProcessTables()
 {
+	Thread::Init();
+	Process::Init();
 	PageTableAllocator = pantheon::vmm::PageAllocator(Tables, InitNumPageTables);
 }
 

@@ -59,16 +59,6 @@ private:
 
 	inline static LinkedList<Process> ProcessList;
 	inline static LinkedList<Thread> ThreadList;
-
-	/* TODO: make these into SlabAllocators! */
-	inline static pantheon::mm::SlabCache<Process> ProcAllocator;
-	inline static pantheon::mm::SlabCache<Thread> ThreadAllocator;
-
-	static constexpr UINT16 NumProcs = 128;
-	static constexpr UINT16 NumThreads = 4 * NumProcs;
-
-	inline static Process ArrayProcs[NumProcs];
-	inline static Thread ArrayThreads[NumThreads];
 };
 
 UINT32 AcquireProcessID();

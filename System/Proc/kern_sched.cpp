@@ -157,7 +157,7 @@ static void true_drop_process(void *StartAddress, pantheon::vmm::VirtualAddress 
 UINT32 pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *StartAddr)
 {
 	AccessSpinlock.Acquire();
-	pantheon::Process *NewProc = GlobalScheduler::ProcAllocator.AllocateNoCtor();
+	pantheon::Process *NewProc = Process::Create();
 	*NewProc = Process(ProcStr);
 	GlobalScheduler::ProcessList.PushFront(NewProc);
 	
@@ -197,7 +197,7 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateUserThread(pantheon::Process 
 		SetBufferBytes((CHAR*)IStackSpace, 0xAF, InitialThreadStackSize);
 		#endif
 		IStackSpace += InitialThreadStackSize;
-		pantheon::Thread *T = GlobalScheduler::ThreadAllocator.AllocateNoCtor();
+		pantheon::Thread *T = Thread::Create();
 		*T = pantheon::Thread(Proc);
 
 		T->Lock();
@@ -239,7 +239,7 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateThread(pantheon::Process *Pro
 		SetBufferBytes((CHAR*)IStackSpace, 0xAF, InitialThreadStackSize);
 		#endif
 		IStackSpace += InitialThreadStackSize;
-		pantheon::Thread *T = GlobalScheduler::ThreadAllocator.AllocateNoCtor();
+		pantheon::Thread *T = Thread::Create();
 		*T = pantheon::Thread(Proc);
 
 		T->Lock();
@@ -329,9 +329,6 @@ VOID pantheon::GlobalScheduler::Init()
 	this->ThreadList = LinkedList<Thread>();
 	this->ProcessList = LinkedList<Process>();
 
-	this->ProcAllocator = pantheon::mm::SlabCache<Process>(this->ArrayProcs, GlobalScheduler::NumProcs);
-	this->ThreadAllocator = pantheon::mm::SlabCache<Thread>(this->ArrayThreads, GlobalScheduler::NumThreads);
-
 	AccessSpinlock = Spinlock("access_spinlock");
 	IdleProc = pantheon::Process();
 
@@ -348,7 +345,7 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateProcessorIdleThread(UINT64 SP
 	{
 		if (Proc.ProcessID() == 0)
 		{
-			pantheon::Thread *CurThread = GlobalScheduler::ThreadAllocator.AllocateNoCtor();
+			pantheon::Thread *CurThread = Thread::Create();
 			*CurThread = Thread(&Proc, pantheon::THREAD_PRIORITY_NORMAL);
 			CurThread->Lock();
 			CurThread->GetRegisters()->SetSP(SP);

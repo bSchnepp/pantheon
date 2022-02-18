@@ -14,6 +14,8 @@
 #include <Handle/kern_lockable.hpp>
 #include <Handle/kern_handletable.hpp>
 
+#include <Common/Structures/kern_allocatable.hpp>
+
 #ifndef _KERN_PROC_HPP_
 #define _KERN_PROC_HPP_
 
@@ -41,7 +43,7 @@ typedef enum ProcessPriority
 	PROCESS_PRIORITY_VERYHIGH = 4,
 }ProcessPriority;
 
-class Process : public pantheon::Lockable
+class Process : public pantheon::Allocatable<Process, 128>, public pantheon::Lockable
 {
 public:
 	Process();
@@ -79,7 +81,7 @@ private:
 	/* Note that TTBR0 refers to the physical address of MemoryMap. */
 	pantheon::vmm::PhysicalAddress TTBR0;
 	pantheon::vmm::PageTable *MemoryMap;
-	pantheon::HandleTable HandTable;
+	pantheon::HandleTable HandTable;	
 
 private:
 	void CreateBlankPageTable();

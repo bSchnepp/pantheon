@@ -6,6 +6,7 @@
 
 #include <Sync/kern_atomic.hpp>
 #include <Handle/kern_lockable.hpp>
+#include <Common/Structures/kern_allocatable.hpp>
 
 #ifndef _KERN_THREAD_HPP_
 #define _KERN_THREAD_HPP_
@@ -35,7 +36,7 @@ typedef enum ThreadPriority
 
 class Process;
 
-class Thread  : public pantheon::Lockable
+class Thread  : public pantheon::Allocatable<Thread, 512>, public pantheon::Lockable
 {
 public:
 	Thread();
