@@ -61,6 +61,7 @@ static void kern_stage2_init()
 
 void kern_init(InitialBootInfo *InitBootInfo)
 {
+
 	if (pantheon::CPU::GetProcessorNumber() == 0)
 	{
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);		

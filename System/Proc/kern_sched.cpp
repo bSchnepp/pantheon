@@ -100,15 +100,10 @@ void pantheon::Scheduler::Reschedule()
 	pantheon::Thread *New = GlobalScheduler::AcquireThread();
 
 	Old->Lock();
-	New->Lock();
-
-	if (New == Old)
-	{
-		StopError("Same thread was issued to run");
-	}
-
 	Old->SetState(pantheon::THREAD_STATE_WAITING);
+
 	this->CurThread = New;
+	this->CurThread->Lock();
 
 	this->PerformCpuSwitch(Old, New);
 	this->CurThread->EnableScheduling();
@@ -183,6 +178,12 @@ UINT32 pantheon::GlobalScheduler::CreateProcess(pantheon::String ProcStr, void *
 
 pantheon::Thread *pantheon::GlobalScheduler::CreateUserThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority)
 {
+	/* Assert that AccessSpinlock is locked. */
+	if (GlobalScheduler::AccessSpinlock.IsLocked() == FALSE)
+	{
+		StopError("CreateUserThread without AccessSpinlock");
+	}
+
 	/* Attempt 4 pages of stack space for now... */
 	static constexpr UINT64 InitialThreadStackSize = pantheon::vmm::SmallestPageSize * 4;
 	pantheon::Thread T(Proc);
@@ -219,6 +220,12 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateUserThread(pantheon::Process 
 
 pantheon::Thread *pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority)
 {
+	/* Assert that AccessSpinlock is locked. */
+	if (GlobalScheduler::AccessSpinlock.IsLocked() == FALSE)
+	{
+		StopError("CreateThread without AccessSpinlock");
+	}
+
 	/* Attempt 4 pages of stack space for now... */
 	static constexpr UINT64 InitialThreadStackSize = pantheon::vmm::SmallestPageSize * 4;
 	pantheon::Thread T(Proc);

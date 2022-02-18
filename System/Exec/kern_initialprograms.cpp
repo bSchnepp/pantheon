@@ -25,13 +25,7 @@ static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, UINT32 Proc)
 		UINT64 CurSize = PrgHeaderTable[Index].p_filesz;
 
 		/* Is this loadable? */
-		if (PrgHeaderTable[Index].p_type != PT_LOAD)
-		{
-			continue;
-		}
-
-		/* If this program section is really empty, don't bother doing anything. */
-		if (CurSize == 0)
+		if (PrgHeaderTable[Index].p_type != PT_LOAD || CurSize == 0)
 		{
 			continue;
 		}
