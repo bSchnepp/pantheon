@@ -168,9 +168,28 @@ void FORCE_INLINE ClearBuffer(CHAR *Location, UINT32 Amount)
 
 void FORCE_INLINE CopyMemory(VOID *Dest, VOID *Src, UINT64 Amt)
 {
-	CHAR *DestAsChar = reinterpret_cast<CHAR*>(Dest);
-	CHAR *SrcAsChar = reinterpret_cast<CHAR*>(Src);
-	for (UINT64 Index = 0; Index < Amt; ++Index)
+	UINT64 Index = 0;
+	UINT64 RawDest = (UINT64)Dest;
+	UINT64 RawSrc = (UINT64)Src;
+
+	CHAR *DestAsChar = reinterpret_cast<CHAR*>(RawDest);
+	CHAR *SrcAsChar = reinterpret_cast<CHAR*>(RawSrc);
+
+	typedef UINT64 __attribute__((__may_alias__)) AUINT64;
+	if (((RawDest & 0x07) == 0) && ((RawSrc & 0x07) == 0))
+	{
+		AUINT64 *DestAsU64 = reinterpret_cast<AUINT64*>(RawDest);
+		AUINT64 *SrcAs64 = reinterpret_cast<AUINT64*>(RawSrc);
+		for (; (Index * sizeof(UINT64)) < Amt; Index++)
+		{
+			DestAsU64[Index] = SrcAs64[Index];
+		} 
+	}
+
+	Index *= sizeof(UINT64);
+
+
+	for (; Index < Amt; ++Index)
 	{
 		DestAsChar[Index] = SrcAsChar[Index];
 	}

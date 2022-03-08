@@ -33,6 +33,24 @@ static UINT64 NumMemArea = 0;
 static UINT8 Area[(NUM_BOOT_MEMORY_AREAS * (2ULL * 1024ULL * 1024ULL * 1024ULL)) / (pantheon::vmm::SmallestPageSize * 8)];
 static BitmapRegion Regions[NUM_BOOT_MEMORY_AREAS];
 
+bool IsUsed(UINT64 Addr)
+{
+	for (UINT64 InitArea = 0; InitArea < NumMemArea; ++InitArea)
+	{
+		UINT64 MinAddr = Regions[InitArea].BaseAddress;
+		UINT64 MaxAddr = MinAddr + Regions[InitArea].Map.GetSizeBytes() * pantheon::vmm::SmallestPageSize * 8;
+
+		if (Addr < MinAddr || Addr > MaxAddr)
+		{
+			continue;
+		}
+
+		UINT64 Offset = (Addr - MinAddr) / (pantheon::vmm::SmallestPageSize);
+		return Regions[InitArea].Map.Get(Offset);
+	}
+	return 0;
+}
+
 void AllocatePage(UINT64 Addr)
 {
 	UINT64 NumMemAreas = NumMemArea;
@@ -152,4 +170,13 @@ void pantheon::PageAllocator::Free(UINT64 Page)
 	AllocLock.Acquire();
 	FreePage(Page);
 	AllocLock.Release();
+}
+
+bool pantheon::PageAllocator::Used(UINT64 Page)
+{
+	bool Status = false;
+	AllocLock.Acquire();
+	Status = !IsUsed(Page);
+	AllocLock.Release();
+	return Status;
 }

@@ -50,7 +50,7 @@ static void kern_basic_init(InitialBootInfo *InitBootInfo)
 	pantheon::InitBasicMemory();
 	pantheon::InitProcessTables();
 	pantheon::ipc::InitEventSystem();
-	pantheon::GetGlobalScheduler()->Init();
+	pantheon::GlobalScheduler::Init();
 }
 
 static void kern_stage2_init()

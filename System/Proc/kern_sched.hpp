@@ -36,13 +36,12 @@ class GlobalScheduler
 {
 
 public:
-	GlobalScheduler();
-	~GlobalScheduler();
+	static void Init();
 
-	void Init();
-
-	static UINT32 CreateProcess(pantheon::String ProcStr, void *StartAddr);
+	static UINT32 CreateProcess(const pantheon::String &ProcStr, void *StartAddr);
 	static pantheon::Thread *CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority = pantheon::THREAD_PRIORITY_NORMAL);
+
+	static pantheon::Thread *CreateUserThread(UINT32 PID, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority = pantheon::THREAD_PRIORITY_NORMAL);
 	static pantheon::Thread *CreateUserThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority = pantheon::THREAD_PRIORITY_NORMAL);
 
 	static UINT64 CountThreads(UINT64 PID);
@@ -59,6 +58,9 @@ private:
 
 	inline static LinkedList<Process> ProcessList;
 	inline static LinkedList<Thread> ThreadList;
+
+private:
+	static Thread *CreateUserThreadCommon(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority);
 };
 
 UINT32 AcquireProcessID();

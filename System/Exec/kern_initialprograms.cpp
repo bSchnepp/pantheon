@@ -36,14 +36,14 @@ static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, UINT32 Proc)
 		{
 			/* Create a new page for every part of the program section... */
 			pantheon::vmm::PhysicalAddress NewPage = pantheon::PageAllocator::Alloc();
-			/* TODO: virtualize this address for kernel space! */
+			pantheon::vmm::VirtualAddress NewPageVirt = pantheon::vmm::PhysicalToVirtualAddress(NewPage);
 
 			const char *FinalLocation = (ProgramLocation + (pantheon::vmm::SmallestPageSize * Count));
 			UINT64 TargetSize = (CurSize > pantheon::vmm::SmallestPageSize) ? pantheon::vmm::SmallestPageSize : CurSize;
 			
 			/* Clear the page first before we use it. */
-			SetBufferBytes((CHAR*)NewPage, 0x00, pantheon::vmm::SmallestPageSize);
-			CopyMemory((void*)NewPage, (void*)FinalLocation, TargetSize);
+			SetBufferBytes((CHAR*)NewPageVirt, 0x00, pantheon::vmm::SmallestPageSize);
+			CopyMemory((void*)NewPageVirt, (void*)FinalLocation, TargetSize);
 			CurSize -= TargetSize;
 
 			/* Map this page in now... */
@@ -60,7 +60,7 @@ static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, UINT32 Proc)
 			UEntry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
 			UEntry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
 
-			pantheon::GetGlobalScheduler()->MapPages(Proc, &TargetVAddr, &NewPage, UEntry, 1);
+			pantheon::GlobalScheduler::MapPages(Proc, &TargetVAddr, &NewPage, UEntry, 1);
 		}
 	}
 }
@@ -80,6 +80,7 @@ static void RunSysm(void)
 	}
 	UINT32 PID = pantheon::GetGlobalScheduler()->CreateProcess("sysm", (void*)SysmHeader().e_entry);
 	RunElf(SysmHeader(), (const char*)ElfLocation, PID);
+	pantheon::GlobalScheduler::CreateUserThread(PID, (void*)(SysmHeader().e_entry), nullptr);
 	pantheon::GetGlobalScheduler()->SetState(PID, pantheon::PROCESS_STATE_RUNNING);
 }
 
@@ -98,6 +99,7 @@ static void RunPrgm(void)
 	}
 	UINT32 PID = pantheon::GetGlobalScheduler()->CreateProcess("prgm", (void*)PrgmHeader().e_entry);
 	RunElf(PrgmHeader(), (const char*)ElfLocation, PID);
+	pantheon::GlobalScheduler::CreateUserThread(PID, (void*)(PrgmHeader().e_entry), nullptr);
 	pantheon::GetGlobalScheduler()->SetState(PID, pantheon::PROCESS_STATE_RUNNING);
 }
 

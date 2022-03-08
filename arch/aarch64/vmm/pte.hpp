@@ -381,6 +381,14 @@ private:
 typedef struct PageTable
 {
 	pantheon::vmm::PageTableEntry Entries[512];
+
+	void Clear()
+	{
+		for (pantheon::vmm::PageTableEntry &Ent : this->Entries)
+		{
+			Ent.SetRawAttributes(0x00);
+		}		
+	}
 }PageTable;
 static_assert(sizeof(PageTable) == 4096);	
 

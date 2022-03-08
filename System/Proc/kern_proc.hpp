@@ -43,15 +43,30 @@ typedef enum ProcessPriority
 	PROCESS_PRIORITY_VERYHIGH = 4,
 }ProcessPriority;
 
+typedef enum ProcessCreateFlags
+{
+	PROCESS_CREATE_FLAG_MAX,
+}ProcessCreateFlags;
+
+typedef struct ProcessCreateInfo
+{
+	String Name;
+	pantheon::vmm::VirtualAddress EntryPoint;
+
+	UINT64 NumMemoryRegions;
+	pantheon::vmm::VirtualAddress *VPages;
+	pantheon::vmm::PhysicalAddress *PPages;
+	pantheon::vmm::PageTableEntry *Permissions;
+
+}ProcessCreateInfo;
+
 class Process : public pantheon::Allocatable<Process, 128>, public pantheon::Lockable
 {
 public:
 	Process();
-	Process(const char *CommandString);
-	Process(String &CommandString);
-	Process(const Process &Other) noexcept;
-	Process(Process &&Other) noexcept;
 	~Process() override;
+
+	void Initialize(const ProcessCreateInfo &CreateInfo);
 
 	Process &operator=(const Process &Other);
 	Process &operator=(Process &&Other) noexcept;
@@ -61,15 +76,13 @@ public:
 
 	[[nodiscard]] ProcessState MyState() const;
 	void SetState(ProcessState State);
-
-	void SetPageTable(pantheon::vmm::PageTable *Root, pantheon::vmm::PhysicalAddress PageTablePhysicalAddr);
-	void MapAddresses(pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages);
+	void MapAddress(const pantheon::vmm::VirtualAddress &VAddresses, const pantheon::vmm::PhysicalAddress &PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes);
 
 	INT64 EncodeHandle(const pantheon::Handle &NewHand);
 	pantheon::Handle *GetHandle(INT32 HandleID);
 	[[nodiscard]] pantheon::vmm::PhysicalAddress GetTTBR0() const;
 
-	static const constexpr pantheon::vmm::VirtualAddress StackAddr = 0x7FC0000000;
+	static const constexpr pantheon::vmm::VirtualAddress StackAddr = 0xFFFFFFFFF000;
 
 private:
 	UINT32 PID;
@@ -78,13 +91,21 @@ private:
 	ProcessState CurState;
 	ProcessPriority Priority;
 
+	pantheon::vmm::VirtualAddress EntryPoint;
+
 	/* Note that TTBR0 refers to the physical address of MemoryMap. */
 	pantheon::vmm::PhysicalAddress TTBR0;
 	pantheon::vmm::PageTable *MemoryMap;
 	pantheon::HandleTable HandTable;	
 
 private:
+	Process(const char *CommandString);
+	Process(String &CommandString);
+	Process(const Process &Other) noexcept;
+	Process(Process &&Other) noexcept;
+
 	void CreateBlankPageTable();
+	void SetPageTable(pantheon::vmm::PageTable *Root, pantheon::vmm::PhysicalAddress PageTablePhysicalAddr);
 
 };
 

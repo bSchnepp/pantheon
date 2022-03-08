@@ -14,7 +14,7 @@
 
 /* This needs to be replaced with a proper slab allocator at some point */
 static constexpr UINT64 InitNumPageTables = 1024;
-static pantheon::vmm::PageTable Tables[InitNumPageTables];
+alignas(4096) static pantheon::vmm::PageTable Tables[InitNumPageTables];
 static pantheon::vmm::PageAllocator PageTableAllocator;
 
 void pantheon::InitProcessTables()
@@ -78,6 +78,89 @@ pantheon::Process::~Process()
 
 }
 
+void pantheon::Process::Initialize(const pantheon::ProcessCreateInfo &CreateInfo)
+{
+	this->CurState = pantheon::PROCESS_STATE_INIT;
+	this->Priority = pantheon::PROCESS_PRIORITY_NORMAL;
+	this->ProcessCommand = CreateInfo.Name;
+	this->PID = pantheon::AcquireProcessID();
+	this->CreateBlankPageTable();
+
+	/* Let's go ahead and map in everything in the lower table as-is. */
+	pantheon::vmm::PageTableEntry Entry;
+	Entry.SetBlock(TRUE);
+	Entry.SetMapped(TRUE);
+	Entry.SetUserNoExecute(TRUE);
+	Entry.SetKernelNoExecute(FALSE);
+
+	/* For now, allow anything since we don't have a real userland yet.
+	 * We'll need to create page allocators for userland at some point,
+	 * but for now let everything share the same address space.
+	 */
+	UINT64 PagePermission = 0;
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_KERN;
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_EXECUTE_KERN; 
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_USER;
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_EXECUTE_USER;
+	Entry.SetPagePermissions(PagePermission);
+
+	Entry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
+	Entry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
+	Entry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
+
+
+	/* For the initial stack, it will be at 0x7FC0000000, 
+	 * which should be ASLRed later. This is a very high virtual address!
+	 * The initial user stack will be 4 pages.
+	 */
+	static constexpr UINT8 NumInitStackPages = 4;
+	pantheon::vmm::VirtualAddress VAddrs[NumInitStackPages];
+	pantheon::vmm::PhysicalAddress PAddrs[NumInitStackPages];
+
+	for (UINT8 Index = 0; Index < NumInitStackPages; Index++)
+	{
+		PAddrs[Index] = pantheon::PageAllocator::Alloc();
+		ClearBuffer((CHAR*)pantheon::vmm::PhysicalToVirtualAddress(PAddrs[Index]), pantheon::vmm::SmallestPageSize);
+		VAddrs[Index] = StackAddr - pantheon::vmm::SmallestPageSize * Index;
+	}
+
+	/* If we do, say, an rv64 port, this needs to be abtracted, 
+	 * since MAIR doesnt make sense on other hardware. */
+	pantheon::vmm::PageTableEntry UStackEntry;
+	UStackEntry.SetBlock(TRUE);
+	UStackEntry.SetMapped(TRUE);
+	UStackEntry.SetUserNoExecute(TRUE);
+	UStackEntry.SetKernelNoExecute(TRUE);
+
+	PagePermission = 0;
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_ONLY_KERN;
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_KERN; 
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_USER;
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_USER;
+	UStackEntry.SetPagePermissions(PagePermission);
+
+	UStackEntry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
+	UStackEntry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
+	UStackEntry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
+
+	/* Create the stack */
+	for (UINT64 Index = 0; Index < NumInitStackPages; ++Index)
+	{
+		this->MapAddress(VAddrs[Index], PAddrs[Index], UStackEntry);
+	}
+
+	/* Map in initial objects */
+	for (UINT64 Index = 0; Index < CreateInfo.NumMemoryRegions; ++Index)
+	{
+		this->MapAddress(CreateInfo.VPages[Index], CreateInfo.PPages[Index], CreateInfo.Permissions[Index]);
+	}
+
+	this->EntryPoint = CreateInfo.EntryPoint;
+	
+	pantheon::Sync::DSBISH();
+	pantheon::Sync::ISB();
+}
+
 pantheon::Process &pantheon::Process::operator=(const pantheon::Process &Other)
 {
 	if (this == &Other)
@@ -122,68 +205,14 @@ extern "C" CHAR *USER_END;
 
 void pantheon::Process::CreateBlankPageTable()
 {
-	/* TODO: Create new page tables, instead of reusing old stuff. */
 	this->TTBR0 = pantheon::PageAllocator::Alloc();
-	ClearBuffer((CHAR*)this->TTBR0, sizeof(pantheon::vmm::SmallestPageSize));
-	this->MemoryMap = reinterpret_cast<pantheon::vmm::PageTable*>(pantheon::vmm::PhysicalToVirtualAddress(this->TTBR0));
 
-	/* Let's go ahead and map in everything in the lower table as-is. */
-	pantheon::vmm::PageTableEntry Entry;
-	Entry.SetBlock(TRUE);
-	Entry.SetMapped(TRUE);
-	Entry.SetUserNoExecute(TRUE);
-	Entry.SetKernelNoExecute(FALSE);
+	pantheon::vmm::VirtualAddress NewTableVAddr = pantheon::vmm::PhysicalToVirtualAddress(this->TTBR0);
+	pantheon::vmm::PageTable *PgTable = reinterpret_cast<pantheon::vmm::PageTable*>(NewTableVAddr);
 
-	/* For now, allow anything since we don't have a real userland yet.
-	 * We'll need to create page allocators for userland at some point,
-	 * but for now let everything share the same address space.
-	 */
-	UINT64 PagePermission = 0;
-	PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_KERN;
-	PagePermission |= pantheon::vmm::PAGE_PERMISSION_EXECUTE_KERN; 
-	PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_USER;
-	PagePermission |= pantheon::vmm::PAGE_PERMISSION_EXECUTE_USER;
-	Entry.SetPagePermissions(PagePermission);
+	this->MemoryMap = PgTable;
+	this->MemoryMap->Clear();
 
-	Entry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
-	Entry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
-	Entry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
-
-
-	/* For the initial stack, it will be at 0x7FC0000000, 
-	 * which should be ASLRed later. This is a very high virtual address!
-	 * The initial user stack will be 4 pages.
-	 */
-	static constexpr UINT8 NumInitStackPages = 4;
-	pantheon::vmm::VirtualAddress VAddrs[NumInitStackPages];
-	pantheon::vmm::PhysicalAddress PAddrs[NumInitStackPages];
-
-	for (UINT8 Index = 0; Index < NumInitStackPages; Index++)
-	{
-		PAddrs[Index] = pantheon::PageAllocator::Alloc();
-		VAddrs[Index] = StackAddr - pantheon::vmm::SmallestPageSize * Index;
-	}
-
-	/* If we do, say, an rv64 port, this needs to be abtracted, 
-	 * since MAIR doesnt make sense on other hardware. */
-	pantheon::vmm::PageTableEntry UStackEntry;
-	UStackEntry.SetBlock(TRUE);
-	UStackEntry.SetMapped(TRUE);
-	UStackEntry.SetUserNoExecute(TRUE);
-	UStackEntry.SetKernelNoExecute(TRUE);
-
-	PagePermission = 0;
-	PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_ONLY_KERN;
-	PagePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_KERN; 
-	PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_USER;
-	PagePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_USER;
-	UStackEntry.SetPagePermissions(PagePermission);
-
-	UStackEntry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
-	UStackEntry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
-	UStackEntry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
-
-	this->MapAddresses(VAddrs, PAddrs, UStackEntry, NumInitStackPages);	
 }
 
 void pantheon::Process::SetPageTable(pantheon::vmm::PageTable *Root, pantheon::vmm::PhysicalAddress PageTablePhysicalAddr)
@@ -192,14 +221,14 @@ void pantheon::Process::SetPageTable(pantheon::vmm::PageTable *Root, pantheon::v
 	this->TTBR0 = PageTablePhysicalAddr;
 }
 
-void pantheon::Process::MapAddresses(pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages)
+void pantheon::Process::MapAddress(const pantheon::vmm::VirtualAddress &VAddresses, const pantheon::vmm::PhysicalAddress &PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes)
 {
-	this->Lock();
-	for (UINT64 Num = 0; Num < NumPages; Num++)
+	if (this->IsLocked() == FALSE)
 	{
-		PageTableAllocator.Map(this->MemoryMap, VAddresses[Num], PAddresses[Num], pantheon::vmm::SmallestPageSize, PageAttributes);
+		StopError("Process not locked when mapping addresses\n");
 	}
-	this->Unlock();
+
+	PageTableAllocator.Map(this->MemoryMap, VAddresses, PAddresses, pantheon::vmm::SmallestPageSize, PageAttributes);
 }
 
 [[nodiscard]]
