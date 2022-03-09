@@ -9,6 +9,8 @@
 
 #include <printf/printf.h>
 
+#include <Board.hpp>
+
 VOID WriteMMIOU64(UINT64 Addr, UINT64 Value)
 {
 	*(volatile UINT64*)Addr = Value;
@@ -175,4 +177,13 @@ void pantheon::InitBasicRuntime()
 {
 	PrintMutex = pantheon::Spinlock("print_mutex");
 	PanicMutex = pantheon::Spinlock("panic_mutex");
+}
+
+void _putchar(char c)
+{
+	if (c == '\n')
+	{
+		PUTCHAR_FUNC('\r');
+	}
+	PUTCHAR_FUNC(c);
 }

@@ -392,6 +392,28 @@ typedef struct PageTable
 }PageTable;
 static_assert(sizeof(PageTable) == 4096);	
 
+constexpr pantheon::vmm::PageTableEntry StackPermissions()
+{
+	pantheon::vmm::PageTableEntry UStackEntry;
+
+	UStackEntry.SetBlock(TRUE);
+	UStackEntry.SetMapped(TRUE);
+	UStackEntry.SetUserNoExecute(TRUE);
+	UStackEntry.SetKernelNoExecute(TRUE);
+
+	UINT64 PagePermission = 0;
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_ONLY_KERN;
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_KERN; 
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_USER;
+	PagePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_USER;
+	UStackEntry.SetPagePermissions(PagePermission);
+
+	UStackEntry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
+	UStackEntry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
+	UStackEntry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
+	return pantheon::vmm::PageTableEntry(UStackEntry);
+}
+
 }
 
 #endif

@@ -3,6 +3,6 @@
 #ifndef _BOARD_HPP_
 #define _BOARD_HPP_
 
-/* Not used anymore... */
+#define PUTCHAR_FUNC(x) WriteSerialChar(x)
 
 #endif

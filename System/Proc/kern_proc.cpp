@@ -124,24 +124,7 @@ void pantheon::Process::Initialize(const pantheon::ProcessCreateInfo &CreateInfo
 		VAddrs[Index] = StackAddr - pantheon::vmm::SmallestPageSize * Index;
 	}
 
-	/* If we do, say, an rv64 port, this needs to be abtracted, 
-	 * since MAIR doesnt make sense on other hardware. */
-	pantheon::vmm::PageTableEntry UStackEntry;
-	UStackEntry.SetBlock(TRUE);
-	UStackEntry.SetMapped(TRUE);
-	UStackEntry.SetUserNoExecute(TRUE);
-	UStackEntry.SetKernelNoExecute(TRUE);
-
-	PagePermission = 0;
-	PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_ONLY_KERN;
-	PagePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_KERN; 
-	PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_USER;
-	PagePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_USER;
-	UStackEntry.SetPagePermissions(PagePermission);
-
-	UStackEntry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
-	UStackEntry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
-	UStackEntry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
+	pantheon::vmm::PageTableEntry UStackEntry = pantheon::vmm::StackPermissions();
 
 	/* Create the stack */
 	for (UINT64 Index = 0; Index < NumInitStackPages; ++Index)

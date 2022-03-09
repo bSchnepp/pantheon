@@ -76,12 +76,3 @@ VOID PerCoreBoardInit()
 	pantheon::arm::GICEnableInterrupt(TimerIRQ);
 	pantheon::arm::GICInitCore();
 }
-
-void _putchar(char c)
-{
-	if (c == '\n')
-	{
-		WriteSerialChar('\r');
-	}
-	WriteSerialChar(c);
-}

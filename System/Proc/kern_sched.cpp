@@ -74,6 +74,8 @@ VOID pantheon::Scheduler::PerformCpuSwitch(Thread *Old, Thread *New)
 	New->Unlock();
 	Old->Unlock();
 
+	pantheon::Sync::FORCE_CLEAN_CACHE();
+
 	cpu_switch(Prev, Next, CpuIRegOffset);	
 }
 

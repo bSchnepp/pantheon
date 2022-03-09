@@ -20,6 +20,21 @@ namespace pantheon::Sync
 	{
 		asm volatile("isb\n" ::: "memory");
 	}
+
+	FORCE_INLINE void IC_IALLU()
+	{
+		asm volatile("ic iallu\n" ::: "memory");
+	}
+
+	FORCE_INLINE void FORCE_CLEAN_CACHE()
+	{
+		/* Be sure we're cleaning caches correctly */
+		pantheon::Sync::ISB();
+		pantheon::Sync::DSBSY();
+		pantheon::Sync::IC_IALLU();
+		pantheon::Sync::DSBSY();
+		pantheon::Sync::ISB();
+	}
 }
 
 #endif
