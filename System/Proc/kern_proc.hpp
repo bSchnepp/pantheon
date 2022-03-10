@@ -80,7 +80,9 @@ public:
 
 	INT64 EncodeHandle(const pantheon::Handle &NewHand);
 	pantheon::Handle *GetHandle(INT32 HandleID);
+
 	[[nodiscard]] pantheon::vmm::PhysicalAddress GetTTBR0() const;
+	[[nodiscard]] pantheon::vmm::PageTable *GetPageTable() const;
 
 	static const constexpr pantheon::vmm::VirtualAddress StackAddr = 0xFFFFFFFFF000;
 

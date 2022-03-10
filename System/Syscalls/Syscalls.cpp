@@ -419,19 +419,37 @@ pantheon::Result pantheon::SVCExecute()
 	return -1;	
 }
 
-void *syscall_table[] = 
+typedef void (*SyscallFn)(pantheon::TrapFrame *);
+
+SyscallFn syscall_table[] = 
 {
-	(void*)pantheon::SVCExitProcess, 
-	(void*)pantheon::SVCForkProcess, 
-	(void*)pantheon::SVCLogText, 
-	(void*)pantheon::SVCAllocateBuffer,
-	(void*)pantheon::SVCCreateThread,
-	(void*)pantheon::SVCCreateNamedEvent,
-	(void*)pantheon::SVCSignalEvent,
-	(void*)pantheon::SVCClearEvent,
-	(void*)pantheon::SVCResetEvent,
-	(void*)pantheon::SVCPollEvent,
-	(void*)pantheon::SVCYield,
-	(void*)pantheon::SVCExitThread,
-	(void*)pantheon::SVCExecute,
+	(SyscallFn)pantheon::SVCExitProcess, 
+	(SyscallFn)pantheon::SVCForkProcess, 
+	(SyscallFn)pantheon::SVCLogText, 
+	(SyscallFn)pantheon::SVCAllocateBuffer,
+	(SyscallFn)pantheon::SVCCreateThread,
+	(SyscallFn)pantheon::SVCCreateNamedEvent,
+	(SyscallFn)pantheon::SVCSignalEvent,
+	(SyscallFn)pantheon::SVCClearEvent,
+	(SyscallFn)pantheon::SVCResetEvent,
+	(SyscallFn)pantheon::SVCPollEvent,
+	(SyscallFn)pantheon::SVCYield,
+	(SyscallFn)pantheon::SVCExitThread,
+	(SyscallFn)pantheon::SVCExecute,
 };
+
+UINT64 pantheon::SyscallCount()
+{
+	constexpr UINT64 Count = sizeof(syscall_table) / (sizeof(void*));
+	return Count;
+}
+
+BOOL pantheon::CallSyscall(UINT32 Index, pantheon::TrapFrame *Frame)
+{
+	if (Index < SyscallCount())
+	{
+		(*syscall_table[Index])(Frame);
+		return TRUE;
+	}
+	return FALSE;
+}

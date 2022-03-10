@@ -91,6 +91,7 @@ VOID pantheon::Scheduler::PerformCpuSwitch(Thread *Old, Thread *New)
  */
 void pantheon::Scheduler::Reschedule()
 {
+	OBJECT_SELF_ASSERT(this);
 	/* Interrupts must be enabled before we can do anything. */
 	if (pantheon::CPU::ICOUNT())
 	{
@@ -113,6 +114,7 @@ void pantheon::Scheduler::Reschedule()
 
 pantheon::Process *pantheon::Scheduler::MyProc()
 {
+	OBJECT_SELF_ASSERT(this);
 	if (this->CurThread)
 	{
 		return this->CurThread->MyProc();
@@ -122,6 +124,7 @@ pantheon::Process *pantheon::Scheduler::MyProc()
 
 pantheon::Thread *pantheon::Scheduler::MyThread()
 {
+	OBJECT_SELF_ASSERT(this);
 	return this->CurThread;
 }
 

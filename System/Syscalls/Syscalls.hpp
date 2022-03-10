@@ -1,4 +1,3 @@
-#include <kern_thread.hpp>
 #include <kern_datatypes.hpp>
 
 #ifndef _SYSCALLS_HPP_
@@ -26,6 +25,11 @@ Result SVCPollEvent();
 Result SVCYield();
 Result SVCExitThread();
 Result SVCExecute();
+
+
+UINT64 SyscallCount();
+BOOL CallSyscall(UINT32 Index, pantheon::TrapFrame *Frame);
+
 }
 
 #endif
