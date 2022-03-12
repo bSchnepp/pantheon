@@ -44,22 +44,21 @@ extern "C" void sync_handler_el1(pantheon::TrapFrame *Frame)
 {
 	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
 
-	UINT64 ESR, FAR, ELR, SPSR;
+	UINT64 ESR, FAR, ELR, SPSR, SP;
 	asm volatile(
 		"mrs %0, esr_el1\n"
 		"mrs %1, far_el1\n"
 		"mrs %2, elr_el1\n"
 		"mrs %3, spsr_el1\n"
-		: "=r"(ESR), "=r"(FAR), "=r"(ELR), "=r"(SPSR));
+		"mov %4, sp\n"
+		: "=r"(ESR), "=r"(FAR), "=r"(ELR), "=r"(SPSR), "=r"(SP));
 
 	PANTHEON_UNUSED(FAR);
 	PANTHEON_UNUSED(ELR);
 	PANTHEON_UNUSED(SPSR);
-	if (ESR == 0x2000000)
-	{
-		pantheon::StopError("ERR: SYNC HANDLER EL1");
-	}
-
+	pantheon::StopErrorFmt(
+		"ERR: SYNC HANDLER EL1: esr: %lx far: %lx elr: %lx spsr: %lx, sp: %lx\n", 
+		ESR, FAR, ELR, SPSR, SP);
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 

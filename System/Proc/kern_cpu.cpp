@@ -57,7 +57,12 @@ pantheon::GlobalScheduler *pantheon::CPU::GetGlobalScheduler()
 
 pantheon::Thread *pantheon::CPU::GetCurThread()
 {
-	return pantheon::CPU::GetCoreInfo()->CurSched->MyThread();
+	pantheon::Scheduler *Sched = pantheon::CPU::GetCurSched();
+	if (Sched == nullptr)
+	{
+		return nullptr;
+	}
+	return Sched->MyThread();
 }
 
 pantheon::Scheduler *pantheon::CPU::GetCurSched()
