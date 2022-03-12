@@ -27,7 +27,7 @@ VOID pantheon::SVCExitProcess()
 {
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	CurThread->MyProc()->Lock();
-	CurThread->MyProc()->SetState(pantheon::PROCESS_STATE_ZOMBIE);
+	CurThread->MyProc()->SetState(pantheon::Process::STATE_ZOMBIE);
 	CurThread->MyProc()->Unlock();
 
 	CurThread->Lock();
@@ -356,7 +356,7 @@ pantheon::Result pantheon::SVCExitThread()
 
 	if (pantheon::GetGlobalScheduler()->CountThreads(CurThread->MyProc()->ProcessID()) == 0)
 	{
-		CurProc->SetState(pantheon::PROCESS_STATE_ZOMBIE);
+		CurProc->SetState(pantheon::Process::STATE_ZOMBIE);
 	}
 	CurProc->Unlock();
 	CurSched->Reschedule();
@@ -395,7 +395,7 @@ pantheon::Result pantheon::SVCExecute()
 	{
 		pantheon::Process *Other = Hand->GetContent().Process;
 		Other->Lock();
-		Other->SetState(pantheon::PROCESS_STATE_RUNNING);
+		Other->SetState(pantheon::Process::STATE_RUNNING);
 		Other->Unlock();
 
 		Proc->Unlock();

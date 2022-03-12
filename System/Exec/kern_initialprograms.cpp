@@ -81,7 +81,7 @@ static void RunSysm(void)
 	UINT32 PID = pantheon::GetGlobalScheduler()->CreateProcess("sysm", (void*)SysmHeader().e_entry);
 	RunElf(SysmHeader(), (const char*)ElfLocation, PID);
 	pantheon::GlobalScheduler::CreateUserThread(PID, (void*)(SysmHeader().e_entry), nullptr);
-	pantheon::GetGlobalScheduler()->SetState(PID, pantheon::PROCESS_STATE_RUNNING);
+	pantheon::GetGlobalScheduler()->SetState(PID, pantheon::Process::STATE_RUNNING);
 }
 
 static void RunPrgm(void)
@@ -100,7 +100,7 @@ static void RunPrgm(void)
 	UINT32 PID = pantheon::GetGlobalScheduler()->CreateProcess("prgm", (void*)PrgmHeader().e_entry);
 	RunElf(PrgmHeader(), (const char*)ElfLocation, PID);
 	pantheon::GlobalScheduler::CreateUserThread(PID, (void*)(PrgmHeader().e_entry), nullptr);
-	pantheon::GetGlobalScheduler()->SetState(PID, pantheon::PROCESS_STATE_RUNNING);
+	pantheon::GetGlobalScheduler()->SetState(PID, pantheon::Process::STATE_RUNNING);
 }
 
 void pantheon::UnpackInitPrograms()

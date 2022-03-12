@@ -49,7 +49,7 @@ public:
 	static pantheon::Thread *AcquireThread();
 	static pantheon::Thread *CreateProcessorIdleThread(UINT64 SP, UINT64 IP);
 
-	static BOOL SetState(UINT32 PID, pantheon::ProcessState State);
+	static BOOL SetState(UINT32 PID, pantheon::Process::State State);
 	static BOOL MapPages(UINT32 PID, pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages);
 
 private:

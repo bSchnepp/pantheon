@@ -297,7 +297,7 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 			}
 
 			pantheon::ScopedLock L2(Proc);
-			if (Proc->MyState() != pantheon::PROCESS_STATE_RUNNING)
+			if (Proc->MyState() != pantheon::Process::STATE_RUNNING)
 			{
 				continue;
 			}
@@ -486,7 +486,7 @@ BOOL pantheon::GlobalScheduler::MapPages(UINT32 PID, pantheon::vmm::VirtualAddre
 	return Success;
 }
 
-BOOL pantheon::GlobalScheduler::SetState(UINT32 PID, pantheon::ProcessState State)
+BOOL pantheon::GlobalScheduler::SetState(UINT32 PID, pantheon::Process::State State)
 {
 	BOOL Success = FALSE;
 	AccessSpinlock.Acquire();

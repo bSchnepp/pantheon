@@ -26,51 +26,10 @@ void pantheon::InitProcessTables()
 
 pantheon::Process::Process() : pantheon::Lockable("Process")
 {
-	this->CurState = pantheon::PROCESS_STATE_INIT;
-	this->Priority = pantheon::PROCESS_PRIORITY_VERYLOW;
-	this->ProcessCommand = "idle";
+	this->CurState = pantheon::Process::STATE_INIT;
+	this->CurPriority = pantheon::Process::PRIORITY_VERYLOW;
+	this->ProcessString = "idle";
 	this->PID = 0;
-}
-
-pantheon::Process::Process(const char *CommandString) : pantheon::Lockable("Process")
-{
-	this->ProcessCommand = pantheon::String(CommandString);
-	this->CurState = pantheon::PROCESS_STATE_INIT;
-	this->Priority = pantheon::PROCESS_PRIORITY_NORMAL;
-	this->PID = pantheon::AcquireProcessID();
-	this->CreateBlankPageTable();
-}
-
-pantheon::Process::Process(pantheon::String &CommandString) : pantheon::Lockable("Process")
-{
-	this->CurState = pantheon::PROCESS_STATE_INIT;
-	this->Priority = pantheon::PROCESS_PRIORITY_NORMAL;
-	this->ProcessCommand = CommandString;
-	this->PID = pantheon::AcquireProcessID();
-	this->CreateBlankPageTable();
-}
-
-pantheon::Process::Process(const Process &Other) noexcept : pantheon::Lockable("Process")
-{
-	this->Lock();
-	this->CurState = Other.CurState;
-	this->PID = Other.PID;
-	this->Priority = Other.Priority;
-	this->ProcessCommand = Other.ProcessCommand;
-	this->MemoryMap = Other.MemoryMap;
-	this->TTBR0 = Other.TTBR0;
-	this->Unlock();
-}
-
-pantheon::Process::Process(Process &&Other) noexcept
-{
-	this->CurState = Other.CurState;
-	this->PID = Other.PID;
-	this->Priority = Other.Priority;
-	this->ProcessCommand = Other.ProcessCommand;
-	this->MemoryMap = Other.MemoryMap;
-	this->TTBR0 = Other.TTBR0;
-	ClearBuffer((CHAR*)&Other, sizeof(Process));	
 }
 
 pantheon::Process::~Process()
@@ -81,11 +40,17 @@ pantheon::Process::~Process()
 void pantheon::Process::Initialize(const pantheon::ProcessCreateInfo &CreateInfo)
 {
 	OBJECT_SELF_ASSERT(this);
-	this->CurState = pantheon::PROCESS_STATE_INIT;
-	this->Priority = pantheon::PROCESS_PRIORITY_NORMAL;
-	this->ProcessCommand = CreateInfo.Name;
+	this->CurState = pantheon::Process::STATE_INIT;
+	this->CurPriority = pantheon::Process::PRIORITY_NORMAL;
+	this->ProcessString = CreateInfo.Name;
 	this->PID = pantheon::AcquireProcessID();
-	this->CreateBlankPageTable();
+	this->TTBR0 = pantheon::PageAllocator::Alloc();
+
+	pantheon::vmm::VirtualAddress NewTableVAddr = pantheon::vmm::PhysicalToVirtualAddress(this->TTBR0);
+	pantheon::vmm::PageTable *PgTable = reinterpret_cast<pantheon::vmm::PageTable*>(NewTableVAddr);
+
+	this->MemoryMap = PgTable;
+	this->MemoryMap->Clear();
 
 	/* Let's go ahead and map in everything in the lower table as-is. */
 	pantheon::vmm::PageTableEntry Entry;
@@ -109,16 +74,10 @@ void pantheon::Process::Initialize(const pantheon::ProcessCreateInfo &CreateInfo
 	Entry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
 	Entry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
 
+	pantheon::vmm::VirtualAddress VAddrs[Process::StackPages];
+	pantheon::vmm::PhysicalAddress PAddrs[Process::StackPages];
 
-	/* For the initial stack, it will be at 0x7FC0000000, 
-	 * which should be ASLRed later. This is a very high virtual address!
-	 * The initial user stack will be 4 pages.
-	 */
-	static constexpr UINT8 NumInitStackPages = 4;
-	pantheon::vmm::VirtualAddress VAddrs[NumInitStackPages];
-	pantheon::vmm::PhysicalAddress PAddrs[NumInitStackPages];
-
-	for (UINT8 Index = 0; Index < NumInitStackPages; Index++)
+	for (UINT8 Index = 0; Index < Process::StackPages; Index++)
 	{
 		PAddrs[Index] = pantheon::PageAllocator::Alloc();
 		ClearBuffer((CHAR*)pantheon::vmm::PhysicalToVirtualAddress(PAddrs[Index]), pantheon::vmm::SmallestPageSize);
@@ -128,7 +87,7 @@ void pantheon::Process::Initialize(const pantheon::ProcessCreateInfo &CreateInfo
 	pantheon::vmm::PageTableEntry UStackEntry = pantheon::vmm::StackPermissions();
 
 	/* Create the stack */
-	for (UINT64 Index = 0; Index < NumInitStackPages; ++Index)
+	for (UINT64 Index = 0; Index < Process::StackPages; ++Index)
 	{
 		this->MapAddress(VAddrs[Index], PAddrs[Index], UStackEntry);
 	}
@@ -155,8 +114,8 @@ pantheon::Process &pantheon::Process::operator=(const pantheon::Process &Other)
 	Lockable::operator=(Other);
 	this->CurState = Other.CurState;
 	this->PID = Other.PID;
-	this->Priority = Other.Priority;
-	this->ProcessCommand = Other.ProcessCommand;
+	this->CurPriority = Other.CurPriority;
+	this->ProcessString = Other.ProcessString;
 	this->MemoryMap = Other.MemoryMap;
 	this->TTBR0 = Other.TTBR0;
 	return *this;
@@ -172,8 +131,8 @@ pantheon::Process &pantheon::Process::operator=(pantheon::Process &&Other) noexc
 	Lockable::operator=(Other);
 	this->CurState = Other.CurState;
 	this->PID = Other.PID;
-	this->Priority = Other.Priority;
-	this->ProcessCommand = Other.ProcessCommand;
+	this->CurPriority = Other.CurPriority;
+	this->ProcessString = Other.ProcessString;
 	this->MemoryMap = Other.MemoryMap;
 	this->TTBR0 = Other.TTBR0;	
 	ClearBuffer((CHAR*)&Other, sizeof(Process));
@@ -184,31 +143,11 @@ pantheon::Process &pantheon::Process::operator=(pantheon::Process &&Other) noexc
 const pantheon::String &pantheon::Process::GetProcessString() const
 {
 	OBJECT_SELF_ASSERT(this);
-	return this->ProcessCommand;
+	return this->ProcessString;
 }
 
 extern "C" CHAR *USER_BEGIN;
 extern "C" CHAR *USER_END;
-
-void pantheon::Process::CreateBlankPageTable()
-{
-	OBJECT_SELF_ASSERT(this);
-	this->TTBR0 = pantheon::PageAllocator::Alloc();
-
-	pantheon::vmm::VirtualAddress NewTableVAddr = pantheon::vmm::PhysicalToVirtualAddress(this->TTBR0);
-	pantheon::vmm::PageTable *PgTable = reinterpret_cast<pantheon::vmm::PageTable*>(NewTableVAddr);
-
-	this->MemoryMap = PgTable;
-	this->MemoryMap->Clear();
-
-}
-
-void pantheon::Process::SetPageTable(pantheon::vmm::PageTable *Root, pantheon::vmm::PhysicalAddress PageTablePhysicalAddr)
-{
-	OBJECT_SELF_ASSERT(this);
-	this->MemoryMap = Root;
-	this->TTBR0 = PageTablePhysicalAddr;
-}
 
 void pantheon::Process::MapAddress(const pantheon::vmm::VirtualAddress &VAddresses, const pantheon::vmm::PhysicalAddress &PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes)
 {
@@ -229,18 +168,18 @@ UINT32 pantheon::Process::ProcessID() const
 }
 
 [[nodiscard]] 
-pantheon::ProcessState pantheon::Process::MyState() const
+pantheon::Process::State pantheon::Process::MyState() const
 {
 	OBJECT_SELF_ASSERT(this);
 	/* ubsan says there is an error here */
-	if (this->CurState > pantheon::PROCESS_STATE_MAX)
+	if (this->CurState > pantheon::Process::STATE_MAX)
 	{
 		StopErrorFmt("Invalid process state: got 0x%lx\n", this->CurState);
 	}
 	return this->CurState;
 }
 
-void pantheon::Process::SetState(pantheon::ProcessState State)
+void pantheon::Process::SetState(pantheon::Process::State State)
 {
 	OBJECT_SELF_ASSERT(this);
 	if (this->IsLocked() == FALSE)

@@ -24,25 +24,6 @@ namespace pantheon
 
 class Thread;
 
-typedef enum ProcessState
-{
-	PROCESS_STATE_INIT,
-	PROCESS_STATE_RUNNING,
-	PROCESS_STATE_BLOCKED,
-	PROCESS_STATE_ZOMBIE,
-	PROCESS_STATE_TERMINATED,
-	PROCESS_STATE_MAX,
-}ProcessState;
-
-typedef enum ProcessPriority
-{
-	PROCESS_PRIORITY_VERYLOW = 0,
-	PROCESS_PRIORITY_LOW = 1,
-	PROCESS_PRIORITY_NORMAL = 2,
-	PROCESS_PRIORITY_HIGH = 3,
-	PROCESS_PRIORITY_VERYHIGH = 4,
-}ProcessPriority;
-
 typedef enum ProcessCreateFlags
 {
 	PROCESS_CREATE_FLAG_MAX,
@@ -62,6 +43,27 @@ typedef struct ProcessCreateInfo
 
 class Process : public pantheon::Allocatable<Process, 128>, public pantheon::Lockable
 {
+public:
+	typedef enum State
+	{
+		STATE_INIT,
+		STATE_RUNNING,
+		STATE_ZOMBIE,
+		STATE_TERMINATED,
+		STATE_MAX,
+	}ProcessState;
+
+	typedef enum Priority
+	{
+		PRIORITY_VERYLOW = 0,
+		PRIORITY_LOW = 1,
+		PRIORITY_NORMAL = 2,
+		PRIORITY_HIGH = 3,
+		PRIORITY_VERYHIGH = 4,
+	}ProcessPriority;
+
+	typedef UINT32 ID;
+
 public:
 	Process();
 	~Process() override;
@@ -84,31 +86,23 @@ public:
 	[[nodiscard]] pantheon::vmm::PhysicalAddress GetTTBR0() const;
 	[[nodiscard]] pantheon::vmm::PageTable *GetPageTable() const;
 
+	static const constexpr UINT64 StackPages = 16;
 	static const constexpr pantheon::vmm::VirtualAddress StackAddr = 0xFFFFFFFFF000;
 
 private:
-	UINT32 PID;
-	String ProcessCommand;
+	ID PID;
+	String ProcessString;
 	
-	ProcessState CurState;
-	ProcessPriority Priority;
+	State CurState;
+	Priority CurPriority;
 
 	pantheon::vmm::VirtualAddress EntryPoint;
 
 	/* Note that TTBR0 refers to the physical address of MemoryMap. */
 	pantheon::vmm::PhysicalAddress TTBR0;
 	pantheon::vmm::PageTable *MemoryMap;
-	pantheon::HandleTable HandTable;	
 
-private:
-	Process(const char *CommandString);
-	Process(String &CommandString);
-	Process(const Process &Other) noexcept;
-	Process(Process &&Other) noexcept;
-
-	void CreateBlankPageTable();
-	void SetPageTable(pantheon::vmm::PageTable *Root, pantheon::vmm::PhysicalAddress PageTablePhysicalAddr);
-
+	pantheon::HandleTable HandTable;
 };
 
 void InitProcessTables();
