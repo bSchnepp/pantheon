@@ -45,6 +45,7 @@ void pantheon::Process::Initialize(const pantheon::ProcessCreateInfo &CreateInfo
 	this->ProcessString = CreateInfo.Name;
 	this->PID = pantheon::AcquireProcessID();
 	this->TTBR0 = pantheon::PageAllocator::Alloc();
+	this->EntryPoint = CreateInfo.EntryPoint;
 
 	pantheon::vmm::VirtualAddress NewTableVAddr = pantheon::vmm::PhysicalToVirtualAddress(this->TTBR0);
 	pantheon::vmm::PageTable *PgTable = reinterpret_cast<pantheon::vmm::PageTable*>(NewTableVAddr);

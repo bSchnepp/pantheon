@@ -89,6 +89,8 @@ public:
 	static const constexpr UINT64 StackPages = 16;
 	static const constexpr pantheon::vmm::VirtualAddress StackAddr = 0xFFFFFFFFF000;
 
+	[[nodiscard]] pantheon::vmm::VirtualAddress GetEntryPoint() const { return this->EntryPoint; }
+
 private:
 	ID PID;
 	String ProcessString;

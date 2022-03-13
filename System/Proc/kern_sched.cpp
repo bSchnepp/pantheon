@@ -486,6 +486,32 @@ BOOL pantheon::GlobalScheduler::MapPages(UINT32 PID, pantheon::vmm::VirtualAddre
 	return Success;
 }
 
+BOOL pantheon::GlobalScheduler::RunProcess(UINT32 PID)
+{
+	BOOL Success = FALSE;
+	pantheon::vmm::VirtualAddress Entry = 0x00;
+	AccessSpinlock.Acquire();
+	for (pantheon::Process &Proc : GlobalScheduler::ProcessList)
+	{
+		if (Proc.ProcessID() == PID)
+		{
+			Proc.Lock();
+			Proc.SetState(pantheon::Process::STATE_RUNNING);
+			Entry = Proc.GetEntryPoint();
+			Success = TRUE;
+			Proc.Unlock();
+			break;
+		}
+	}
+	AccessSpinlock.Release();
+
+	if (Success)
+	{
+		pantheon::GlobalScheduler::CreateUserThread(PID, (void*)(Entry), nullptr);
+	}
+	return Success;	
+}
+
 BOOL pantheon::GlobalScheduler::SetState(UINT32 PID, pantheon::Process::State State)
 {
 	BOOL Success = FALSE;
