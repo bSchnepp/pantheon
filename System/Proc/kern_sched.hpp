@@ -39,10 +39,10 @@ public:
 	static void Init();
 
 	static UINT32 CreateProcess(const pantheon::String &ProcStr, void *StartAddr);
-	static pantheon::Thread *CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority = pantheon::THREAD_PRIORITY_NORMAL);
+	static pantheon::Thread *CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
 
-	static pantheon::Thread *CreateUserThread(UINT32 PID, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority = pantheon::THREAD_PRIORITY_NORMAL);
-	static pantheon::Thread *CreateUserThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority = pantheon::THREAD_PRIORITY_NORMAL);
+	static pantheon::Thread *CreateUserThread(UINT32 PID, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
+	static pantheon::Thread *CreateUserThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
 
 	static UINT64 CountThreads(UINT64 PID);
 
@@ -61,7 +61,7 @@ private:
 	inline static LinkedList<Thread> ThreadList;
 
 private:
-	static Thread *CreateUserThreadCommon(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority);
+	static Thread *CreateUserThreadCommon(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority);
 };
 
 UINT32 AcquireProcessID();

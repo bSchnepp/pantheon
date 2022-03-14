@@ -31,8 +31,8 @@ VOID pantheon::SVCExitProcess()
 	CurThread->MyProc()->Unlock();
 
 	CurThread->Lock();
-	CurThread->SetState(pantheon::THREAD_STATE_TERMINATED);
-	CurThread->SetState(pantheon::THREAD_STATE_DEAD);
+	CurThread->SetState(pantheon::Thread::STATE_TERMINATED);
+	CurThread->SetState(pantheon::Thread::STATE_DEAD);
 	CurThread->Unlock();
 	
 	pantheon::CPU::GetCoreInfo()->CurSched->Reschedule();
@@ -351,7 +351,7 @@ pantheon::Result pantheon::SVCExitThread()
 	pantheon::Scheduler *CurSched = pantheon::CPU::GetCurSched();
 	CurProc->Lock();
 	CurThread->Lock();
-	CurThread->SetState(pantheon::THREAD_STATE_TERMINATED);
+	CurThread->SetState(pantheon::Thread::STATE_TERMINATED);
 	CurThread->Unlock();
 
 	if (pantheon::GetGlobalScheduler()->CountThreads(CurThread->MyProc()->ProcessID()) == 0)
@@ -406,7 +406,7 @@ pantheon::Result pantheon::SVCExecute()
 	{
 		pantheon::Thread *Other = Hand->GetContent().Thread;
 		Other->Lock();
-		Other->SetState(pantheon::THREAD_STATE_WAITING);
+		Other->SetState(pantheon::Thread::STATE_WAITING);
 		Other->Unlock();
 
 		Proc->Unlock();

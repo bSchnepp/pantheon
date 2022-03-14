@@ -17,8 +17,8 @@ pantheon::Thread::Thread() : pantheon::Lockable("Thread")
 	this->Lock();
 	this->ParentProcess = nullptr;
 	this->PreemptCount = 1;
-	this->Priority = pantheon::THREAD_PRIORITY_NORMAL;
-	this->State = pantheon::THREAD_STATE_TERMINATED;
+	this->CurPriority = pantheon::Thread::PRIORITY_NORMAL;
+	this->CurState = pantheon::Thread::STATE_TERMINATED;
 	this->RemainingTicks = 0;
 	this->Registers.Wipe();
 	this->KernelStackSpace = nullptr;
@@ -34,7 +34,7 @@ pantheon::Thread::Thread() : pantheon::Lockable("Thread")
  * register the current thread.
  */
 pantheon::Thread::Thread(Process *OwningProcess) 
-	: pantheon::Thread::Thread(OwningProcess, pantheon::THREAD_PRIORITY_NORMAL)
+	: pantheon::Thread::Thread(OwningProcess, pantheon::Thread::PRIORITY_NORMAL)
 {
 }
 
@@ -46,11 +46,11 @@ pantheon::Thread::Thread(Process *OwningProcess)
  * \~english @param Priority The priority of the current thread. The thread
  * priority given will never be greater than the supplied priority. 
  */
-pantheon::Thread::Thread(Process *OwningProcess, ThreadPriority Priority) : pantheon::Lockable("Thread")
+pantheon::Thread::Thread(Process *OwningProcess, Priority Pri) : pantheon::Lockable("Thread")
 {
 	this->Lock();
 	this->ParentProcess = OwningProcess;
-	this->Priority = Priority;
+	this->CurPriority = Pri;
 	this->KernelStackSpace = nullptr;
 	this->UserStackSpace = nullptr;
 
@@ -58,7 +58,7 @@ pantheon::Thread::Thread(Process *OwningProcess, ThreadPriority Priority) : pant
 	this->RemainingTicks = 0;
 
 	this->Registers.Wipe();
-	this->State = pantheon::THREAD_STATE_INIT;
+	this->CurState = pantheon::Thread::STATE_INIT;
 
 	this->TID = AcquireThreadID();
 
@@ -72,10 +72,10 @@ pantheon::Thread::Thread(const pantheon::Thread &Other) : pantheon::Lockable("Th
 	this->Lock();
 	this->ParentProcess = Other.ParentProcess;
 	this->PreemptCount = Other.PreemptCount;
-	this->Priority = Other.Priority;
+	this->CurPriority = Other.CurPriority;
 	this->Registers = Other.Registers;
 	this->RemainingTicks = Other.RemainingTicks;
-	this->State = Other.State;
+	this->CurState = Other.CurState;
 	this->TID = Other.TID;
 	this->KernelStackSpace = Other.KernelStackSpace;
 	this->UserStackSpace = Other.UserStackSpace;
@@ -87,10 +87,10 @@ pantheon::Thread::Thread(pantheon::Thread &&Other) noexcept : pantheon::Lockable
 	this->Lock();
 	this->ParentProcess = Other.ParentProcess;
 	this->PreemptCount = Other.PreemptCount;
-	this->Priority = Other.Priority;
+	this->CurPriority = Other.CurPriority;
 	this->Registers = Other.Registers;
 	this->RemainingTicks = Other.RemainingTicks;
-	this->State = Other.State;
+	this->CurState = Other.CurState;
 	this->TID = Other.TID;
 	this->KernelStackSpace = Other.KernelStackSpace;
 	this->UserStackSpace = Other.UserStackSpace;
@@ -127,19 +127,19 @@ pantheon::Process *pantheon::Thread::MyProc() const
  * \~english @author Brian Schnepp
  * \~english @return The current status of this thread
  */
-pantheon::ThreadState pantheon::Thread::MyState()
+pantheon::Thread::State pantheon::Thread::MyState()
 {
 	OBJECT_SELF_ASSERT(this);
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("MyState without lock");
 	}
-	UINT64 State = this->State;	/* ubsan says this is a problem. */
-	if (State > pantheon::THREAD_STATE_MAX)
+	UINT64 State = this->CurState;	/* ubsan says this is a problem. */
+	if (State > pantheon::Thread::STATE_MAX)
 	{
-		StopErrorFmt("Invalid thread state: got 0x%lx\n", this->State);
+		StopErrorFmt("Invalid thread state: got 0x%lx\n", this->CurState);
 	}
-	return this->State;
+	return this->CurState;
 }
 
 /**
@@ -148,14 +148,14 @@ pantheon::ThreadState pantheon::Thread::MyState()
  * \~english @return The current priority of this thread
  */
 [[nodiscard]]
-pantheon::ThreadPriority pantheon::Thread::MyPriority()
+pantheon::Thread::Priority pantheon::Thread::MyPriority()
 {
 	OBJECT_SELF_ASSERT(this);
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("MyPriority without lock");
 	}
-	return this->Priority;
+	return this->CurPriority;
 }
 
 /**
@@ -230,21 +230,21 @@ VOID pantheon::Thread::RefreshTicks()
 	{
 		StopError("RefreshTicks without lock");
 	}
-	this->RemainingTicks = static_cast<UINT64>((this->Priority + 1)) * 3;
+	this->RemainingTicks = static_cast<UINT64>((this->CurPriority + 1)) * 3;
 }
 
 /**
  * \~english @brief Sets the state, such as running, to the current process.
  * \~english @author Brian Schnepp
  */
-VOID pantheon::Thread::SetState(ThreadState State)
+VOID pantheon::Thread::SetState(Thread::State St)
 {
 	OBJECT_SELF_ASSERT(this);
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("SetState without lock");
 	}	
-	this->State = State;
+	this->CurState = St;
 }
 
 VOID pantheon::Thread::SetTicks(UINT64 TickCount)
@@ -264,7 +264,7 @@ VOID pantheon::Thread::SetTicks(UINT64 TickCount)
  * as a network services daemon, which does not need to run too often.
  * \~english @author Brian Schnepp
  */
-VOID pantheon::Thread::SetPriority(ThreadPriority Priority)
+VOID pantheon::Thread::SetPriority(Thread::Priority Pri)
 {
 	OBJECT_SELF_ASSERT(this);
 	if (this->IsLocked() == FALSE)
@@ -272,9 +272,9 @@ VOID pantheon::Thread::SetPriority(ThreadPriority Priority)
 		StopError("SetPriority without lock");
 	}
 
-	if (Priority <= this->Priority)
+	if (Pri <= this->CurPriority)
 	{
-		this->Priority = Priority;
+		this->CurPriority = Pri;
 	}
 }
 
@@ -305,10 +305,10 @@ pantheon::Thread &pantheon::Thread::operator=(const pantheon::Thread &Other)
 	Lockable::operator=(Other);
 	this->ParentProcess = Other.ParentProcess;
 	this->PreemptCount = Other.PreemptCount;
-	this->Priority = Other.Priority;
+	this->CurPriority = Other.CurPriority;
 	this->Registers = Other.Registers;
 	this->RemainingTicks = Other.RemainingTicks;
-	this->State = Other.State;
+	this->CurState = Other.CurState;
 	this->TID = Other.TID;
 
 	/* Is this right? */
@@ -327,10 +327,10 @@ pantheon::Thread &pantheon::Thread::operator=(pantheon::Thread &&Other) noexcept
 	Lockable::operator=(Other);
 	this->ParentProcess = Other.ParentProcess;
 	this->PreemptCount = Other.PreemptCount;
-	this->Priority = Other.Priority;
+	this->CurPriority = Other.CurPriority;
 	this->Registers = Other.Registers;
 	this->RemainingTicks = Other.RemainingTicks;
-	this->State = Other.State;
+	this->CurState = Other.CurState;
 	this->TID = Other.TID;
 	this->KernelStackSpace = Other.KernelStackSpace;
 	this->UserStackSpace = Other.UserStackSpace;
