@@ -30,4 +30,6 @@ typedef struct InitialBootInfo
 
 InitialBootInfo *GetInitBootInfo();
 
+#define PHYSICAL_MAP_AREA_ADDRESS (0xFFFF000000000000)
+
 #endif

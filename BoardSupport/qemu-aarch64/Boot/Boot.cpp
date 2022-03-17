@@ -52,7 +52,7 @@ InitialBootInfo *GetInitBootInfo()
  */
 alignas(0x1000) static pantheon::vmm::PageTable LowerHalfTables[2];
 
-static constexpr UINT64 NumHigherHalfTables = 32;
+static constexpr UINT64 NumHigherHalfTables = 128;
 alignas(0x1000) static pantheon::vmm::PageTable HigherHalfTables[NumHigherHalfTables];
 
 static constexpr void CreateInitialTables(pantheon::vmm::PageTable *RootTable)
@@ -511,6 +511,8 @@ static void SetupPageTables()
 	pantheon::vmm::VirtualAddress EndAddrBSS = reinterpret_cast<pantheon::vmm::VirtualAddress>(&BSS_END);
 	InitialPageTables.MapLower(&TTBR1, BaseAddrBSS, BaseAddrPhysBSS, EndAddrBSS - BaseAddrBSS, NoExecute);
 
+
+
 	/* Run kernel constructors here */
 
 	/* TODO: make rodata actually read only */
@@ -566,6 +568,45 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 		 * the area.
 		 */
 		InitializeMemory(dtb);
+
+		/* For everything in InitBootInfo, map the appropriate physical memory */
+		for (UINT64 Index = 0; Index < InitBootInfo.NumMemoryAreas; ++Index)
+		{
+			pantheon::vmm::PageTableEntry Entry;
+			Entry.SetBlock(TRUE);
+			Entry.SetMapped(TRUE);
+			Entry.SetUserNoExecute(TRUE);
+			Entry.SetKernelNoExecute(FALSE);
+
+			/* For now, allow anything since we don't have a real userland yet.
+			* We'll need to create page allocators for userland at some point,
+			* but for now let everything share the same address space.
+			*/
+			UINT64 PagePermission = 0;
+			PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_KERN;
+			PagePermission |= pantheon::vmm::PAGE_PERMISSION_EXECUTE_KERN; 
+			PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_USER;
+			PagePermission |= pantheon::vmm::PAGE_PERMISSION_EXECUTE_USER;
+			Entry.SetPagePermissions(PagePermission);
+
+			Entry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
+			Entry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
+			Entry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
+
+			UINT64 NoExecutePermission = 0;
+			NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_KERN;
+			NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_KERN; 
+			NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_USER;
+			pantheon::vmm::PageTableEntry NoExecute(Entry);
+			NoExecute.SetPagePermissions(NoExecutePermission);
+
+			UINT64 ByteCount = InitBootInfo.InitMemoryAreas[Index].Size - 1;
+			ByteCount *= (8 * pantheon::vmm::SmallestPageSize);
+
+			pantheon::vmm::PhysicalAddress StartArea = InitBootInfo.InitMemoryAreas[Index].BaseAddress;
+			pantheon::vmm::VirtualAddress BeginPhysicalArea = StartArea + PHYSICAL_MAP_AREA_ADDRESS;
+			InitialPageTables.MapLower(&TTBR1, BeginPhysicalArea, StartArea, ByteCount, NoExecute);
+		}		
 	}
 	return GetInitBootInfo();
 }

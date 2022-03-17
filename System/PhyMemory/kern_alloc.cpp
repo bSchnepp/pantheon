@@ -1,3 +1,4 @@
+#include <vmm/vmm.hpp>
 #include <vmm/pte.hpp>
 #include <Boot/Boot.hpp>
 #include <Sync/kern_spinlock.hpp>
@@ -161,6 +162,11 @@ UINT64 pantheon::PageAllocator::Alloc()
 	UINT64 Addr = FindPage();
 	AllocatePage(Addr);
 	AllocLock.Release();
+
+	if (Addr != 0x00)
+	{
+		ClearBuffer((CHAR*)pantheon::vmm::PhysicalToVirtualAddress(Addr), pantheon::vmm::SmallestPageSize);
+	}
 
 	return Addr;
 }

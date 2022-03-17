@@ -8,6 +8,8 @@
 #include <arch/aarch64/vmm/pte.hpp>
 #include <Common/Structures/kern_slab.hpp>
 
+#include <Boot/Boot.hpp>
+
 #ifndef _AARCH64_VIRT_MEM_HPP_
 #define _AARCH64_VIRT_MEM_HPP_
 
@@ -19,8 +21,7 @@ namespace pantheon::vmm
 
 FORCE_INLINE VirtualAddress PhysicalToVirtualAddress(PhysicalAddress PhyAddr)
 {
-	/* TODO */
-	return PhyAddr;
+	return PhyAddr + PHYSICAL_MAP_AREA_ADDRESS; 
 }
 
 static constexpr FORCE_INLINE UINT16 VirtAddrToPageTableIndex(pantheon::vmm::VirtualAddress VAddr, UINT8 Level)

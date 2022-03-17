@@ -81,7 +81,6 @@ void pantheon::Process::Initialize(const pantheon::ProcessCreateInfo &CreateInfo
 	for (UINT8 Index = 0; Index < Process::StackPages; Index++)
 	{
 		PAddrs[Index] = pantheon::PageAllocator::Alloc();
-		ClearBuffer((CHAR*)pantheon::vmm::PhysicalToVirtualAddress(PAddrs[Index]), pantheon::vmm::SmallestPageSize);
 		VAddrs[Index] = StackAddr - pantheon::vmm::SmallestPageSize * Index;
 	}
 
