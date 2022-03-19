@@ -32,6 +32,7 @@ static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, UINT32 Proc)
 
 		const char *ProgramLocation = ElfLocation + PrgHeaderTable[Index].p_offset;
 		UINT64 NumPages = Align<UINT64>(CurSize, pantheon::vmm::SmallestPageSize) / pantheon::vmm::SmallestPageSize;
+
 		for (UINT64 Count = 0; Count < NumPages; Count++)
 		{
 			/* Create a new page for every part of the program section... */

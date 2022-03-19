@@ -118,7 +118,7 @@ pantheon::Thread::~Thread()
 [[nodiscard]]
 pantheon::Process *pantheon::Thread::MyProc() const
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	return this->ParentProcess;
 }
 
@@ -129,7 +129,7 @@ pantheon::Process *pantheon::Thread::MyProc() const
  */
 pantheon::Thread::State pantheon::Thread::MyState()
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("MyState without lock");
@@ -150,7 +150,7 @@ pantheon::Thread::State pantheon::Thread::MyState()
 [[nodiscard]]
 pantheon::Thread::Priority pantheon::Thread::MyPriority()
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("MyPriority without lock");
@@ -166,7 +166,7 @@ pantheon::Thread::Priority pantheon::Thread::MyPriority()
 [[nodiscard]]
 BOOL pantheon::Thread::Preempted() const
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	return this->PreemptCount != 0;
 }
 
@@ -179,7 +179,7 @@ BOOL pantheon::Thread::Preempted() const
  */
 UINT64 pantheon::Thread::TicksLeft() const
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	return this->RemainingTicks;
 }
 
@@ -189,7 +189,7 @@ UINT64 pantheon::Thread::TicksLeft() const
  */
 VOID pantheon::Thread::CountTick()
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("CountTicks without lock");
@@ -205,7 +205,7 @@ VOID pantheon::Thread::CountTick()
 [[nodiscard]]
 UINT64 pantheon::Thread::ThreadID() const
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	return this->TID;
 }
 
@@ -215,7 +215,7 @@ UINT64 pantheon::Thread::ThreadID() const
  */
 VOID pantheon::Thread::AddTicks(UINT64 TickCount)
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("AddTicks without lock");
@@ -225,7 +225,7 @@ VOID pantheon::Thread::AddTicks(UINT64 TickCount)
 
 VOID pantheon::Thread::RefreshTicks()
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("RefreshTicks without lock");
@@ -239,7 +239,7 @@ VOID pantheon::Thread::RefreshTicks()
  */
 VOID pantheon::Thread::SetState(Thread::State St)
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("SetState without lock");
@@ -249,7 +249,7 @@ VOID pantheon::Thread::SetState(Thread::State St)
 
 VOID pantheon::Thread::SetTicks(UINT64 TickCount)
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("SetTicks without lock");
@@ -266,7 +266,7 @@ VOID pantheon::Thread::SetTicks(UINT64 TickCount)
  */
 VOID pantheon::Thread::SetPriority(Thread::Priority Pri)
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("SetPriority without lock");
@@ -284,7 +284,7 @@ VOID pantheon::Thread::SetPriority(Thread::Priority Pri)
  */
 pantheon::CpuContext *pantheon::Thread::GetRegisters()
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("GetRegisters without lock");
@@ -296,7 +296,7 @@ pantheon::CpuContext *pantheon::Thread::GetRegisters()
 
 pantheon::Thread &pantheon::Thread::operator=(const pantheon::Thread &Other)
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	if (this == &Other)
 	{
 		return *this;
@@ -319,7 +319,7 @@ pantheon::Thread &pantheon::Thread::operator=(const pantheon::Thread &Other)
 
 pantheon::Thread &pantheon::Thread::operator=(pantheon::Thread &&Other) noexcept
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	if (this == &Other)
 	{
 		return *this;
@@ -339,7 +339,7 @@ pantheon::Thread &pantheon::Thread::operator=(pantheon::Thread &&Other) noexcept
 
 void pantheon::Thread::SetKernelStackAddr(UINT64 Addr)
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("SetKernelStackAddr without lock");
@@ -351,7 +351,7 @@ void pantheon::Thread::SetKernelStackAddr(UINT64 Addr)
 
 void pantheon::Thread::SetUserStackAddr(UINT64 Addr)
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("SetUserStackAddr without lock");
@@ -363,7 +363,7 @@ void pantheon::Thread::SetUserStackAddr(UINT64 Addr)
 
 void pantheon::Thread::SetProc(pantheon::Process *Proc)
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("SetProc without lock");
@@ -373,7 +373,7 @@ void pantheon::Thread::SetProc(pantheon::Process *Proc)
 
 void pantheon::Thread::BlockScheduling()
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	this->Lock();
 	pantheon::Sync::DSBISH();
 	this->PreemptCount++;
@@ -383,7 +383,7 @@ void pantheon::Thread::BlockScheduling()
 
 void pantheon::Thread::EnableScheduling()
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	this->Lock();
 	pantheon::Sync::DSBISH();
 	this->PreemptCount--;

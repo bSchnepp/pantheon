@@ -219,6 +219,6 @@ BOOL Panicked();
 
 }
 
-#define OBJECT_SELF_ASSERT(x) if ((x) == nullptr) { StopError("called method was nullptr"); }
+#define OBJECT_SELF_ASSERT() if ((this) == nullptr) { StopError("called method was nullptr"); }
 
 #endif

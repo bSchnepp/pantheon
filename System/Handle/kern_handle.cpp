@@ -38,12 +38,12 @@ pantheon::Handle::~Handle()
 
 pantheon::HandleContent &pantheon::Handle::GetContent()
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	return this->Content;
 }
 
 pantheon::HandleType pantheon::Handle::GetType()
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	return this->Type;
 }

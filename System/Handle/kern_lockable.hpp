@@ -30,19 +30,19 @@ public:
 
 	void Lock()
 	{
-		OBJECT_SELF_ASSERT(this);
+		OBJECT_SELF_ASSERT();
 		this->ObjLock.Acquire();
 	}
 
 	void Unlock()
 	{
-		OBJECT_SELF_ASSERT(this);
+		OBJECT_SELF_ASSERT();
 		this->ObjLock.Release();
 	}
 
 	BOOL IsLocked()
 	{
-		OBJECT_SELF_ASSERT(this);
+		OBJECT_SELF_ASSERT();
 		return this->ObjLock.IsLocked();
 	}
 

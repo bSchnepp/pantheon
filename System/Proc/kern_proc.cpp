@@ -39,7 +39,7 @@ pantheon::Process::~Process()
 
 void pantheon::Process::Initialize(const pantheon::ProcessCreateInfo &CreateInfo)
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	this->CurState = pantheon::Process::STATE_INIT;
 	this->CurPriority = pantheon::Process::PRIORITY_NORMAL;
 	this->ProcessString = CreateInfo.Name;
@@ -106,7 +106,7 @@ void pantheon::Process::Initialize(const pantheon::ProcessCreateInfo &CreateInfo
 
 pantheon::Process &pantheon::Process::operator=(const pantheon::Process &Other)
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	if (this == &Other)
 	{
 		return *this;
@@ -123,7 +123,7 @@ pantheon::Process &pantheon::Process::operator=(const pantheon::Process &Other)
 
 pantheon::Process &pantheon::Process::operator=(pantheon::Process &&Other) noexcept
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	if (this == &Other)
 	{
 		return *this;
@@ -142,7 +142,7 @@ pantheon::Process &pantheon::Process::operator=(pantheon::Process &&Other) noexc
 [[nodiscard]]
 const pantheon::String &pantheon::Process::GetProcessString() const
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	return this->ProcessString;
 }
 
@@ -151,7 +151,7 @@ extern "C" CHAR *USER_END;
 
 void pantheon::Process::MapAddress(const pantheon::vmm::VirtualAddress &VAddresses, const pantheon::vmm::PhysicalAddress &PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes)
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("Process not locked when mapping addresses\n");
@@ -163,14 +163,14 @@ void pantheon::Process::MapAddress(const pantheon::vmm::VirtualAddress &VAddress
 [[nodiscard]]
 UINT32 pantheon::Process::ProcessID() const
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	return this->PID;
 }
 
 [[nodiscard]] 
 pantheon::Process::State pantheon::Process::MyState() const
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	/* ubsan says there is an error here */
 	if (this->CurState > pantheon::Process::STATE_MAX)
 	{
@@ -181,7 +181,7 @@ pantheon::Process::State pantheon::Process::MyState() const
 
 void pantheon::Process::SetState(pantheon::Process::State State)
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("Process not locked with SetState");
@@ -192,7 +192,7 @@ void pantheon::Process::SetState(pantheon::Process::State State)
 
 INT64 pantheon::Process::EncodeHandle(const pantheon::Handle &NewHand)
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("Process not locked with EncodeHandle");
@@ -202,7 +202,7 @@ INT64 pantheon::Process::EncodeHandle(const pantheon::Handle &NewHand)
 
 pantheon::Handle *pantheon::Process::GetHandle(INT32 HandleID)
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("Process not locked with GetHandle");
@@ -214,14 +214,14 @@ pantheon::Handle *pantheon::Process::GetHandle(INT32 HandleID)
 [[nodiscard]] 
 pantheon::vmm::PhysicalAddress pantheon::Process::GetTTBR0() const
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	return this->TTBR0;
 }
 
 [[nodiscard]] 
 pantheon::vmm::PageTable *pantheon::Process::GetPageTable() const
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	return this->MemoryMap;
 }
 	
