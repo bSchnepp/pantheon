@@ -55,6 +55,14 @@ alignas(0x1000) static pantheon::vmm::PageTable LowerHalfTables[2];
 static constexpr UINT64 NumHigherHalfTables = 128;
 alignas(0x1000) static pantheon::vmm::PageTable HigherHalfTables[NumHigherHalfTables];
 
+
+alignas(4096) static char BootStackArea[MAX_NUM_CPUS * DEFAULT_STACK_SIZE];
+void *GetBootStackArea(UINT64 Core)
+{
+	return BootStackArea + static_cast<UINT64>(Core * DEFAULT_STACK_SIZE);
+}
+
+
 static constexpr void CreateInitialTables(pantheon::vmm::PageTable *RootTable)
 {
 	pantheon::vmm::PageTableEntry Entry;

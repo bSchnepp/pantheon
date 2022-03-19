@@ -3,6 +3,7 @@
 #include <kern_datatypes.hpp>
 #include <System/Proc/kern_cpu.hpp>
 
+#include "Boot.hpp"
 #include "BootDriver.hpp"
 #include "PSCI/PSCI.hpp"
 
@@ -91,13 +92,6 @@ void DriverHandleDTB(const CHAR *DriverName, DeviceTreeBlob *CurState)
 		}
 	}
 }
-
-alignas(4096) static char BootStackArea[MAX_NUM_CPUS * DEFAULT_STACK_SIZE];
-static void *GetBootStackArea(UINT64 Core)
-{
-	return BootStackArea + static_cast<UINT64>(Core * DEFAULT_STACK_SIZE);
-}
-
 
 void FiniDriver(const CHAR *DriverName, UINT64 Address)
 {

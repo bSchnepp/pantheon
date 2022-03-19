@@ -29,6 +29,7 @@ typedef struct InitialBootInfo
 }InitialBootInfo;
 
 InitialBootInfo *GetInitBootInfo();
+void *GetBootStackArea(UINT64 Core);
 
 #define PHYSICAL_MAP_AREA_ADDRESS (0xFFFF000000000000)
 

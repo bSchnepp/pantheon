@@ -46,7 +46,6 @@ void kern_init_core()
 
 static void kern_basic_init(InitialBootInfo *InitBootInfo)
 {
-	BoardRuntimeInit();
 	pantheon::InitBasicRuntime();
 	pantheon::PageAllocator::InitPageAllocator(InitBootInfo);
 	pantheon::InitBasicMemory();
@@ -63,10 +62,10 @@ static void kern_stage2_init()
 
 void kern_init(InitialBootInfo *InitBootInfo)
 {
-
 	if (pantheon::CPU::GetProcessorNumber() == 0)
 	{
-		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);		
+		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_INIT);
+		BoardRuntimeInit();
 		kern_basic_init(InitBootInfo);
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_SECOND_STAGE);
 		kern_stage2_init();
