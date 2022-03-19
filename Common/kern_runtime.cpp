@@ -8,8 +8,7 @@
 #include <System/PhyMemory/kern_alloc.hpp>
 
 #include <printf/printf.h>
-
-#include <Board.hpp>
+#include <BoardRuntime/BoardRT.hpp>
 
 VOID WriteMMIOU64(UINT64 Addr, UINT64 Value)
 {

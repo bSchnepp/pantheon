@@ -10,6 +10,7 @@
 #include <System/Exec/kern_initialprograms.hpp>
 
 #include <Boot/Boot.hpp>
+#include <BoardRuntime/BoardRT.hpp>
 
 
 extern "C" void sysm_Main();
@@ -45,6 +46,7 @@ void kern_init_core()
 
 static void kern_basic_init(InitialBootInfo *InitBootInfo)
 {
+	BoardRuntimeInit();
 	pantheon::InitBasicRuntime();
 	pantheon::PageAllocator::InitPageAllocator(InitBootInfo);
 	pantheon::InitBasicMemory();
