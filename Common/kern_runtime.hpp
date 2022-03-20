@@ -145,7 +145,7 @@ BOOL FORCE_INLINE StringCompare(const CHAR *Arg1, const CHAR *Arg2, UINT64 Amt)
 	return TRUE;
 }
 
-void FORCE_INLINE SetBufferBytes(CHAR *Location, UINT8 Value, UINT32 Amount)
+void FORCE_INLINE SetBufferBytes(UINT8 *Location, UINT8 Value, UINT32 Amount)
 {
 	UINT32 Index = 0;
 
@@ -161,9 +161,9 @@ void FORCE_INLINE SetBufferBytes(CHAR *Location, UINT8 Value, UINT32 Amount)
 	}
 }
 
-void FORCE_INLINE ClearBuffer(CHAR *Location, UINT32 Amount)
+void FORCE_INLINE ClearBuffer(const CHAR *Location, UINT32 Amount)
 {
-	SetBufferBytes(Location, 0x00, Amount);
+	SetBufferBytes((UINT8*)Location, 0x00, Amount);
 }
 
 void FORCE_INLINE CopyMemory(VOID *Dest, VOID *Src, UINT64 Amt)

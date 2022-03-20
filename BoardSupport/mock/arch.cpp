@@ -7,6 +7,8 @@
 #include <Proc/kern_cpu.hpp>
 #include <System/Syscalls/Syscalls.hpp>
 
+#include <stdio.h>
+
 void createprocess_tail()
 {
 
@@ -72,7 +74,8 @@ extern "C" VOID drop_usermode(UINT64 PC)
 
 extern "C" UINT64 svc_LogText(const CHAR *Text)
 {
-	return pantheon::SVCLogText(Text);
+	printf("%s\n", Text);
+	return 0;
 }
 
 #include <stdlib.h>
@@ -82,7 +85,7 @@ extern "C" void *svc_AllocateBuffer(UINT64 Sz)
 	return malloc(Sz);
 }
 
-extern "C" void svc_CreateThread(void *Entry, VOID *Reserved, void *StackTop, pantheon::ThreadPriority Priority)
+extern "C" void svc_CreateThread(void *Entry, VOID *Reserved, void *StackTop, pantheon::Thread::Priority Priority)
 {
 	PANTHEON_UNUSED(Entry);
 	PANTHEON_UNUSED(Reserved);
@@ -117,3 +120,25 @@ UINT64 pantheon::CPU::ICOUNT()
 	pantheon::CPU::CoreInfo *CoreInfo = pantheon::CPU::GetCoreInfo();
 	return CoreInfo->NOff;	
 }
+
+VOID pantheon::CPU::LIDT(void *Loc)
+{
+
+}
+
+CHAR *PRE_KERN_AREA = nullptr;
+CHAR *PRE_KERN_END = nullptr;
+CHAR *USER_BEGIN = nullptr;
+CHAR *USER_END = nullptr;
+CHAR *TEXT_AREA = nullptr;
+CHAR *TEXT_PHY_AREA = nullptr;
+CHAR *TEXT_END = nullptr;
+CHAR *RODATA_AREA = nullptr;
+CHAR *RODATA_PHY_AREA = nullptr;
+CHAR *RODATA_END = nullptr;
+CHAR *DATA_AREA = nullptr;
+CHAR *DATA_PHY_AREA = nullptr;
+CHAR *DATA_END = nullptr;
+CHAR *BSS_AREA = nullptr;
+CHAR *BSS_PHY_AREA = nullptr;
+CHAR *BSS_END = nullptr;

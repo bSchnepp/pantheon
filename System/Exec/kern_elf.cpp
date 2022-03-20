@@ -11,7 +11,7 @@ Optional<ELFFileHeader64> pantheon::exec::ParseElfFileHeader(void *Data)
 	CopyMemory(&FinalHeader, Data, sizeof(ELFFileHeader64));
 
 	/* Now, make sure the data makes sense. */
-	constexpr const char MagicData[] = {0x7F, 'E', 'L', 'F'};
+	constexpr const unsigned char MagicData[] = {0x7F, 'E', 'L', 'F'};
 	for (UINT8 Index = 0; Index < 4; Index++)
 	{
 		if (FinalHeader.e_ident[Index + 0] != MagicData[Index])

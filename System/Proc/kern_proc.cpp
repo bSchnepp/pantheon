@@ -48,13 +48,17 @@ pantheon::Process::~Process() = default;
 
 
 /**
- * @brief Initializes a process with appropriate state.
+ * @brief Initializes a process with appropriate state. Must be locked before use.
  * @details A process is initialized with state as needed from CreateInfo, where it is used to set up initial memory mapped locations, a user mode stack, a name, and the appropriate entry point for it.
  * @param CreateInfo The process creation info
  */
 void pantheon::Process::Initialize(const pantheon::ProcessCreateInfo &CreateInfo)
 {
 	OBJECT_SELF_ASSERT();
+	if (this->IsLocked() == FALSE)
+	{
+		pantheon::StopError("Process not locked in initialization");
+	}
 	this->CurState = pantheon::Process::STATE_INIT;
 	this->CurPriority = pantheon::Process::PRIORITY_NORMAL;
 	this->ProcessString = CreateInfo.Name;

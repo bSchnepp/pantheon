@@ -35,7 +35,7 @@ public:
 	Handle(pantheon::ipc::WritableEvent *Evt);
 	Handle(pantheon::Process *Proc);
 	Handle(pantheon::Thread *Thr);
-	~Handle();
+	~Handle() = default;
 
 	HandleType GetType();
 	HandleContent &GetContent();

@@ -80,7 +80,7 @@ void pantheon::InitBasicMemory()
 	/* Double check this, just to be sure. */
 	GlobalFreeList = nullptr;
 
-	SetBufferBytes(BasicMemory, 0x4D, HeapSpace);
+	SetBufferBytes((UINT8*)BasicMemory, 0x4D, HeapSpace);
 
 	/* Mark the ends as in use, so coalescing doesn't become a problem. */
 	SetSizeAlloc(((char*)(BasicMemory)), TRUE, sizeof(BlockHeader));
@@ -108,6 +108,10 @@ void LinkFreeList(VOID *Addr)
 	List->Next = GlobalFreeList;
 	GlobalFreeList = List;
 }
+
+#ifdef ONLY_TESTS
+#include <stdlib.h>
+#endif
 
 /**
  * \~english @brief Tries to allocate a block of memory from a static heap.
@@ -140,6 +144,10 @@ void LinkFreeList(VOID *Addr)
  */
 Optional<void*> BasicMalloc(UINT64 Amt)
 {
+	#ifdef ONLY_TESTS
+	return Optional<void*>(malloc(Amt));
+	#endif
+
 	/* If there's no space to allocate, don't even try. */
 	if (Amt == 0 || Amt > HeapSpace)
 	{
@@ -170,7 +178,7 @@ Optional<void*> BasicMalloc(UINT64 Amt)
 
 			Final = Current;
 			#if POISON_MEMORY
-				SetBufferBytes((CHAR*)Final, 0x3D, Amount);
+				SetBufferBytes((UINT8*)Final, 0x3D, Amount);
 			#endif
 			break;
 		}
@@ -181,6 +189,11 @@ Optional<void*> BasicMalloc(UINT64 Amt)
 
 void BasicFree(void *Addr)
 {
+	#ifdef ONLY_TESTS
+	free(Addr);
+	return;
+	#endif
+	
 	if (Addr == nullptr)
 	{
 		return;

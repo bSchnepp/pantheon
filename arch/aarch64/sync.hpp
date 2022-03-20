@@ -1,3 +1,4 @@
+#include <kern_runtime.hpp>
 #include <arch/aarch64/ints.hpp>
 #include <arch/aarch64/thread.hpp>
 

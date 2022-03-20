@@ -31,11 +31,6 @@ pantheon::Handle::Handle(pantheon::Thread *Thr)
 	this->Content.Thread = Thr;
 }
 
-pantheon::Handle::~Handle()
-{
-
-}
-
 pantheon::HandleContent &pantheon::Handle::GetContent()
 {
 	OBJECT_SELF_ASSERT();

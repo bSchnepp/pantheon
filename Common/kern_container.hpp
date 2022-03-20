@@ -63,7 +63,7 @@ public:
 		{
 			this->Content = (T*)MaybeMem.GetValue();
 			#if POISON_MEMORY
-				SetBufferBytes((char*)this->Content, 0xDF, InitCount * sizeof(T));
+				SetBufferBytes((UINT8*)this->Content, 0xDF, InitCount * sizeof(T));
 			#endif
 			this->SpaceCount = InitCount;
 			this->EntryCount = 0;
@@ -169,7 +169,7 @@ public:
 		{
 			T* NewArea = (T*)MaybeMem.GetValue();
 			#if POISON_MEMORY
-				SetBufferBytes((char*)NewArea, 0xDF, Other.EntryCount * sizeof(T));
+				SetBufferBytes((UINT8*)NewArea, 0xDF, Other.EntryCount * sizeof(T));
 			#endif			
 			for (UINT64 Index = 0; Index < Other.EntryCount; ++Index)
 			{
@@ -234,7 +234,7 @@ public:
 				NewContent[Index] = Current;
 			}
 			#if POISON_MEMORY
-				SetBufferBytes((char*)this->Content, 0xDF, this->SpaceCount * sizeof(T));
+				SetBufferBytes((UINT8*)this->Content, 0xDF, this->SpaceCount * sizeof(T));
 			#endif			
 			this->Free(this->Content);
 			this->Content = NewContent;

@@ -17,10 +17,14 @@
 /* HACK: This should be put in a better place.. */
 extern VOID PerCoreBoardInit();
 
+#ifndef ONLY_TESTS
 extern char interrupt_table[];
+#endif
 
 void PerCoreInit()
 {
+#ifndef ONLY_TESTS
 	pantheon::CPU::LIDT(interrupt_table);
+#endif
 	PerCoreBoardInit();
 }

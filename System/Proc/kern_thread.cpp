@@ -1,3 +1,4 @@
+#include <sync.hpp>
 #include <kern_datatypes.hpp>
 #include <Sync/kern_spinlock.hpp>
 

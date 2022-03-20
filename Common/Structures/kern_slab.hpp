@@ -21,7 +21,7 @@ template<typename T>
 class SlabCache
 {
 public:
-	static_assert(sizeof(T) >= sizeof(SlabNext<T>));
+	/* Implicitly assume that sizeof(T) >= sizeof(SlabCache<T>) */
 
 	FORCE_INLINE SlabCache()
 	{
@@ -35,9 +35,9 @@ public:
 	{
 		this->Area = reinterpret_cast<T*>(Area);
 		#if POISON_MEMORY
-			SetBufferBytes((char*)this->Area, 0xDF, Count * sizeof(T));
+			SetBufferBytes((UINT8*)this->Area, 0xDF, Count * sizeof(T));
 		#else
-			ClearBuffer((char*)this->Area, Count * sizeof(T));
+			ClearBuffer((UINT8*)this->Area, Count * sizeof(T));
 		#endif
 		this->Size = Count;
 		this->Used = 0;
@@ -52,7 +52,10 @@ public:
 			Current->Next = Next;
 		}
 		SlabNext<T>* Last = reinterpret_cast<SlabNext<T>*>(BaseAddr + (sizeof(T) * Index));
-		Last->Next = nullptr;
+		if (Last != nullptr)
+		{
+			Last->Next = nullptr;
+		}
 		this->FreeList = reinterpret_cast<SlabNext<T>*>(this->Area);
 	}
 

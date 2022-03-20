@@ -10,8 +10,13 @@
 #include <System/Proc/kern_sched.hpp>
 #include <System/PhyMemory/kern_alloc.hpp>
 
+#ifndef ONLY_TESTS
 extern char *sysm_location;
 extern char *prgm_location;
+#else
+const char sysm_location[128] = {};
+const char prgm_location[128] = {};
+#endif
 
 static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, UINT32 Proc)
 {
@@ -43,7 +48,7 @@ static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, UINT32 Proc)
 			UINT64 TargetSize = (CurSize > pantheon::vmm::SmallestPageSize) ? pantheon::vmm::SmallestPageSize : CurSize;
 			
 			/* Clear the page first before we use it. */
-			SetBufferBytes((CHAR*)NewPageVirt, 0x00, pantheon::vmm::SmallestPageSize);
+			SetBufferBytes((UINT8*)NewPageVirt, 0x00, pantheon::vmm::SmallestPageSize);
 			CopyMemory((void*)NewPageVirt, (void*)FinalLocation, TargetSize);
 			CurSize -= TargetSize;
 

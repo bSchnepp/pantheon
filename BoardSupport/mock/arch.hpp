@@ -103,6 +103,12 @@ typedef struct CpuContext
 		this->SetPC(TailAddr);
 	}
 
+	VOID SetInitUserContext(UINT64 StackAddress, UINT64 StartAddress)
+	{
+		this->Regs[20] = (UINT64)StartAddress;
+		this->Regs[21] = StackAddress;
+	}
+
 }CpuContext;
 
 typedef struct TrapFrame
@@ -122,6 +128,22 @@ typedef struct TrapFrame
 		PSTATE = 0;
 		SP = 0;
 	}
+
+	VOID SetUser()
+	{
+		this->PSTATE = 0;
+	}
+
+	VOID SetKern()
+	{
+		this->PSTATE = 1;
+	}
+
+	UINT64 &GetIntArgument(UINT8 Index)
+	{
+		return this->Regs[Index];
+	}
+
 }TrapFrame;
 
 VOID RearmSystemTimer();
@@ -147,6 +169,11 @@ VOID PAUSE();
 
 }
 
+}
+
+namespace pantheon::CPU
+{
+	void LIDT(void *Location);
 }
 
 #endif

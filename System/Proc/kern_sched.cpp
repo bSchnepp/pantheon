@@ -2,6 +2,7 @@
 #include <stddef.h>
 
 #include <arch.hpp>
+#include <sync.hpp>
 #include <cpureg.hpp>
 #include <vmm/pte.hpp>
 #include <vmm/vmm.hpp>
@@ -50,7 +51,7 @@ pantheon::Scheduler::Scheduler()
 	UINT64 IP = (UINT64)proc_idle;
 
 	#ifdef POISON_MEMORY
-	SetBufferBytes((CHAR*)SP-4096, 0xAF, 4096);
+	SetBufferBytes((UINT8*)SP-4096, 0xAF, 4096);
 	#endif
 
 	this->CurThread = pantheon::GetGlobalScheduler()->CreateProcessorIdleThread(SP, IP);
@@ -155,6 +156,11 @@ UINT32 pantheon::GlobalScheduler::CreateProcess(const pantheon::String &ProcStr,
 	Info.Name = ProcStr;
 	Info.EntryPoint = (pantheon::vmm::VirtualAddress)StartAddr;
 
+	if (NewProc == nullptr)
+	{
+		return 0;
+	}
+
 	AccessSpinlock.Acquire();
 
 	NewProc->Lock();
@@ -184,7 +190,7 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateUserThreadCommon(pantheon::Pr
 	{
 		UINT64 IStackSpace = (UINT64)StackSpace();
 		#ifdef POISON_MEMORY
-		SetBufferBytes((CHAR*)IStackSpace, 0xAF, InitialThreadStackSize);
+		SetBufferBytes((UINT8*)IStackSpace, 0xAF, InitialThreadStackSize);
 		#endif
 		IStackSpace += InitialThreadStackSize;
 		pantheon::Thread *T = Thread::Create();
@@ -197,8 +203,7 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateUserThreadCommon(pantheon::Pr
 
 		pantheon::CpuContext *Regs = T->GetRegisters();
 		Regs->SetInitContext(IStartAddr, IThreadData, IStackSpace);
-		Regs->x20 = (UINT64)StartAddr;
-		Regs->x21 = pantheon::Process::StackAddr;
+		Regs->SetInitUserContext(pantheon::Process::StackAddr, (UINT64)StartAddr);
 		T->SetState(pantheon::Thread::STATE_WAITING);
 		T->SetPriority(Priority);
 		T->Unlock();
@@ -256,7 +261,7 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateThread(pantheon::Process *Pro
 	{
 		UINT64 IStackSpace = (UINT64)StackSpace();
 		#ifdef POISON_MEMORY
-		SetBufferBytes((CHAR*)IStackSpace, 0xAF, InitialThreadStackSize);
+		SetBufferBytes((UINT8*)IStackSpace, 0xAF, InitialThreadStackSize);
 		#endif
 		IStackSpace += InitialThreadStackSize;
 		pantheon::Thread *T = Thread::Create();

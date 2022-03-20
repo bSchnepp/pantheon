@@ -156,8 +156,17 @@ void pantheon::PageAllocator::InitPageAllocator(InitialBootInfo *BootInfo)
 	}
 }
 
+#ifdef ONLY_TESTS
+#include <stdlib.h>
+#endif
+
 UINT64 pantheon::PageAllocator::Alloc()
 {
+/* This allows tests to pass in userspace for things like process creation. */
+#ifdef ONLY_TESTS
+	return (UINT64)malloc(pantheon::vmm::SmallestPageSize);
+#endif
+
 	AllocLock.Acquire();
 	UINT64 Addr = FindPage();
 	AllocatePage(Addr);
@@ -173,6 +182,12 @@ UINT64 pantheon::PageAllocator::Alloc()
 
 void pantheon::PageAllocator::Free(UINT64 Page)
 {
+/* This allows tests to pass in userspace for things like process creation. */
+#ifdef ONLY_TESTS
+	free((void*)Page);
+	return;
+#endif
+
 	AllocLock.Acquire();
 	FreePage(Page);
 	AllocLock.Release();

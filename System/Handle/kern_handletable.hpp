@@ -10,7 +10,7 @@ namespace pantheon
 class HandleTable
 {
 public:
-	explicit HandleTable() = default;
+	HandleTable() = default;
 
 	INT32 Create(const Handle &Item);
 	pantheon::Handle *Get(INT32 Index);

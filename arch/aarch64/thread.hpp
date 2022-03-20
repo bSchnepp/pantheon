@@ -88,6 +88,12 @@ typedef struct CpuContext
 		this->SetPC(TailAddr);
 	}
 
+	VOID SetInitUserContext(UINT64 StackAddress, UINT64 StartAddress)
+	{
+		this->x20 = StartAddress;
+		this->x21 = StackAddress;
+	}
+
 	CpuContext &operator=(const CpuContext &Other)
 	{
 		if (this == &Other)

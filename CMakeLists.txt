@@ -42,6 +42,7 @@ SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${FSANITIZE_FLAGS}")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FSANITIZE_FLAGS}")
 ENDIF()
 
+SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 # Get definitions specific to this board, or the mock board for tests
 IF (${ONLY_TESTS})
@@ -56,12 +57,10 @@ IF (${ONLY_TESTS})
 	ADD_SUBDIRECTORY(tests)
 ELSE()
 	ADD_SUBDIRECTORY(${TARGET_SYSTEM_BOARD})
+	# Userland MUST be built first for link order to make sense.
+	ADD_SUBDIRECTORY(Userland)
 ENDIF()
 
-SET(CMAKE_INCLUDE_CURRENT_DIR ON)
-
-# Userland MUST be built first for link order to make sense.
-ADD_SUBDIRECTORY(Userland)
 ADD_SUBDIRECTORY(arch)
 ADD_SUBDIRECTORY(Common)
 ADD_SUBDIRECTORY(Devices)
@@ -71,30 +70,33 @@ ADD_SUBDIRECTORY(System)
 INCLUDE_DIRECTORIES(externals/printf)
 ADD_SUBDIRECTORY(externals)
 
-SET(CMAKE_C_LINK_EXECUTABLE ${FINAL_CMAKE_C_LINK_EXECUTABLE})
-SET(CMAKE_CXX_LINK_EXECUTABLE ${FINAL_CMAKE_CXX_LINK_EXECUTABLE})
-
 ADD_EXECUTABLE(pantheon kern_main.cpp cpprt.cpp ubsan.cpp)
 
 IF (${ONLY_TESTS})
 	TARGET_LINK_LIBRARIES(pantheon Tests)
 ELSE()
+	SET(CMAKE_C_LINK_EXECUTABLE ${FINAL_CMAKE_C_LINK_EXECUTABLE})
+	SET(CMAKE_CXX_LINK_EXECUTABLE ${FINAL_CMAKE_CXX_LINK_EXECUTABLE})
+
 	SET_TARGET_PROPERTIES(pantheon PROPERTIES LINK_DEPENDS ${LINKER_SCRIPT})
+	# ArchLib doesn't make sense without at least initial userland.
+	# But we no longer need to link to libUserland.a, since these are separate ELFs.
+	ADD_DEPENDENCIES(ArchLibProper sysm)
+	ADD_DEPENDENCIES(ArchLibProper prgm)
+
+	TARGET_LINK_LIBRARIES(pantheon ArchLib)
+
+	TARGET_LINK_LIBRARIES(pantheon Boot)
+	TARGET_LINK_LIBRARIES(pantheon BoardRT)
+
 ENDIF()
 
-# ArchLib doesn't make sense without at least initial userland.
-# But we no longer need to link to libUserland.a, since these are separate ELFs.
-ADD_DEPENDENCIES(ArchLibProper sysm)
-ADD_DEPENDENCIES(ArchLibProper prgm)
-
-TARGET_LINK_LIBRARIES(pantheon ArchLib)
 TARGET_LINK_LIBRARIES(pantheon Common)
 TARGET_LINK_LIBRARIES(pantheon Devices)
 TARGET_LINK_LIBRARIES(pantheon Board)
 TARGET_LINK_LIBRARIES(pantheon Printf)
 TARGET_LINK_LIBRARIES(pantheon System)
-TARGET_LINK_LIBRARIES(pantheon Boot)
-TARGET_LINK_LIBRARIES(pantheon BoardRT)
+
 
 ADD_CUSTOM_COMMAND(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
 	COMMAND ${CMAKE_OBJCOPY} -O binary ${CMAKE_PROJECT_NAME} kernel.img)

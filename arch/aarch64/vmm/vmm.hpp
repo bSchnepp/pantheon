@@ -1,7 +1,6 @@
 #include <kern.h>
 #include <kern_runtime.hpp>
 #include <kern_datatypes.hpp>
-#include <kern_datatypes.hpp>
 
 #include <arch/aarch64/arch.hpp>
 #include <arch/aarch64/sync.hpp>
