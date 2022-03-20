@@ -17,6 +17,14 @@ static constexpr UINT64 InitNumPageTables = 1024;
 alignas(4096) static pantheon::vmm::PageTable Tables[InitNumPageTables];
 static pantheon::vmm::PageAllocator PageTableAllocator;
 
+/**
+ * @file System/Proc/kern_proc.cpp
+ * @brief Defines a Pantheon process, which contains a page table and some threads of execution
+ */
+
+/**
+ * @brief Initializes the necessary mechanisms to setup thread and process allocation
+ */
 void pantheon::InitProcessTables()
 {
 	Thread::Init();
@@ -24,6 +32,10 @@ void pantheon::InitProcessTables()
 	PageTableAllocator = pantheon::vmm::PageAllocator(Tables, InitNumPageTables);
 }
 
+/**
+ * @brief Creates a minimal, empty process, which by default is equivalent to the idle process
+ * @author Brian Schnepp
+ */
 pantheon::Process::Process() : pantheon::Lockable("Process")
 {
 	this->CurState = pantheon::Process::STATE_INIT;
@@ -32,11 +44,14 @@ pantheon::Process::Process() : pantheon::Lockable("Process")
 	this->PID = 0;
 }
 
-pantheon::Process::~Process()
-{
+pantheon::Process::~Process() = default;
 
-}
 
+/**
+ * @brief Initializes a process with appropriate state.
+ * @details A process is initialized with state as needed from CreateInfo, where it is used to set up initial memory mapped locations, a user mode stack, a name, and the appropriate entry point for it.
+ * @param CreateInfo The process creation info
+ */
 void pantheon::Process::Initialize(const pantheon::ProcessCreateInfo &CreateInfo)
 {
 	OBJECT_SELF_ASSERT();
@@ -139,6 +154,9 @@ pantheon::Process &pantheon::Process::operator=(pantheon::Process &&Other) noexc
 	return *this;
 }
 
+/**
+ * @brief Obtains the process string belonging to this process
+ */
 [[nodiscard]]
 const pantheon::String &pantheon::Process::GetProcessString() const
 {
@@ -146,10 +164,13 @@ const pantheon::String &pantheon::Process::GetProcessString() const
 	return this->ProcessString;
 }
 
-extern "C" CHAR *USER_BEGIN;
-extern "C" CHAR *USER_END;
-
-void pantheon::Process::MapAddress(const pantheon::vmm::VirtualAddress &VAddresses, const pantheon::vmm::PhysicalAddress &PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes)
+/**
+ * @brief Maps a given physical address to a given virtual address. The smallest page size supported is assumed for granularity. Process must be locked before use.
+ * @param VAddresses The virtual address in this process to map to
+ * @param PAddresses The physical address on this machine to map from
+ * @param PageAttributes The configuration to be used for the given page
+ */
+void pantheon::Process::MapAddress(const pantheon::vmm::VirtualAddress &VAddress, const pantheon::vmm::PhysicalAddress &PAddress, const pantheon::vmm::PageTableEntry &PageAttributes)
 {
 	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
@@ -157,9 +178,13 @@ void pantheon::Process::MapAddress(const pantheon::vmm::VirtualAddress &VAddress
 		StopError("Process not locked when mapping addresses\n");
 	}
 
-	PageTableAllocator.Map(this->MemoryMap, VAddresses, PAddresses, pantheon::vmm::SmallestPageSize, PageAttributes);
+	PageTableAllocator.Map(this->MemoryMap, VAddress, PAddress, pantheon::vmm::SmallestPageSize, PageAttributes);
 }
 
+/**
+ * @brief Obtains the process ID for this process
+ * @return The process ID belonging to this process
+ */
 [[nodiscard]]
 UINT32 pantheon::Process::ProcessID() const
 {
@@ -167,6 +192,11 @@ UINT32 pantheon::Process::ProcessID() const
 	return this->PID;
 }
 
+
+/**
+ * @brief Obtains the process state for this process
+ * @return The state of this process
+ */
 [[nodiscard]] 
 pantheon::Process::State pantheon::Process::MyState() const
 {
@@ -179,6 +209,9 @@ pantheon::Process::State pantheon::Process::MyState() const
 	return this->CurState;
 }
 
+/**
+ * @brief Sets the state of this process. Process must be locked before use.
+ */
 void pantheon::Process::SetState(pantheon::Process::State State)
 {
 	OBJECT_SELF_ASSERT();
@@ -190,7 +223,11 @@ void pantheon::Process::SetState(pantheon::Process::State State)
 	this->CurState = State;
 }
 
-INT64 pantheon::Process::EncodeHandle(const pantheon::Handle &NewHand)
+/**
+ * @brief Attaches a handle to this process. Process must be locked before use.
+ * @return An integer as an index into this current handle table, or a negative number on an error.
+ */
+INT32 pantheon::Process::EncodeHandle(const pantheon::Handle &NewHand)
 {
 	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
@@ -200,6 +237,10 @@ INT64 pantheon::Process::EncodeHandle(const pantheon::Handle &NewHand)
 	return this->HandTable.Create(NewHand);
 }
 
+/**
+ * @brief Obtains a pointer to a handle based on the index provided. Must be locked before use.
+ * @return A pointer to a handle corresponding to the index provided. Nullptr if invalid.
+ */
 pantheon::Handle *pantheon::Process::GetHandle(INT32 HandleID)
 {
 	OBJECT_SELF_ASSERT();
@@ -211,6 +252,10 @@ pantheon::Handle *pantheon::Process::GetHandle(INT32 HandleID)
 	return this->HandTable.Get(HandleID);
 }
 
+/**
+ * @brief Obtains the physical address of the page table for this process.
+ * @return The physical address of the page table for this process.
+ */
 [[nodiscard]] 
 pantheon::vmm::PhysicalAddress pantheon::Process::GetTTBR0() const
 {
@@ -218,6 +263,10 @@ pantheon::vmm::PhysicalAddress pantheon::Process::GetTTBR0() const
 	return this->TTBR0;
 }
 
+/**
+ * @brief Obtains the page table in kernel virtual memory for this process.
+ * @return A pointer to the page table for this process
+ */
 [[nodiscard]] 
 pantheon::vmm::PageTable *pantheon::Process::GetPageTable() const
 {

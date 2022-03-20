@@ -80,7 +80,7 @@ public:
 	void SetState(ProcessState State);
 	void MapAddress(const pantheon::vmm::VirtualAddress &VAddresses, const pantheon::vmm::PhysicalAddress &PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes);
 
-	INT64 EncodeHandle(const pantheon::Handle &NewHand);
+	INT32 EncodeHandle(const pantheon::Handle &NewHand);
 	pantheon::Handle *GetHandle(INT32 HandleID);
 
 	[[nodiscard]] pantheon::vmm::PhysicalAddress GetTTBR0() const;
