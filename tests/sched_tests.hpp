@@ -260,14 +260,6 @@ TEST(Scheduler, ManyThreadIDs)
 	ASSERT_TRUE(OneProc.ThreadID() < OtherProc.ThreadID());
 }
 
-TEST(CPUCore, CoreInfoInit)
-{
-	pantheon::GlobalScheduler::Init();
-	pantheon::CPU::InitCoreInfo(0);
-	ASSERT_EQ(pantheon::CPU::GetCurThread(), nullptr);
-	ASSERT_NE(pantheon::CPU::GetCoreInfo()->CurSched, nullptr);
-}
-
 TEST(Scheduler, ProcessFromRawString)
 {
 	const char *SomeRawString = "some raw string";
