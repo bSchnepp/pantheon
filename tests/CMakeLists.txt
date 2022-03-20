@@ -1,7 +1,7 @@
 LIST(APPEND TESTS_HEADERS common_tests.hpp)
 LIST(APPEND TESTS_HEADERS sched_tests.hpp)
-LIST(APPEND TESTS_HEADERS driver_tests.hpp)
 LIST(APPEND TESTS_HEADERS arch_tests.hpp)
+LIST(APPEND TESTS_HEADERS struct_tests.hpp)
 
 LIST(APPEND TESTS_SOURCES main.cpp)
 

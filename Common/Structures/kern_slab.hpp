@@ -1,3 +1,4 @@
+#include <kern.h>
 #include <kern_runtime.hpp>
 #include <kern_datatypes.hpp>
 
@@ -20,9 +21,9 @@ template<typename T>
 class SlabCache
 {
 public:
-	static_assert(sizeof(T) >= sizeof(SlabNext<T>));
+	/* Implicitly assume that sizeof(T) >= sizeof(SlabCache<T>) */
 
-	SlabCache()
+	FORCE_INLINE SlabCache()
 	{
 		this->Size = 0;
 		this->Used = 0;
@@ -30,10 +31,14 @@ public:
 		this->Area = nullptr;
 	}
 
-	SlabCache(VOID *Area, UINT16 Count = 64)
+	FORCE_INLINE SlabCache(VOID *Area, UINT16 Count = 64)
 	{
 		this->Area = reinterpret_cast<T*>(Area);
-		ClearBuffer((char*)this->Area, Count * sizeof(T));
+		#if POISON_MEMORY
+			SetBufferBytes((UINT8*)this->Area, 0xDF, Count * sizeof(T));
+		#else
+			ClearBuffer((UINT8*)this->Area, Count * sizeof(T));
+		#endif
 		this->Size = Count;
 		this->Used = 0;
 		this->FreeList = nullptr;
@@ -47,16 +52,19 @@ public:
 			Current->Next = Next;
 		}
 		SlabNext<T>* Last = reinterpret_cast<SlabNext<T>*>(BaseAddr + (sizeof(T) * Index));
-		Last->Next = nullptr;
+		if (Last != nullptr)
+		{
+			Last->Next = nullptr;
+		}
 		this->FreeList = reinterpret_cast<SlabNext<T>*>(this->Area);
 	}
 
-	~SlabCache()
+	FORCE_INLINE ~SlabCache()
 	{
 
 	}
 
-	BOOL InRange(T *Ptr)
+	FORCE_INLINE BOOL InRange(T *Ptr)
 	{
 		/* Check if this is in range */
 		UINT64 PtrRaw = reinterpret_cast<UINT64>(Ptr);
@@ -69,7 +77,7 @@ public:
 		return TRUE;
 	}
 
-	T *Allocate()
+	FORCE_INLINE T *Allocate()
 	{
 		if (this->FreeList != nullptr)
 		{
@@ -91,7 +99,28 @@ public:
 		return nullptr;
 	}
 
-	void Deallocate(T *Ptr)
+	FORCE_INLINE T *AllocateNoCtor()
+	{
+		if (this->FreeList != nullptr)
+		{
+			/* Note this causes a warning, that Next may be
+			 * undefined. Intuition says this is wrong, since
+			 * the free list can only be manipulated by Allocate
+			 * or Deallocate (and if it's smashed in memory,
+			 * we have bigger problems), so it's always either
+			 * valid or nullptr. We should fuzz this.
+			 */
+			SlabNext<T> *Current = this->FreeList;
+			SlabNext<T> *Next = Current->Next;
+			T* NewArea = reinterpret_cast<T*>(Current);
+			this->FreeList = Next;
+			this->Used++;
+			return NewArea;
+		}
+		return nullptr;
+	}
+
+	FORCE_INLINE void Deallocate(T *Ptr)
 	{
 		if (!InRange(Ptr))
 		{

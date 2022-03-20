@@ -62,6 +62,9 @@ public:
 		if (MaybeMem.GetOkay() != FALSE)
 		{
 			this->Content = (T*)MaybeMem.GetValue();
+			#if POISON_MEMORY
+				SetBufferBytes((UINT8*)this->Content, 0xDF, InitCount * sizeof(T));
+			#endif
 			this->SpaceCount = InitCount;
 			this->EntryCount = 0;
 		}
@@ -85,7 +88,6 @@ public:
 	{
 		if (this->Content)
 		{
-			this->Clear();
 			this->Free(this->Content);
 		}
 	}
@@ -128,7 +130,6 @@ public:
 
 		if (this->Content)
 		{
-			this->Clear();
 			this->Free(this->Content);
 		}
 
@@ -144,18 +145,12 @@ public:
 		Other.Content = nullptr;
 	}
 
-	void Clear()
-	{
-	}
-
 	void Copy(const ArrayList<T> &Other) noexcept
 	{
 		if (this == &Other)
 		{
 			return;
 		}
-
-		this->Clear();
 		
 		if (this->Content && this->Free)
 		{
@@ -173,6 +168,9 @@ public:
 		if (MaybeMem.GetOkay())
 		{
 			T* NewArea = (T*)MaybeMem.GetValue();
+			#if POISON_MEMORY
+				SetBufferBytes((UINT8*)NewArea, 0xDF, Other.EntryCount * sizeof(T));
+			#endif			
 			for (UINT64 Index = 0; Index < Other.EntryCount; ++Index)
 			{
 				NewArea[Index] = Other.Content[Index];
@@ -235,7 +233,9 @@ public:
 				T &Current = this->Content[Index];
 				NewContent[Index] = Current;
 			}
-			this->Clear();
+			#if POISON_MEMORY
+				SetBufferBytes((UINT8*)this->Content, 0xDF, this->SpaceCount * sizeof(T));
+			#endif			
 			this->Free(this->Content);
 			this->Content = NewContent;
 			this->Add(NewItem);
@@ -261,7 +261,6 @@ public:
 			{
 				NewContent[SIndex-1] = this->Content[SIndex];
 			}
-			this->Clear();
 			this->Free(this->Content);
 			this->Content = NewContent;
 		}

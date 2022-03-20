@@ -5,6 +5,9 @@
 #include <kern_container.hpp>
 
 #include <Sync/kern_atomic.hpp>
+#include <System/Proc/kern_proc.hpp>
+
+#include <Common/Structures/kern_slab.hpp>
 #include <Common/Structures/kern_linkedlist.hpp>
 
 #ifndef _KERN_SCHED_HPP_
@@ -33,29 +36,32 @@ class GlobalScheduler
 {
 
 public:
-	GlobalScheduler();
-	~GlobalScheduler();
+	static void Init();
 
-	void Init();
+	static UINT32 CreateProcess(const pantheon::String &ProcStr, void *StartAddr);
+	static pantheon::Thread *CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
 
-	BOOL CreateProcess(pantheon::String ProcStr, void *StartAddr);
-	BOOL CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority);
-	BOOL CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::ThreadPriority Priority, void *StackTop);
+	static pantheon::Thread *CreateUserThread(UINT32 PID, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
+	static pantheon::Thread *CreateUserThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
 
-	Thread* AcquireThread();
-	UINT64 CountThreads(UINT64 PID);
-	void ReleaseThread(Thread *T);
+	static UINT64 CountThreads(UINT64 PID);
 
-	pantheon::Process *ObtainProcessByID(UINT64 PID);
-	pantheon::Thread *ObtainThreadByID(UINT64 TID);
+	static pantheon::Thread *AcquireThread();
+	static pantheon::Thread *CreateProcessorIdleThread(UINT64 SP, UINT64 IP);
 
-	pantheon::Thread *CreateProcessorIdleThread(UINT64 SP, UINT64 IP);
+	static BOOL RunProcess(UINT32 PID);
+	static BOOL SetState(UINT32 PID, pantheon::Process::State State);
+	static BOOL MapPages(UINT32 PID, pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages);
 
 private:
-	Atomic<BOOL> Okay;
-	Spinlock AccessSpinlock;
-	ArrayList<Process> ProcessList;
-	pantheon::LinkedList<Thread> ThreadList;
+	inline static Atomic<BOOL> Okay;
+	inline static Spinlock AccessSpinlock;
+
+	inline static LinkedList<Process> ProcessList;
+	inline static LinkedList<Thread> ThreadList;
+
+private:
+	static Thread *CreateUserThreadCommon(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority);
 };
 
 UINT32 AcquireProcessID();

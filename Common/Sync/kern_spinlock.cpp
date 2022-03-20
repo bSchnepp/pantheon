@@ -29,7 +29,7 @@ void pantheon::Spinlock::Acquire()
 {
 	if (this->DebugName == nullptr)
 	{
-		StopError("bad spinlock");
+		StopError("bad spinlock", this);
 	}
 	
 	pantheon::CPU::PUSHI();

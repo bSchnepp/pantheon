@@ -8,21 +8,18 @@ namespace pantheon
 {
 
 template <typename T>
-class LinkedList
+class LinkedListItem
 {
 public:
-	template<typename K>
-	struct LinkedListIterator;
-
-	LinkedList() : LinkedList(nullptr, nullptr)
+	LinkedListItem() : LinkedListItem(nullptr, nullptr)
 	{
 	}
 
-	LinkedList(T *Value) : LinkedList(nullptr, Value)
+	LinkedListItem(T *Value) : LinkedListItem(nullptr, Value)
 	{
 	}
 
-	LinkedList(LinkedList<T> *Next, T *Value)
+	LinkedListItem(LinkedListItem<T> *Next, T *Value)
 	{
 		this->NextInList = Next;
 		this->Value = Value;
@@ -33,23 +30,24 @@ public:
 		return this->Value; 
 	}
 
-	[[nodiscard]] LinkedList<T> *GetNext() const
+	[[nodiscard]] LinkedListItem<T> *GetNext() const
 	{ 
 		return this->NextInList; 
 	}
 
-	[[nodiscard]] UINT64 Size() const 
-	{ 
-		if (this->Value == nullptr)
-		{
-			return 0;
-		}
+	void SetNext(LinkedListItem<T> *Next)
+	{
+		this->NextInList = Next;
+	}
 
-		if (this->NextInList == nullptr)
+	[[nodiscard]] UINT64 Size() const 
+	{
+		UINT64 Count = 0;
+		for (const LinkedListItem<T> *Cur = this; Cur != nullptr; Cur = Cur->GetNext())
 		{
-			return 1;
+			Count++;
 		}
-		return 1 + this->NextInList->Size(); 
+		return Count;
 	}
 
 	[[nodiscard]] BOOL End() const
@@ -57,9 +55,9 @@ public:
 		return this->NextInList == nullptr;
 	}
 
-	void Append(LinkedList<T> *Next)
+	void Append(LinkedListItem<T> *Next)
 	{
-		for (LinkedList<T> *Iter = this; Iter != nullptr; Iter = Iter->NextInList)
+		for (LinkedListItem<T> *Iter = this; Iter != nullptr; Iter = Iter->NextInList)
 		{
 			if (Iter->End())
 			{
@@ -69,7 +67,7 @@ public:
 
 			if (Iter->Value == nullptr)
 			{
-				LinkedList<T> *NextEntry = Iter->NextInList;
+				LinkedListItem<T> *NextEntry = Iter->NextInList;
 				*Iter = *Next;
 				Iter->NextInList = NextEntry;
 				return;
@@ -77,22 +75,12 @@ public:
 		}
 	}
 
-	[[nodiscard]] LinkedListIterator<T> begin() const
+	static pantheon::LinkedListItem<T> *CreateEntry(T *Item)
 	{
-		return LinkedListIterator<T>(this);
-	}
-
-	[[nodiscard]] LinkedListIterator<T> end() const
-	{
-		return LinkedListIterator<T>(nullptr);
-	}
-
-	static pantheon::LinkedList<T> *CreateEntry(T *Item)
-	{
-		Optional<void*> TryAlloc = BasicMalloc(sizeof(LinkedList<T>));
+		Optional<void*> TryAlloc = BasicMalloc(sizeof(LinkedListItem<T>));
 		if (TryAlloc.GetOkay())
 		{
-			LinkedList<T> *Res = static_cast<LinkedList<T>*>(TryAlloc());
+			LinkedListItem<T> *Res = static_cast<LinkedListItem<T>*>(TryAlloc());
 			Res->Value = Item;
 			Res->NextInList = nullptr;
 			return Res;
@@ -100,24 +88,105 @@ public:
 		return nullptr;
 	}
 
+	static void DestroyEntry(pantheon::LinkedListItem<T> *Item)
+	{
+		if (Item != nullptr)
+		{
+			BasicFree(Item);
+		}
+	}
+
+private:
+	pantheon::LinkedListItem<T> *NextInList;
+	T* Value;
+};
+
+template<typename T>
+class LinkedList
+{
+public:
+	template<typename K>
+	struct LinkedListIterator;
+
+	LinkedList() : LinkedList(nullptr)
+	{
+	}
+
+	LinkedList(LinkedListItem<T> *ListRoot) : Root(ListRoot)
+	{
+		/* Size is either 0 or 1, depending on if Root is valid. */
+		this->NumElem = (Root != nullptr);
+	}
+
+	void PushFront(T *Item)
+	{
+		LinkedListItem<T> *NewEntry = LinkedListItem<T>::CreateEntry(Item);
+		if (this->Root == nullptr)
+		{
+			this->NumElem = 1;
+			Root = NewEntry;
+			return;
+		}
+
+		NewEntry->SetNext(this->Root);
+		this->Root = NewEntry;
+		this->NumElem++;
+	}
+
+	T *Front()
+	{
+		return this->Root->GetValue();
+	}
+
+	T *PopFront()
+	{
+		LinkedListItem<T> *OldRoot = this->Root;
+		this->Root = this->Root->GetNext();
+		this->NumElem--;
+
+		T *Item = OldRoot->GetValue();
+		LinkedListItem<T>::DestroyEntry(OldRoot);
+		return Item;
+	}
+
+	[[nodiscard]] LinkedListIterator<T> begin() const
+	{
+		return LinkedListIterator<T>(this->Root);
+	}
+
+	[[nodiscard]] LinkedListIterator<T> end() const
+	{
+		return LinkedListIterator<T>(nullptr);
+	}
+
+	[[nodiscard]] UINT64 Size() const
+	{
+		return this->NumElem;
+	}
+
 	template<typename K>
 	struct LinkedListIterator
 	{
 		LinkedListIterator() : LinkedListIterator(nullptr){};
-		LinkedListIterator(const LinkedList<K> *Ptr) : Loc(Ptr){};
+		LinkedListIterator(const LinkedListItem<K> *Ptr) : Loc(Ptr){};
 
 		K &operator*() 
 		{ 
-			return *(this->Loc->Value); 
+			return *(this->Loc->GetValue()); 
+		}
+
+		LinkedListIterator<K> &Next()
+		{
+			if (this->Loc)
+			{
+				this->Loc = this->Loc->GetNext();
+			}
+			return *this;
 		}
 
 		LinkedListIterator<K> &operator++()
 		{
-			if (this->Loc)
-			{
-				this->Loc = this->Loc->NextInList;
-			}
-			return *this;
+			return this->Next();
 		}
 
 		friend bool operator==(const LinkedListIterator<K> &L, const LinkedListIterator<K> &R)
@@ -131,12 +200,12 @@ public:
 		}
 
 	private:
-		const LinkedList<K> *Loc;
+		const LinkedListItem<K> *Loc;
 	};
 
 private:
-	pantheon::LinkedList<T> *NextInList;
-	T* Value;
+	UINT64 NumElem;
+	LinkedListItem<T> *Root;
 };
 
 

@@ -19,19 +19,26 @@ pantheon::Handle::Handle(pantheon::ipc::WritableEvent *Evt)
 	this->Content.WriteEvent = Evt;
 }
 
-pantheon::Handle::~Handle()
+pantheon::Handle::Handle(pantheon::Process *Proc)
 {
+	this->Type = pantheon::HANDLE_TYPE_PROCESS;
+	this->Content.Process = Proc;
+}
 
+pantheon::Handle::Handle(pantheon::Thread *Thr)
+{
+	this->Type = pantheon::HANDLE_TYPE_THREAD;
+	this->Content.Thread = Thr;
 }
 
 pantheon::HandleContent &pantheon::Handle::GetContent()
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	return this->Content;
 }
 
 pantheon::HandleType pantheon::Handle::GetType()
 {
-	OBJECT_SELF_ASSERT(this);
+	OBJECT_SELF_ASSERT();
 	return this->Type;
 }

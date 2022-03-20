@@ -1,14 +1,13 @@
 #include <kern_datatypes.hpp>
 
-#include <Proc/kern_proc.hpp>
-#include <Proc/kern_sched.hpp>
 #include <Proc/kern_thread.hpp>
+#include <Proc/kern_sched.hpp>
 
 #ifndef _KERN_CPU_HPP_
 #define _KERN_CPU_HPP_
 
 #define MAX_NUM_CPUS (8)
-#define DEFAULT_STACK_SIZE (4 * 1024ULL)
+#define DEFAULT_STACK_SIZE (128ULL * 1024ULL)
 
 namespace pantheon
 {
@@ -52,8 +51,6 @@ pantheon::Scheduler *GetCurSched();
 pantheon::TrapFrame *GetCurFrame();
 
 void *GetStackArea(UINT64 Core);
-
-BOOL DropToUsermode(UINT64 PC);
 
 }
 

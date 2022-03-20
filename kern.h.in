@@ -22,6 +22,8 @@ void *memcpy(void *dest, const void * src, unsigned long int n);
 #cmakedefine TARGET_SYSTEM_QEMU_AARCH64_VIRT @TARGET_SYSTEM_QEMU_AARCH64_VIRT@
 #cmakedefine ONLY_TESTS @ONLY_TESTS@
 
+#cmakedefine POISON_MEMORY @POISON_MEMORY@
+
 #if defined(__cplusplus)
 }
 #endif

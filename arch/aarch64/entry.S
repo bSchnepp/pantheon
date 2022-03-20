@@ -1,3 +1,10 @@
+.section ".bss.early"
+.align 16
+stack_bottom:
+	.skip 16 * 1024
+stack_top:
+
+
 .section ".text.early"
 
 .globl _cpu_start
@@ -13,6 +20,9 @@ _cpu_start:
 	/* x0 must be preserved and passed to the kernel proper. */
 	adr x20, .
 
+	/* Make 100% sure interrupts are disabled first. */
+	msr daifset, #2
+
 	adrp x1, dtb_ptr
 	add x1, x1, :lo12:dtb_ptr
 	str x0, [x1]
@@ -22,8 +32,8 @@ _cpu_start:
 	str x20, [x1]
 
 	/* Set up the stack */
-	adrp x0, kern_stack_end
-	add x0, x0, :lo12:kern_stack_end
+	adrp x0, stack_top
+	add x0, x0, :lo12:stack_top
 	mov sp, x0
 
 	/* If this is not core/thread 0, dont clear bss again */
@@ -32,10 +42,11 @@ _cpu_start:
 	cbnz x0, go_kern_main
 	
 	/* x0 and x1 are unused. */
-	adrp x0, bss_begin
-	add x0, x0, :lo12:bss_begin
-	adrp x1, bss_end
-	add x1, x1, :lo12:bss_end
+	adrp x0, BSS_PHY_AREA
+	add x0, x0, :lo12:BSS_AREA
+	adrp x1, BSS_SIZE
+	add x1, x1, :lo12:BSS_SIZE
+	add x1, x0, x1
 	bl _zero_bss
 
 go_kern_main:
@@ -49,7 +60,11 @@ go_kern_main:
 
 	ldr x2, =_cpu_start
 	bl BootInit
-	mov x0, x0 /* No-op, but to clarify x0 needs to be preserved. */
+	mov x19, x0 /* save x0 for a little bit */
+
+	bl get_stack_area
+	mov sp, x0
+	mov x0, x19	/* Restore x0 */
 
 	adrp x2, initial_addr
 	add x2, x2, :lo12:initial_addr
@@ -67,7 +82,13 @@ asm_kern_init_core:
 
 	ldr x2, =_cpu_start
 	bl BootInit
-	mov x0, x0 /* No-op, but to clarify x0 needs to be preserved. */
+	mov x19, x0  /* Move this to a saved register for now */
+
+	bl get_stack_area
+	mov sp, x0
+
+	/* restore x0 */
+	mov x0, x19
 		
 	bl kern_init_core
 	b _hang

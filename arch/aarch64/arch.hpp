@@ -1,15 +1,12 @@
-#ifndef _ARCH_HPP_
-#define _ARCH_HPP_
-
 #include <arch/aarch64/ints.hpp>
 #include <arch/aarch64/thread.hpp>
-#include <arch/aarch64/vmm/vmm.hpp>
+#include <arch/aarch64/cpureg.hpp>
 
-typedef struct PagingInfo
-{
-	UINT64 TTBR0;
-	UINT64 TTBR1;
-}PagingInfo;
+#include <arch/aarch64/sync.hpp>
+
+
+#ifndef _ARCH_HPP_
+#define _ARCH_HPP_
 
 namespace pantheon
 {
@@ -55,40 +52,7 @@ VOID LIDT(void *IDT);
 
 }
 
-namespace CPUReg
-{
 
-UINT64 R_TTBR0_EL1();
-UINT64 R_TTBR1_EL1();
-
-VOID W_TTBR0_EL1(UINT64);
-VOID W_TTBR1_EL1(UINT64);
-
-VOID W_MAIR_EL1(UINT64 Value);
-UINT64 R_MAIR_EL1();
-
-VOID W_TCR_EL1(UINT64 Value);
-UINT64 R_TCR_EL1();
-
-}
-
-namespace Sync
-{
-	FORCE_INLINE void DSBISH()
-	{
-		asm volatile("dsb ish\n" ::: "memory");
-	}
-
-	FORCE_INLINE void DSBSY()
-	{
-		asm volatile("dsb sy\n" ::: "memory");
-	}
-
-	FORCE_INLINE void ISB()
-	{
-		asm volatile("isb\n" ::: "memory");
-	}
-}
 
 }
 

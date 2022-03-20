@@ -31,6 +31,14 @@ pantheon::String::String()
  */
 pantheon::String::String(const char *Str)
 {
+	if (Str == nullptr)
+	{
+		this->ContentLen = 0;
+		this->DataLen = 0;
+		this->Str = "";
+		return;
+	}
+
 	this->ContentLen = 0;
 	this->Str = Str;
 

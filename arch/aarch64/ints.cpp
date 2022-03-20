@@ -2,9 +2,13 @@
 #include "gic.hpp"
 
 #include <kern.h>
+#include <vmm/vmm.hpp>
+
 #include <kern_runtime.hpp>
 #include <kern_datatypes.hpp>
+
 #include <Proc/kern_cpu.hpp>
+#include <System/Syscalls/Syscalls.hpp>
 
 static UINT64 TimerClock = 1000;
 
@@ -39,7 +43,22 @@ extern "C" void irq_handler_el1_sp0(pantheon::TrapFrame *Frame)
 extern "C" void sync_handler_el1(pantheon::TrapFrame *Frame)
 {
 	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
-	pantheon::StopError("ERR: SYNC HANDLER EL1");
+
+	UINT64 ESR, FAR, ELR, SPSR, SP;
+	asm volatile(
+		"mrs %0, esr_el1\n"
+		"mrs %1, far_el1\n"
+		"mrs %2, elr_el1\n"
+		"mrs %3, spsr_el1\n"
+		"mov %4, sp\n"
+		: "=r"(ESR), "=r"(FAR), "=r"(ELR), "=r"(SPSR), "=r"(SP));
+
+	PANTHEON_UNUSED(FAR);
+	PANTHEON_UNUSED(ELR);
+	PANTHEON_UNUSED(SPSR);
+	pantheon::StopErrorFmt(
+		"ERR: SYNC HANDLER EL1: esr: %lx far: %lx elr: %lx spsr: %lx, sp: %lx\n", 
+		ESR, FAR, ELR, SPSR, SP);
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
@@ -70,8 +89,39 @@ extern "C" void irq_handler_el1(pantheon::TrapFrame *Frame)
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
+extern "C" void enable_interrupts();
+extern "C" void disable_interrupts();
 
-/* sync_handler_el0 is entirely in asm */
+extern "C" void sync_handler_el0(pantheon::TrapFrame *Frame)
+{
+	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
+	UINT64 ESR, FAR, ELR, SPSR;
+	asm volatile(
+		"mrs %0, esr_el1\n"
+		"mrs %1, far_el1\n"
+		"mrs %2, elr_el1\n"
+		"mrs %3, spsr_el1\n"
+		: "=r"(ESR), "=r"(FAR), "=r"(ELR), "=r"(SPSR));
+
+	PANTHEON_UNUSED(FAR);
+	PANTHEON_UNUSED(ELR);
+	PANTHEON_UNUSED(SPSR);
+
+	UINT64 ESRType = (ESR >> 26);
+	if ((ESRType & 0xFF) == 0x15)
+	{
+		UINT32 SyscallNo = Frame->Regs[8];
+		pantheon::CallSyscall(SyscallNo, Frame);
+	} 
+	else if (ESR == 0x2000000)
+	{
+		SERIAL_LOG_UNSAFE("Bad sync handler el0: esr: 0x%lx far: 0x%lx elr: 0x%lx spsr: 0x%lx\n", ESR, FAR, ELR, SPSR);
+		SERIAL_LOG_UNSAFE("Process ID was %ld\n", pantheon::CPU::GetCurThread()->MyProc()->ProcessID());
+		pantheon::vmm::PageTable *PT = pantheon::CPU::GetCurThread()->MyProc()->GetPageTable();
+		pantheon::vmm::PrintPageTablesNoZeroes(PT);
+	}
+	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
+}
 
 extern "C" void err_handler_el0(pantheon::TrapFrame *Frame)
 {
@@ -96,6 +146,23 @@ extern "C" void irq_handler_el0(pantheon::TrapFrame *Frame)
 extern "C" void sync_handler_el0_32(pantheon::TrapFrame *Frame)
 {
 	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
+
+	UINT64 ESR, FAR, ELR, SPSR;
+	asm volatile(
+		"mrs %0, esr_el1\n"
+		"mrs %1, far_el1\n"
+		"mrs %2, elr_el1\n"
+		"mrs %3, spsr_el1\n"
+		: "=r"(ESR), "=r"(FAR), "=r"(ELR), "=r"(SPSR));
+
+	PANTHEON_UNUSED(FAR);
+	PANTHEON_UNUSED(ELR);
+	PANTHEON_UNUSED(SPSR);
+	if (ESR == 0x2000000)
+	{
+		pantheon::StopError("ERR: SYNC HANDLER EL1 SP0");
+	}
+
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: SYNC HANDLER EL0_32");
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
@@ -119,6 +186,11 @@ extern "C" void irq_handler_el0_32(pantheon::TrapFrame *Frame)
 	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: IRQ HANDLER EL0_32");
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
+}
+
+extern "C" void write_trap_frame(pantheon::TrapFrame *Frame)
+{
+	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
 }
 
 VOID pantheon::arm::LoadInterruptTable(VOID *Table)

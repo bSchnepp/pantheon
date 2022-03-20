@@ -88,6 +88,12 @@ typedef struct CpuContext
 		this->SetPC(TailAddr);
 	}
 
+	VOID SetInitUserContext(UINT64 StackAddress, UINT64 StartAddress)
+	{
+		this->x20 = StartAddress;
+		this->x21 = StackAddress;
+	}
+
 	CpuContext &operator=(const CpuContext &Other)
 	{
 		if (this == &Other)
@@ -148,7 +154,14 @@ typedef struct TrapFrame
 	{
 		this->PSTATE = PSTATE_MODE_KERN;
 	}
+
+	UINT64 &GetIntArgument(UINT8 Index)
+	{
+		return this->Regs[Index];
+	}
 }TrapFrame;
+
+static_assert(sizeof(TrapFrame) == (16ULL*17ULL));
 
 }
 

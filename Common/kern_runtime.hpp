@@ -29,7 +29,7 @@ void WriteString(const CHAR *String);
 
 
 template <typename T>
-T CharStarNumberAtoi(const CHAR *Input)
+T FORCE_INLINE CharStarNumberAtoi(const CHAR *Input)
 {
 	T Result = 0;
 	UINT64 Index = 0;
@@ -49,7 +49,7 @@ T CharStarNumberAtoi(const CHAR *Input)
 }
 
 template <typename T>
-T CharStarNumberAtoiB16(const CHAR *Input)
+T FORCE_INLINE CharStarNumberAtoiB16(const CHAR *Input)
 {
 	T Result = 0;
 	UINT64 Index = 0;
@@ -97,25 +97,25 @@ T CharStarNumberAtoiB16(const CHAR *Input)
 
 
 template<typename T>
-T Max(T L, T R)
+T FORCE_INLINE Max(T L, T R)
 {
 	return (L > R) ? L : R;
 }
 
 template<typename T>
-T Min(T L, T R)
+T FORCE_INLINE Min(T L, T R)
 {
 	return (L > R) ? R : L;
 }
 
 template<typename T>
-constexpr T Align(T Amt, T Align)
+constexpr FORCE_INLINE T Align(T Amt, T Align)
 {
 	return ~(Align - 1) & (((Amt) + (Align - 1)));
 }
 
 template<typename T>
-constexpr BOOL IsAligned(T Val, T AlignVal)
+constexpr FORCE_INLINE BOOL IsAligned(T Val, T AlignVal)
 {
 	return Align(Val, AlignVal) == Val;
 }
@@ -128,10 +128,72 @@ extern "C"
 	void _putchar(char c);
 }
 
-BOOL StringCompare(const CHAR *Arg1, const CHAR *Arg2, UINT64 Amt);
-void ClearBuffer(CHAR *Location, UINT32 Amount);
-void SetBufferBytes(CHAR *Location, UINT8 Value, UINT32 Amount);
-void CopyMemory(VOID *Dest, VOID *Src, UINT64 Amt);
+BOOL FORCE_INLINE StringCompare(const CHAR *Arg1, const CHAR *Arg2, UINT64 Amt)
+{
+	for (UINT64 Index = 0; Index < Amt; ++Index)
+	{
+		if (Arg1[Index] != Arg2[Index])
+		{
+			return FALSE;
+		}
+
+		if (Arg1[Index] == 0)
+		{
+			break;
+		}
+	}
+	return TRUE;
+}
+
+void FORCE_INLINE SetBufferBytes(UINT8 *Location, UINT8 Value, UINT32 Amount)
+{
+	UINT32 Index = 0;
+
+	UINT64 *AsUINT64 = (UINT64*)Location;
+	for (Index = 0; Index < Amount; Index += 8)
+	{
+		AsUINT64[Index / 8] = 0;
+	}
+
+	for (; Index < Amount; ++Index)
+	{
+		Location[Index] = Value;
+	}
+}
+
+void FORCE_INLINE ClearBuffer(const CHAR *Location, UINT32 Amount)
+{
+	SetBufferBytes((UINT8*)Location, 0x00, Amount);
+}
+
+void FORCE_INLINE CopyMemory(VOID *Dest, VOID *Src, UINT64 Amt)
+{
+	UINT64 Index = 0;
+	UINT64 RawDest = (UINT64)Dest;
+	UINT64 RawSrc = (UINT64)Src;
+
+	CHAR *DestAsChar = reinterpret_cast<CHAR*>(RawDest);
+	CHAR *SrcAsChar = reinterpret_cast<CHAR*>(RawSrc);
+
+	typedef UINT64 __attribute__((__may_alias__)) AUINT64;
+	if (((RawDest & 0x07) == 0) && ((RawSrc & 0x07) == 0))
+	{
+		AUINT64 *DestAsU64 = reinterpret_cast<AUINT64*>(RawDest);
+		AUINT64 *SrcAs64 = reinterpret_cast<AUINT64*>(RawSrc);
+		for (; (Index * sizeof(UINT64)) < Amt; Index++)
+		{
+			DestAsU64[Index] = SrcAs64[Index];
+		} 
+	}
+
+	Index *= sizeof(UINT64);
+
+
+	for (; Index < Amt; ++Index)
+	{
+		DestAsChar[Index] = SrcAsChar[Index];
+	}
+}
 
 constexpr UINT32 ConstStrLen(const CHAR *Str)
 {
@@ -151,11 +213,12 @@ namespace pantheon
 
 void InitBasicRuntime();
 void InitBasicMemory();
-void StopError(const char *Reason, void *Source = nullptr);
+[[noreturn]] void StopError(const char *Reason, void *Source = nullptr);
+[[noreturn]] void StopErrorFmt(const char *Reason, ...);
 BOOL Panicked();
 
 }
 
-#define OBJECT_SELF_ASSERT(x) if ((x) == nullptr) { StopError("called method was nullptr"); }
+#define OBJECT_SELF_ASSERT() if ((this) == nullptr) { StopError("called method was nullptr"); }
 
 #endif

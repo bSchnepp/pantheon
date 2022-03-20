@@ -20,7 +20,7 @@ struct NamedEventContainer
 	BOOL Valid;
 };
 
-ArrayList<NamedEventContainer> ValidEvents;
+static ArrayList<NamedEventContainer> ValidEvents;
 
 void pantheon::ipc::InitEventSystem()
 {

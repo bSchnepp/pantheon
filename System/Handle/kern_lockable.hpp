@@ -30,24 +30,41 @@ public:
 
 	void Lock()
 	{
-		OBJECT_SELF_ASSERT(this);
+		OBJECT_SELF_ASSERT();
 		this->ObjLock.Acquire();
 	}
 
 	void Unlock()
 	{
-		OBJECT_SELF_ASSERT(this);
+		OBJECT_SELF_ASSERT();
 		this->ObjLock.Release();
 	}
 
 	BOOL IsLocked()
 	{
-		OBJECT_SELF_ASSERT(this);
+		OBJECT_SELF_ASSERT();
 		return this->ObjLock.IsLocked();
 	}
 
 private:
 	pantheon::Spinlock ObjLock;
+};
+
+class ScopedLock
+{
+public:
+	ScopedLock(Lockable *Lk) : Lock(Lk)
+	{
+		Lock->Lock();
+	}
+
+	~ScopedLock()
+	{
+		Lock->Unlock();
+	}
+	
+private:
+	Lockable *Lock;
 };
 
 }
