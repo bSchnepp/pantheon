@@ -2,6 +2,7 @@
 #include <Proc/kern_cpu.hpp>
 
 #include "Syscalls.hpp"
+#include <vmm/vmm.hpp>
 
 template<typename T>
 static T ReadArgument(UINT64 Val)
@@ -13,6 +14,12 @@ static T ReadArgument(UINT64 Val)
 
 static const CHAR *ReadArgumentAsCharPointer(UINT64 Val)
 {
+	/* Don't allow reading of kernel memory */
+	if (Val > pantheon::vmm::HigherHalfAddress)
+	{
+		return nullptr;
+	}
+
 	/* This is a hack: this should be validated later!!! */
 	return reinterpret_cast<const CHAR*>(Val);
 }
@@ -68,11 +75,10 @@ pantheon::Result pantheon::SVCAllocateBuffer()
 	
 	Sz = ReadArgumentAsInteger(CurFrame->GetIntArgument(0));
 
-	/* HACK: sizeof(pantheon::Result) == sizeof(UINT_PTR)
-	 * Until we get a more proper virtual memory API going,
-	 * this will suffice. Not ideal, but better than nothing...
-	 */
-	return (UINT64)(BasicMalloc(Sz)());
+	PANTHEON_UNUSED(Sz);
+
+	/* NYI */
+	return 0;
 }
 
 typedef void (*ThreadStartPtr)(void*);
