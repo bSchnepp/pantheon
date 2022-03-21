@@ -33,7 +33,11 @@ FORCE_INLINE VOID W_TTBR0_EL1(UINT64 Val)
 
 FORCE_INLINE VOID W_TTBR1_EL1(UINT64 Val)
 {
-	asm volatile ("msr ttbr1_el1, %0\n" :: "r"(Val) :);
+	/* The TLB has to also be smashed here... */
+	asm volatile ("msr ttbr1_el1, %0\n"
+		"tlbi vmalle1is\n"
+		"dsb ish\n"
+		"isb\n"  :: "r"(Val) :);
 }
 
 FORCE_INLINE VOID W_MAIR_EL1(UINT64 Value)
