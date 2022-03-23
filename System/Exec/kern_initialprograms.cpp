@@ -47,8 +47,6 @@ static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, UINT32 Proc)
 			const char *FinalLocation = (ProgramLocation + (pantheon::vmm::SmallestPageSize * Count));
 			UINT64 TargetSize = (CurSize > pantheon::vmm::SmallestPageSize) ? pantheon::vmm::SmallestPageSize : CurSize;
 			
-			/* Clear the page first before we use it. */
-			SetBufferBytes((UINT8*)NewPageVirt, 0x00, pantheon::vmm::SmallestPageSize);
 			CopyMemory((void*)NewPageVirt, (void*)FinalLocation, TargetSize);
 			CurSize -= TargetSize;
 
