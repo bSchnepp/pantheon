@@ -20,8 +20,26 @@ static const CHAR *ReadArgumentAsCharPointer(UINT64 Val)
 		return nullptr;
 	}
 
-	/* This is a hack: this should be validated later!!! */
-	return reinterpret_cast<const CHAR*>(Val);
+	/* Make sure we translate this to something in kernel memory, 
+	 * just to be safe. */
+	pantheon::vmm::VirtualAddress RawPtr = Val;
+	const CHAR *Result = nullptr;
+
+	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+	CurThread->Lock();
+
+	pantheon::Process *CurProc = CurThread->MyProc();
+	CurProc->Lock();
+
+	pantheon::vmm::PhysicalAddress PAddr = pantheon::vmm::VirtualToPhysicalAddress(CurProc->GetPageTable(), RawPtr);
+	pantheon::vmm::VirtualAddress VAddr = pantheon::vmm::PhysicalToVirtualAddress(PAddr);
+
+	Result = reinterpret_cast<const char *>(VAddr);
+
+	CurProc->Unlock();
+	CurThread->Unlock();
+
+	return Result;
 }
 
 static UINT64 ReadArgumentAsInteger(UINT64 Val)
