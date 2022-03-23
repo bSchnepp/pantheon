@@ -69,14 +69,16 @@ VOID pantheon::Scheduler::PerformCpuSwitch(Thread *Old, Thread *New)
 	pantheon::CpuContext *Prev = (Old->GetRegisters());
 	pantheon::CpuContext *Next = (New->GetRegisters());
 
-	UINT64 NewTTBR0 = (UINT64)New->MyProc()->GetTTBR0();
-	pantheon::CPUReg::W_TTBR0_EL1(NewTTBR0);
+	if (New->MyProc() != Old->MyProc())
+	{
+		UINT64 NewTTBR0 = (UINT64)New->MyProc()->GetTTBR0();
+		pantheon::CPUReg::W_TTBR0_EL1(NewTTBR0);
+	}
 
 	New->Unlock();
 	Old->Unlock();
 
 	pantheon::Sync::FORCE_CLEAN_CACHE();
-
 	cpu_switch(Prev, Next, CpuIRegOffset);	
 }
 

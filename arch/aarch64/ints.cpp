@@ -103,10 +103,6 @@ extern "C" void sync_handler_el0(pantheon::TrapFrame *Frame)
 		"mrs %3, spsr_el1\n"
 		: "=r"(ESR), "=r"(FAR), "=r"(ELR), "=r"(SPSR));
 
-	PANTHEON_UNUSED(FAR);
-	PANTHEON_UNUSED(ELR);
-	PANTHEON_UNUSED(SPSR);
-
 	UINT64 ESRType = (ESR >> 26);
 	if ((ESRType & 0xFF) == 0x15)
 	{
