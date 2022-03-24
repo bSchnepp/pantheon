@@ -4,6 +4,10 @@
 #include "Syscalls.hpp"
 #include <vmm/vmm.hpp>
 
+#include <Proc/kern_proc.hpp>
+#include <Proc/kern_sched.hpp>
+#include <Proc/kern_thread.hpp>
+
 template<typename T>
 static T ReadArgument(UINT64 Val)
 {

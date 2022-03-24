@@ -1,4 +1,5 @@
 #include <kern.h>
+#include <arch.hpp>
 #include "kern_cpu.hpp"
 
 #include <vmm/pte.hpp>
@@ -7,7 +8,9 @@
 #include <kern_datatypes.hpp>
 #include <PhyMemory/kern_alloc.hpp>
 
-static pantheon::GlobalScheduler GlobalSched;
+#include <Proc/kern_proc.hpp>
+#include <Proc/kern_sched.hpp>
+#include <Proc/kern_thread.hpp>
 
 /* Pantheon can have up to 256 processors in theory.
  * In practice, this should probably be cut down to 8 or 16, which is
@@ -38,11 +41,6 @@ void pantheon::CPU::InitCoreInfo(UINT8 CoreNo)
 	PerCoreInfo[CoreNo].NOff = 0;
 	PerCoreInfo[CoreNo].CurSched = reinterpret_cast<Scheduler*>(&Scheds[CoreNo]);
 	(*PerCoreInfo[CoreNo].CurSched) = pantheon::Scheduler();
-}
-
-pantheon::GlobalScheduler *pantheon::CPU::GetGlobalScheduler()
-{
-	return &(GlobalSched);
 }
 
 pantheon::Thread *pantheon::CPU::GetCurThread()

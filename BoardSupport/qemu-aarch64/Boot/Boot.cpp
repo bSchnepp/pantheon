@@ -16,6 +16,8 @@
 #include "Boot/Boot.hpp"
 #include "Boot/BootDriver.hpp"
 
+#include <Common/Sync/kern_atomic.hpp>
+
 extern "C" CHAR *kern_begin;
 extern "C" CHAR *kern_end;
 extern "C" CHAR *TEXT_AREA;

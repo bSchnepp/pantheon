@@ -159,16 +159,6 @@ pantheon::Process &pantheon::Process::operator=(pantheon::Process &&Other) noexc
 }
 
 /**
- * @brief Obtains the process string belonging to this process
- */
-[[nodiscard]]
-const pantheon::String &pantheon::Process::GetProcessString() const
-{
-	OBJECT_SELF_ASSERT();
-	return this->ProcessString;
-}
-
-/**
  * @brief Maps a given physical address to a given virtual address. The smallest page size supported is assumed for granularity. Process must be locked before use.
  * @param VAddresses The virtual address in this process to map to
  * @param PAddresses The physical address on this machine to map from
@@ -184,18 +174,6 @@ void pantheon::Process::MapAddress(const pantheon::vmm::VirtualAddress &VAddress
 
 	PageTableAllocator.Map(this->MemoryMap, VAddress, PAddress, pantheon::vmm::SmallestPageSize, PageAttributes);
 }
-
-/**
- * @brief Obtains the process ID for this process
- * @return The process ID belonging to this process
- */
-[[nodiscard]]
-UINT32 pantheon::Process::ProcessID() const
-{
-	OBJECT_SELF_ASSERT();
-	return this->PID;
-}
-
 
 /**
  * @brief Obtains the process state for this process

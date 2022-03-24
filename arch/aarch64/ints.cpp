@@ -8,6 +8,8 @@
 #include <kern_datatypes.hpp>
 
 #include <Proc/kern_cpu.hpp>
+#include <Proc/kern_sched.hpp>
+#include <Proc/kern_thread.hpp>
 #include <System/Syscalls/Syscalls.hpp>
 
 static UINT64 TimerClock = 1000;

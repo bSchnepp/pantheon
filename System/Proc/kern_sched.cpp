@@ -69,12 +69,6 @@ VOID pantheon::Scheduler::PerformCpuSwitch(Thread *Old, Thread *New)
 	pantheon::CpuContext *Prev = (Old->GetRegisters());
 	pantheon::CpuContext *Next = (New->GetRegisters());
 
-	if (New->MyProc() != Old->MyProc())
-	{
-		UINT64 NewTTBR0 = (UINT64)New->MyProc()->GetTTBR0();
-		pantheon::CPUReg::W_TTBR0_EL1(NewTTBR0);
-	}
-
 	New->Unlock();
 	Old->Unlock();
 
@@ -107,6 +101,9 @@ void pantheon::Scheduler::Reschedule()
 
 	Old->Lock();
 	Old->SetState(pantheon::Thread::STATE_WAITING);
+
+	pantheon::Process *NewProc = New->MyProc();
+	pantheon::Process::Switch(NewProc);
 
 	this->CurThread = New;
 	this->CurThread->Lock();

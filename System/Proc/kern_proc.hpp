@@ -1,7 +1,6 @@
 #include <arch.hpp>
 
 #include <vmm/pte.hpp>
-
 #include <kern_string.hpp>
 #include <kern_datatypes.hpp>
 #include <kern_container.hpp>
@@ -9,12 +8,18 @@
 #include <Sync/kern_atomic.hpp>
 #include <Sync/kern_spinlock.hpp>
 
+#include <Proc/kern_cpu.hpp>
 #include <Proc/kern_thread.hpp>
 #include <Handle/kern_handle.hpp>
 #include <Handle/kern_lockable.hpp>
 #include <Handle/kern_handletable.hpp>
 
 #include <Common/Structures/kern_allocatable.hpp>
+
+/**
+ * @file System/Proc/kern_proc.hpp
+ * @brief Definitions for the Process class, and associated data
+ */
 
 #ifndef _KERN_PROC_HPP_
 #define _KERN_PROC_HPP_
@@ -73,9 +78,6 @@ public:
 	Process &operator=(const Process &Other);
 	Process &operator=(Process &&Other) noexcept;
 
-	[[nodiscard]] const String &GetProcessString() const;
-	[[nodiscard]] UINT32 ProcessID() const;
-
 	[[nodiscard]] ProcessState MyState() const;
 	void SetState(ProcessState State);
 	void MapAddress(const pantheon::vmm::VirtualAddress &VAddresses, const pantheon::vmm::PhysicalAddress &PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes);
@@ -89,7 +91,46 @@ public:
 	static const constexpr UINT64 StackPages = 16;
 	static const constexpr pantheon::vmm::VirtualAddress StackAddr = 0xFFFFFFFFF000;
 
-	[[nodiscard]] pantheon::vmm::VirtualAddress GetEntryPoint() const { return this->EntryPoint; }
+	/**
+	 * @brief Obtains the process ID for this process
+	 * @return The process ID belonging to this process
+	 */
+	[[nodiscard]] constexpr UINT32 ProcessID() const
+	{
+		OBJECT_SELF_ASSERT();
+		return this->PID;
+	}
+
+	/**
+	 * @brief Obtains the process string belonging to this process
+	 */
+	[[nodiscard]] constexpr const String &GetProcessString() const
+	{
+		OBJECT_SELF_ASSERT();
+		return this->ProcessString;
+	}
+
+	/**
+	 * @brief Obtains the entry point of the main thread of this process, in process virtual memory
+	 */
+	[[nodiscard]] constexpr pantheon::vmm::VirtualAddress GetEntryPoint() const 
+	{
+		OBJECT_SELF_ASSERT();
+		return this->EntryPoint; 
+	}
+
+	/**
+	 * @brief Switches page tables from the current process to a new process
+	 */
+	static void Switch(Process *Next)
+	{
+		pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+		pantheon::Process *CurProc = CurThread->MyProc();
+		if (CurProc && CurProc != Next)
+		{
+			pantheon::CPUReg::W_TTBR0_EL1(Next->GetTTBR0());
+		}
+	}
 
 private:
 	ID PID;
