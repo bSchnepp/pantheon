@@ -1,6 +1,6 @@
 .globl interrupt_table
 
-.include "include.S"
+.equ TRAP_SZ, (16*17)
 
 .macro kern_entry, dpl
 	/* 31 regs, plus sp, pc, and pstate  */
