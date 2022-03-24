@@ -391,3 +391,40 @@ void pantheon::Thread::EnableScheduling()
 	pantheon::Sync::DSBISH();
 	this->Unlock();
 }
+
+extern "C" VOID drop_usermode(UINT64 PC, UINT64 PSTATE, UINT64 SP);
+
+static void true_drop_process(void *StartAddress, pantheon::vmm::VirtualAddress StackAddr)
+{
+	/* This gets usermode for aarch64, needs to be abstracted! */
+	drop_usermode((UINT64)StartAddress, 0x00, StackAddr);
+}
+
+void pantheon::Thread::Initialize(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority, BOOL UserMode)
+{
+	static constexpr UINT64 InitialThreadStackSize = pantheon::vmm::SmallestPageSize * pantheon::Thread::InitialNumStackPages;
+	Optional<void*> StackSpace = BasicMalloc(InitialThreadStackSize);
+	if (StackSpace.GetOkay())
+	{
+		UINT64 IStackSpace = (UINT64)StackSpace();
+		#ifdef POISON_MEMORY
+		SetBufferBytes((UINT8*)IStackSpace, 0xAF, InitialThreadStackSize);
+		#endif
+		IStackSpace += InitialThreadStackSize;
+		this->ParentProcess = Proc;
+		this->Lock();
+
+		UINT64 IStartAddr = (UINT64)true_drop_process;
+		UINT64 IThreadData = (UINT64)ThreadData;
+
+		pantheon::CpuContext *Regs = this->GetRegisters();
+		Regs->SetInitContext(IStartAddr, IThreadData, IStackSpace);
+		if (UserMode)
+		{
+			Regs->SetInitUserContext(pantheon::Process::StackAddr, (UINT64)StartAddr);
+		}
+		this->SetState(pantheon::Thread::STATE_WAITING);
+		this->SetPriority(Priority);
+		this->Unlock();
+	}
+}
