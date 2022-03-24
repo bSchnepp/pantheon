@@ -54,7 +54,7 @@ pantheon::Scheduler::Scheduler()
 	SetBufferBytes((UINT8*)SP-4096, 0xAF, 4096);
 	#endif
 
-	this->CurThread = pantheon::GetGlobalScheduler()->CreateProcessorIdleThread(SP, IP);
+	this->CurThread = pantheon::GlobalScheduler::CreateProcessorIdleThread(SP, IP);
 }
 
 pantheon::Scheduler::~Scheduler()
@@ -402,8 +402,6 @@ UINT64 pantheon::GlobalScheduler::CountThreads(UINT64 PID)
 	return Count;
 }
 
-static pantheon::GlobalScheduler GlobalSched;
-
 UINT32 pantheon::AcquireProcessID()
 {
 	/* TODO: When we run out of IDs, go back and ensure we don't
@@ -427,11 +425,6 @@ UINT64 pantheon::AcquireThreadID()
 	/* A copy has to be made since we haven't unlocked the spinlock yet. */
 	RetVal = ThreadID++;
 	return RetVal;
-}
-
-pantheon::GlobalScheduler *pantheon::GetGlobalScheduler()
-{
-	return &GlobalSched;
 }
 
 void pantheon::AttemptReschedule()

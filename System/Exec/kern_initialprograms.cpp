@@ -82,7 +82,7 @@ static void RunSysm(void)
 	{
 		pantheon::StopError("sysm not an executable");
 	}
-	UINT32 PID = pantheon::GetGlobalScheduler()->CreateProcess("sysm", (void*)SysmHeader().e_entry);
+	UINT32 PID = pantheon::GlobalScheduler::CreateProcess("sysm", (void*)SysmHeader().e_entry);
 	RunElf(SysmHeader(), (const char*)ElfLocation, PID);
 	pantheon::GlobalScheduler::RunProcess(PID);
 }
@@ -100,7 +100,7 @@ static void RunPrgm(void)
 	{
 		pantheon::StopError("prgm not an executable");
 	}
-	UINT32 PID = pantheon::GetGlobalScheduler()->CreateProcess("prgm", (void*)PrgmHeader().e_entry);
+	UINT32 PID = pantheon::GlobalScheduler::CreateProcess("prgm", (void*)PrgmHeader().e_entry);
 	RunElf(PrgmHeader(), (const char*)ElfLocation, PID);
 	pantheon::GlobalScheduler::RunProcess(PID);
 }

@@ -66,7 +66,6 @@ private:
 
 UINT32 AcquireProcessID();
 UINT64 AcquireThreadID();
-GlobalScheduler *GetGlobalScheduler();
 
 void AttemptReschedule();
 

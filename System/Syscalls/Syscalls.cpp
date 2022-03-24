@@ -381,7 +381,7 @@ pantheon::Result pantheon::SVCExitThread(pantheon::TrapFrame *CurFrame)
 	CurThread->SetState(pantheon::Thread::STATE_TERMINATED);
 	CurThread->Unlock();
 
-	if (pantheon::GetGlobalScheduler()->CountThreads(CurThread->MyProc()->ProcessID()) == 0)
+	if (pantheon::GlobalScheduler::CountThreads(CurThread->MyProc()->ProcessID()) == 0)
 	{
 		CurProc->SetState(pantheon::Process::STATE_ZOMBIE);
 	}
