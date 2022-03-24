@@ -30,6 +30,8 @@ public:
 private:
 	VOID PerformCpuSwitch(Thread *Old, Thread *New);
 	Thread *CurThread;
+
+	alignas(pantheon::vmm::SmallestPageSize) char InitialStackSpace[pantheon::Process::StackPages * pantheon::vmm::SmallestPageSize];
 };
 
 class GlobalScheduler

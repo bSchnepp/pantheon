@@ -46,18 +46,14 @@ static void proc_idle()
  */
 pantheon::Scheduler::Scheduler()
 {
-	/* hackishly create an idle thread */
+	/* hackishly create an idle thread: FIXME, get this info from the definitions... */
 	UINT64 StackSize = pantheon::Process::StackPages * pantheon::vmm::SmallestPageSize;
-	Optional<void*> Location = BasicMalloc(StackSize);
-	if (Location.GetOkay())
-	{
-		UINT64 SP = (UINT64)(((Location.GetValue()))) + StackSize;
-		UINT64 IP = (UINT64)proc_idle;
-		#ifdef POISON_MEMORY
-		SetBufferBytes((UINT8*)SP-StackSize, 0xAF, StackSize);
-		#endif
-		this->CurThread = pantheon::GlobalScheduler::CreateProcessorIdleThread(SP, IP);
-	}
+	UINT64 SP = (UINT64)(((this->InitialStackSpace))) + StackSize;
+	UINT64 IP = (UINT64)proc_idle;
+	#ifdef POISON_MEMORY
+	SetBufferBytes((UINT8*)SP-StackSize, 0xAF, StackSize);
+	#endif
+	this->CurThread = pantheon::GlobalScheduler::CreateProcessorIdleThread(SP, IP);
 }
 
 pantheon::Scheduler::~Scheduler()
