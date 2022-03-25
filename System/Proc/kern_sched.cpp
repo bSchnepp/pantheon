@@ -96,17 +96,16 @@ void pantheon::Scheduler::Reschedule()
 		return;
 	}
 	
-	this->CurThread->BlockScheduling();
-
+	New->Lock();
 	Old->Lock();
-	Old->SetState(pantheon::Thread::STATE_WAITING);
 
+	this->CurThread->BlockScheduling();
 	pantheon::Process *NewProc = New->MyProc();
 	pantheon::Process::Switch(NewProc);
 
 	this->CurThread = New;
-	this->CurThread->Lock();
-
+	Old->SetState(pantheon::Thread::STATE_WAITING);
+	
 	this->PerformCpuSwitch(Old, New);
 	this->CurThread->EnableScheduling();
 }
@@ -255,6 +254,7 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 		if (TickCount > MaxTicks)
 		{
 			MaxTicks = TickCount;
+			Thr.SetState(pantheon::Thread::STATE_RUNNING);
 			
 			/* If we had a previous state, make sure we release it. */
 			if (ReturnValue)
@@ -263,9 +263,7 @@ pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 				ReturnValue->SetState(pantheon::Thread::STATE_WAITING);
 				ReturnValue->Unlock();
 			}
-
 			ReturnValue = &Thr;
-			ReturnValue->SetState(pantheon::Thread::STATE_RUNNING);
 		}
 	}
 

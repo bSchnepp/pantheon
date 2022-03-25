@@ -375,11 +375,9 @@ void pantheon::Thread::SetProc(pantheon::Process *Proc)
 void pantheon::Thread::BlockScheduling()
 {
 	OBJECT_SELF_ASSERT();
-	this->Lock();
 	pantheon::Sync::DSBISH();
 	this->PreemptCount++;
 	pantheon::Sync::DSBISH();
-	this->Unlock();
 }
 
 void pantheon::Thread::EnableScheduling()
