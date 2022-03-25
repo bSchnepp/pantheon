@@ -30,8 +30,6 @@ public:
 private:
 	VOID PerformCpuSwitch(Thread *Old, Thread *New);
 	Thread *CurThread;
-
-	alignas(pantheon::vmm::SmallestPageSize) char InitialStackSpace[pantheon::Process::StackPages * pantheon::vmm::SmallestPageSize];
 };
 
 class GlobalScheduler
@@ -49,7 +47,7 @@ public:
 	static UINT64 CountThreads(UINT64 PID);
 
 	static pantheon::Thread *AcquireThread();
-	static pantheon::Thread *CreateProcessorIdleThread(UINT64 SP, UINT64 IP);
+	static pantheon::Thread *CreateProcessorIdleThread();
 
 	static BOOL RunProcess(UINT32 PID);
 	static BOOL SetState(UINT32 PID, pantheon::Process::State State);

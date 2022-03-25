@@ -33,27 +33,13 @@ static UINT64 USER_END = 0;
  * \~english @author Brian Schnepp
  */
 
-static void proc_idle()
-{
-	for (;;) 
-	{
-	}
-}
-
 /**
  * \~english @brief Initalizes an instance of a per-core scheduler.
  * \~english @author Brian Schnepp
  */
 pantheon::Scheduler::Scheduler()
 {
-	/* hackishly create an idle thread: FIXME, get this info from the definitions... */
-	UINT64 StackSize = pantheon::Process::StackPages * pantheon::vmm::SmallestPageSize;
-	UINT64 SP = (UINT64)(((this->InitialStackSpace))) + StackSize;
-	UINT64 IP = (UINT64)proc_idle;
-	#ifdef POISON_MEMORY
-	SetBufferBytes((UINT8*)SP-StackSize, 0xAF, StackSize);
-	#endif
-	this->CurThread = pantheon::GlobalScheduler::CreateProcessorIdleThread(SP, IP);
+	this->CurThread = pantheon::GlobalScheduler::CreateProcessorIdleThread();
 }
 
 pantheon::Scheduler::~Scheduler()
@@ -301,7 +287,7 @@ VOID pantheon::GlobalScheduler::Init()
 	GlobalScheduler::Okay.Store(TRUE);
 }
 
-pantheon::Thread *pantheon::GlobalScheduler::CreateProcessorIdleThread(UINT64 SP, UINT64 IP)
+pantheon::Thread *pantheon::GlobalScheduler::CreateProcessorIdleThread()
 {
 	while (!GlobalScheduler::Okay.Load()){}
 
@@ -311,15 +297,8 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateProcessorIdleThread(UINT64 SP
 		if (Proc.ProcessID() == 0)
 		{
 			pantheon::Thread *CurThread = Thread::Create();
-			*CurThread = Thread(&Proc, pantheon::Thread::PRIORITY_NORMAL);
-			CurThread->Lock();
-			CurThread->GetRegisters()->SetSP(SP);
-			CurThread->GetRegisters()->SetPC(IP);
-			CurThread->SetState(pantheon::Thread::STATE_RUNNING);
-			CurThread->Unlock();
-
+			CurThread->Initialize(&Proc, nullptr, nullptr, pantheon::Thread::PRIORITY_VERYLOW, FALSE);
 			GlobalScheduler::ThreadList.PushFront(CurThread);
-
 			GlobalScheduler::AccessSpinlock.Release();
 			return CurThread;
 		}
