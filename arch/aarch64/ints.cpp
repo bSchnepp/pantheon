@@ -108,8 +108,10 @@ extern "C" void sync_handler_el0(pantheon::TrapFrame *Frame)
 	UINT64 ESRType = (ESR >> 26);
 	if ((ESRType & 0xFF) == 0x15)
 	{
+		pantheon::CPU::STI();
 		UINT32 SyscallNo = Frame->Regs[8];
 		pantheon::CallSyscall(SyscallNo, Frame);
+		pantheon::CPU::CLI();
 	} 
 	else if (ESR == 0x2000000)
 	{

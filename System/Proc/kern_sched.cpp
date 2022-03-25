@@ -39,7 +39,8 @@ static UINT64 USER_END = 0;
  */
 pantheon::Scheduler::Scheduler()
 {
-	this->CurThread = pantheon::GlobalScheduler::CreateProcessorIdleThread();
+	this->IdleThread = pantheon::GlobalScheduler::CreateProcessorIdleThread();
+	this->CurThread = this->IdleThread;
 }
 
 pantheon::Scheduler::~Scheduler()
@@ -80,9 +81,22 @@ void pantheon::Scheduler::Reschedule()
 		StopError("Try to reschedule with interrupts off");
 	}
 
-	this->CurThread->BlockScheduling();
 	pantheon::Thread *Old = this->CurThread;
 	pantheon::Thread *New = GlobalScheduler::AcquireThread();
+
+	/* If there is no next, just do the idle thread. */
+	if (New == nullptr)
+	{
+		New = this->IdleThread;
+	}
+
+	/* Don't bother trying to switching threads if we don't have to. */
+	if (New == Old)
+	{
+		return;
+	}
+	
+	this->CurThread->BlockScheduling();
 
 	Old->Lock();
 	Old->SetState(pantheon::Thread::STATE_WAITING);
@@ -212,66 +226,64 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateThread(pantheon::Process *Pro
 pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
 {
 	pantheon::Thread *ReturnValue = nullptr;
-	while (ReturnValue == nullptr)
+	
+	UINT64 MaxTicks = 0;
+	GlobalScheduler::AccessSpinlock.Acquire();
+	for (pantheon::Thread &Thr : GlobalScheduler::ThreadList)
 	{
-		UINT64 MaxTicks = 0;
-		GlobalScheduler::AccessSpinlock.Acquire();
-		for (pantheon::Thread &Thr : GlobalScheduler::ThreadList)
+		pantheon::ScopedLock L(&Thr);
+		pantheon::Process *Proc = Thr.MyProc();
+		pantheon::Thread::State State = Thr.MyState();
+
+		if (Thr.MyProc() == nullptr)
 		{
-			pantheon::ScopedLock L(&Thr);
-			pantheon::Process *Proc = Thr.MyProc();
-			pantheon::Thread::State State = Thr.MyState();
-
-			if (Thr.MyProc() == nullptr)
-			{
-				StopErrorFmt("Invalid process on thread: 0x%lx\n", Thr.ThreadID());
-			}
-
-			pantheon::ScopedLock L2(Proc);
-			if (Proc->MyState() != pantheon::Process::STATE_RUNNING)
-			{
-				continue;
-			}
-
-			if (State != pantheon::Thread::STATE_WAITING)
-			{
-				continue;
-			}
-
-			UINT64 TickCount = Thr.TicksLeft();
-			if (TickCount > MaxTicks)
-			{
-				MaxTicks = TickCount;
-				
-				/* If we had a previous state, make sure we release it. */
-				if (ReturnValue)
-				{
-					ReturnValue->Lock();
-					ReturnValue->SetState(pantheon::Thread::STATE_WAITING);
-					ReturnValue->Unlock();
-				}
-
-				ReturnValue = &Thr;
-				ReturnValue->SetState(pantheon::Thread::STATE_RUNNING);
-			}
+			StopErrorFmt("Invalid process on thread: 0x%lx\n", Thr.ThreadID());
 		}
 
-		if (ReturnValue != nullptr)
+		pantheon::ScopedLock L2(Proc);
+		if (Proc->MyState() != pantheon::Process::STATE_RUNNING)
 		{
-			GlobalScheduler::AccessSpinlock.Release();
-			return ReturnValue;
+			continue;
 		}
 
-		/* Nothing was found: refresh everything, try again. */
-		for (pantheon::Thread &Thr : GlobalScheduler::ThreadList)
+		if (State != pantheon::Thread::STATE_WAITING)
 		{
-			pantheon::ScopedLock L(&Thr);
-			Thr.RefreshTicks();
+			continue;
 		}
 
-		GlobalScheduler::AccessSpinlock.Release();
+		UINT64 TickCount = Thr.TicksLeft();
+		if (TickCount > MaxTicks)
+		{
+			MaxTicks = TickCount;
+			
+			/* If we had a previous state, make sure we release it. */
+			if (ReturnValue)
+			{
+				ReturnValue->Lock();
+				ReturnValue->SetState(pantheon::Thread::STATE_WAITING);
+				ReturnValue->Unlock();
+			}
+
+			ReturnValue = &Thr;
+			ReturnValue->SetState(pantheon::Thread::STATE_RUNNING);
+		}
 	}
-	StopErrorFmt("Jumped outside acquire thread loop\n");
+
+	if (ReturnValue != nullptr)
+	{
+		GlobalScheduler::AccessSpinlock.Release();
+		return ReturnValue;
+	}
+
+	/* Nothing was found: refresh everything, try again. */
+	for (pantheon::Thread &Thr : GlobalScheduler::ThreadList)
+	{
+		pantheon::ScopedLock L(&Thr);
+		Thr.RefreshTicks();
+	}
+
+	GlobalScheduler::AccessSpinlock.Release();
+	return ReturnValue;
 }
 
 static pantheon::Process IdleProc;
@@ -291,15 +303,13 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateProcessorIdleThread()
 {
 	while (!GlobalScheduler::Okay.Load()){}
 
-	GlobalScheduler::AccessSpinlock.Acquire();
 	for (pantheon::Process &Proc : GlobalScheduler::ProcessList)
 	{
 		if (Proc.ProcessID() == 0)
 		{
+			/* Note the idle thread needs to have no meaningful data: it gets smashed on startup.  */
 			pantheon::Thread *CurThread = Thread::Create();
 			CurThread->Initialize(&Proc, nullptr, nullptr, pantheon::Thread::PRIORITY_VERYLOW, FALSE);
-			GlobalScheduler::ThreadList.PushFront(CurThread);
-			GlobalScheduler::AccessSpinlock.Release();
 			return CurThread;
 		}
 	}

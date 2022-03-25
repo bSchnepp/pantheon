@@ -124,6 +124,11 @@ public:
 	 */
 	static void Switch(Process *Next)
 	{
+		if (Next == nullptr)
+		{
+			return;
+		}
+		
 		pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 		pantheon::Process *CurProc = CurThread->MyProc();
 		if (CurProc && CurProc != Next)

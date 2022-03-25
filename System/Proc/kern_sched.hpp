@@ -30,6 +30,7 @@ public:
 private:
 	VOID PerformCpuSwitch(Thread *Old, Thread *New);
 	Thread *CurThread;
+	Thread *IdleThread;
 };
 
 class GlobalScheduler
