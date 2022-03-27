@@ -12,13 +12,8 @@
 #include <Proc/kern_sched.hpp>
 #include <Proc/kern_thread.hpp>
 
-/* Pantheon can have up to 256 processors in theory.
- * In practice, this should probably be cut down to 8 or 16, which is
- * way more realistic for a SoM I can actually buy. 
- * 256 thread x86 systems barely exist, so it's highly unlikely for any aarch64
- * systems with that many cores or more to exist.
- */
-static pantheon::CPU::CoreInfo PerCoreInfo[256];
+/* Avoid having too high a number of cores to look through. */
+static pantheon::CPU::CoreInfo PerCoreInfo[MAX_NUM_CPUS];
 
 pantheon::CPU::CoreInfo *pantheon::CPU::GetCoreInfo()
 {
