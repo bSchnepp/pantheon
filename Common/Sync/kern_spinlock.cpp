@@ -4,6 +4,8 @@
 #include "kern_datatypes.hpp"
 #include "Proc/kern_cpu.hpp"
 
+#include <kern_runtime.hpp>
+
 pantheon::Spinlock::Spinlock() : pantheon::Spinlock::Spinlock("lock")
 {
 }

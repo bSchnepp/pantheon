@@ -1,4 +1,5 @@
 #include <arch.hpp>
+#include <cpureg.hpp>
 
 #include <vmm/pte.hpp>
 #include <kern_string.hpp>

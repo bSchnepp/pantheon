@@ -5,6 +5,7 @@
 #include <arch/aarch64/thread.hpp>
 
 #include <Proc/kern_cpu.hpp>
+#include <Proc/kern_thread.hpp>
 #include <System/Syscalls/Syscalls.hpp>
 
 #include <stdio.h>

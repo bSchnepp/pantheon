@@ -17,6 +17,7 @@
 namespace pantheon::vmm
 {
 
+static constexpr pantheon::vmm::VirtualAddress HigherHalfAddress = (1ULL << 63);
 
 FORCE_INLINE VirtualAddress PhysicalToVirtualAddress(PhysicalAddress PhyAddr)
 {
