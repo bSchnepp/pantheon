@@ -34,7 +34,7 @@ void pantheon::CPU::InitCoreInfo(UINT8 CoreNo)
 
 	PerCoreInfo[CoreNo].CurFrame = nullptr;
 	PerCoreInfo[CoreNo].NOff = 0;
-	PerCoreInfo[CoreNo].CurSched = reinterpret_cast<Scheduler*>(&Scheds[CoreNo]);
+	PerCoreInfo[CoreNo].CurSched = &Scheds[CoreNo];
 	(*PerCoreInfo[CoreNo].CurSched) = pantheon::Scheduler();
 }
 
@@ -48,6 +48,21 @@ pantheon::Thread *pantheon::CPU::GetCurThread()
 	return Sched->MyThread();
 }
 
+pantheon::Process *pantheon::CPU::GetCurProcess()
+{
+	pantheon::Scheduler *Sched = pantheon::CPU::GetCurSched();
+	if (Sched == nullptr)
+	{
+		return nullptr;
+	}
+	pantheon::Thread *CurThread = Sched->MyThread();
+	if (CurThread)
+	{
+		return CurThread->MyProc();
+	}
+	return nullptr;
+}
+
 pantheon::Scheduler *pantheon::CPU::GetCurSched()
 {
 	return pantheon::CPU::GetCoreInfo()->CurSched;
@@ -58,10 +73,9 @@ pantheon::TrapFrame *pantheon::CPU::GetCurFrame()
 	return pantheon::CPU::GetCoreInfo()->CurFrame;
 }
 
-alignas(4096) static char StackArea[MAX_NUM_CPUS * DEFAULT_STACK_SIZE];
-
 void *pantheon::CPU::GetStackArea(UINT64 Core)
 {
+	alignas(4096) static char StackArea[MAX_NUM_CPUS * DEFAULT_STACK_SIZE];
 	return StackArea + static_cast<UINT64>(Core * DEFAULT_STACK_SIZE) + DEFAULT_STACK_SIZE;
 }
 
