@@ -42,6 +42,21 @@ public:
 		#endif
 	}
 
+	bool operator==(const Atomic<T> &Other)
+	{
+		return this->Load() == Other.Load();
+	}
+
+	void operator=(const T &Thing)
+	{
+		this->Store(Thing);
+	}
+
+	void operator=(T &&Thing)
+	{
+		this->Store(Thing);
+	}
+
 private:
 	T Content;
 
