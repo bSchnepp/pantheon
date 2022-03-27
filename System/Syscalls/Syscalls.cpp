@@ -2,6 +2,11 @@
 #include <Proc/kern_cpu.hpp>
 
 #include "Syscalls.hpp"
+#include <vmm/vmm.hpp>
+
+#include <Proc/kern_proc.hpp>
+#include <Proc/kern_sched.hpp>
+#include <Proc/kern_thread.hpp>
 
 template<typename T>
 static T ReadArgument(UINT64 Val)
@@ -13,8 +18,32 @@ static T ReadArgument(UINT64 Val)
 
 static const CHAR *ReadArgumentAsCharPointer(UINT64 Val)
 {
-	/* This is a hack: this should be validated later!!! */
-	return reinterpret_cast<const CHAR*>(Val);
+	/* Don't allow reading of kernel memory */
+	if (Val > pantheon::vmm::HigherHalfAddress)
+	{
+		return nullptr;
+	}
+
+	/* Make sure we translate this to something in kernel memory, 
+	 * just to be safe. */
+	pantheon::vmm::VirtualAddress RawPtr = Val;
+	const CHAR *Result = nullptr;
+
+	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+	CurThread->Lock();
+
+	pantheon::Process *CurProc = CurThread->MyProc();
+	CurProc->Lock();
+
+	pantheon::vmm::PhysicalAddress PAddr = pantheon::vmm::VirtualToPhysicalAddress(CurProc->GetPageTable(), RawPtr);
+	pantheon::vmm::VirtualAddress VAddr = pantheon::vmm::PhysicalToVirtualAddress(PAddr);
+
+	Result = reinterpret_cast<const char *>(VAddr);
+
+	CurProc->Unlock();
+	CurThread->Unlock();
+
+	return Result;
 }
 
 static UINT64 ReadArgumentAsInteger(UINT64 Val)
@@ -23,8 +52,10 @@ static UINT64 ReadArgumentAsInteger(UINT64 Val)
 	return reinterpret_cast<UINT64>(Val);
 }
 
-VOID pantheon::SVCExitProcess()
+VOID pantheon::SVCExitProcess(pantheon::TrapFrame *CurFrame)
 {
+	PANTHEON_UNUSED(CurFrame);
+
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	CurThread->MyProc()->Lock();
 	CurThread->MyProc()->SetState(pantheon::Process::STATE_ZOMBIE);
@@ -38,15 +69,15 @@ VOID pantheon::SVCExitProcess()
 	pantheon::CPU::GetCoreInfo()->CurSched->Reschedule();
 }
 
-pantheon::Result pantheon::SVCForkProcess()
+pantheon::Result pantheon::SVCForkProcess(pantheon::TrapFrame *CurFrame)
 {
 	/* nyi */
+	PANTHEON_UNUSED(CurFrame);
 	return 0;
 }
 
-pantheon::Result pantheon::SVCLogText()
+pantheon::Result pantheon::SVCLogText(pantheon::TrapFrame *CurFrame)
 {
-	pantheon::TrapFrame *CurFrame = pantheon::CPU::GetCurFrame();
 	const CHAR *Data = nullptr;
 	
 	Data = ReadArgumentAsCharPointer(CurFrame->GetIntArgument(0));
@@ -61,18 +92,16 @@ pantheon::Result pantheon::SVCLogText()
 	return 0;
 }
 
-pantheon::Result pantheon::SVCAllocateBuffer()
+pantheon::Result pantheon::SVCAllocateBuffer(pantheon::TrapFrame *CurFrame)
 {
-	pantheon::TrapFrame *CurFrame = pantheon::CPU::GetCurFrame();
 	UINT64 Sz = 0;
 	
 	Sz = ReadArgumentAsInteger(CurFrame->GetIntArgument(0));
 
-	/* HACK: sizeof(pantheon::Result) == sizeof(UINT_PTR)
-	 * Until we get a more proper virtual memory API going,
-	 * this will suffice. Not ideal, but better than nothing...
-	 */
-	return (UINT64)(BasicMalloc(Sz)());
+	PANTHEON_UNUSED(Sz);
+
+	/* NYI */
+	return 0;
 }
 
 typedef void (*ThreadStartPtr)(void*);
@@ -84,9 +113,10 @@ typedef void (*ThreadStartPtr)(void*);
  * \~english @param StackTop The top of the stack for the newly made process
  * \~english @param Priority The priority of the new thread
  */
-pantheon::Result pantheon::SVCCreateThread()
+pantheon::Result pantheon::SVCCreateThread(pantheon::TrapFrame *CurFrame)
 {
 	/* Not yet implemented! */
+	PANTHEON_UNUSED(CurFrame);
 	return 0;
 }
 
@@ -101,9 +131,8 @@ pantheon::Result pantheon::SVCCreateThread()
  * \~english @param[out] WriteHandle The handle of the process for the write area
  * \~english @param[out] ReadHandle The handle of the process for the read area
  */
-pantheon::Result pantheon::SVCCreateNamedEvent()
+pantheon::Result pantheon::SVCCreateNamedEvent(pantheon::TrapFrame *CurFrame)
 {
-	pantheon::TrapFrame *CurFrame = pantheon::CPU::GetCurFrame();
 	const CHAR *Name = nullptr;
 	Name = ReadArgumentAsCharPointer(CurFrame->GetIntArgument(0));
 	
@@ -162,9 +191,8 @@ pantheon::Result pantheon::SVCCreateNamedEvent()
 	return -1;
 }
 
-pantheon::Result pantheon::SVCSignalEvent()
+pantheon::Result pantheon::SVCSignalEvent(pantheon::TrapFrame *CurFrame)
 {
-	pantheon::TrapFrame *CurFrame = pantheon::CPU::GetCurFrame();
 	INT32 WriteHandle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 
 
@@ -207,9 +235,8 @@ pantheon::Result pantheon::SVCSignalEvent()
 	return 0;
 }
 
-pantheon::Result pantheon::SVCClearEvent()
+pantheon::Result pantheon::SVCClearEvent(pantheon::TrapFrame *CurFrame)
 {
-	pantheon::TrapFrame *CurFrame = pantheon::CPU::GetCurFrame();
 	INT32 WriteHandle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
@@ -249,9 +276,8 @@ pantheon::Result pantheon::SVCClearEvent()
 	return 0;
 }
 
-pantheon::Result pantheon::SVCResetEvent()
+pantheon::Result pantheon::SVCResetEvent(pantheon::TrapFrame *CurFrame)
 {
-	pantheon::TrapFrame *CurFrame = pantheon::CPU::GetCurFrame();
 	INT32 ReadHandle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
@@ -291,9 +317,8 @@ pantheon::Result pantheon::SVCResetEvent()
 	return -1;
 }
 
-pantheon::Result pantheon::SVCPollEvent()
+pantheon::Result pantheon::SVCPollEvent(pantheon::TrapFrame *CurFrame)
 {
-	pantheon::TrapFrame *CurFrame = pantheon::CPU::GetCurFrame();
 	INT32 Handle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
@@ -332,8 +357,9 @@ pantheon::Result pantheon::SVCPollEvent()
 	return -1;
 }
 
-pantheon::Result pantheon::SVCYield()
+pantheon::Result pantheon::SVCYield(pantheon::TrapFrame *CurFrame)
 {
+	PANTHEON_UNUSED(CurFrame);
 	pantheon::Scheduler *CurSched = pantheon::CPU::GetCurSched();
 	{
 		pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
@@ -344,8 +370,9 @@ pantheon::Result pantheon::SVCYield()
 	return 0;
 }
 
-pantheon::Result pantheon::SVCExitThread()
+pantheon::Result pantheon::SVCExitThread(pantheon::TrapFrame *CurFrame)
 {
+	PANTHEON_UNUSED(CurFrame);
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	pantheon::Process *CurProc = CurThread->MyProc();
 	pantheon::Scheduler *CurSched = pantheon::CPU::GetCurSched();
@@ -354,7 +381,7 @@ pantheon::Result pantheon::SVCExitThread()
 	CurThread->SetState(pantheon::Thread::STATE_TERMINATED);
 	CurThread->Unlock();
 
-	if (pantheon::GetGlobalScheduler()->CountThreads(CurThread->MyProc()->ProcessID()) == 0)
+	if (pantheon::GlobalScheduler::CountThreads(CurThread->MyProc()->ProcessID()) == 0)
 	{
 		CurProc->SetState(pantheon::Process::STATE_ZOMBIE);
 	}
@@ -363,9 +390,8 @@ pantheon::Result pantheon::SVCExitThread()
 	return 0;
 }
 
-pantheon::Result pantheon::SVCExecute()
+pantheon::Result pantheon::SVCExecute(pantheon::TrapFrame *CurFrame)
 {
-	pantheon::TrapFrame *CurFrame = pantheon::CPU::GetCurFrame();
 	INT32 Handle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	if (!CurThread)
@@ -446,9 +472,11 @@ UINT64 pantheon::SyscallCount()
 
 BOOL pantheon::CallSyscall(UINT32 Index, pantheon::TrapFrame *Frame)
 {
-	if (Index < SyscallCount())
+	if (Index < SyscallCount() && Frame != nullptr)
 	{
+		pantheon::CPU::STI();
 		(*syscall_table[Index])(Frame);
+		pantheon::CPU::CLI();
 		return TRUE;
 	}
 	return FALSE;

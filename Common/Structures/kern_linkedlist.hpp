@@ -1,5 +1,5 @@
 #include <kern_datatypes.hpp>
-
+#include <Sync/kern_spinlock.hpp>
 
 #ifndef _KERN_LINKEDLIST_HPP_
 #define _KERN_LINKEDLIST_HPP_
@@ -110,27 +110,32 @@ public:
 
 	LinkedList() : LinkedList(nullptr)
 	{
+		OperationSpinlock = pantheon::Spinlock("LinkedList");
 	}
 
 	LinkedList(LinkedListItem<T> *ListRoot) : Root(ListRoot)
 	{
 		/* Size is either 0 or 1, depending on if Root is valid. */
 		this->NumElem = (Root != nullptr);
+		OperationSpinlock = pantheon::Spinlock("LinkedList");
 	}
 
 	void PushFront(T *Item)
 	{
+		this->OperationSpinlock.Acquire();
 		LinkedListItem<T> *NewEntry = LinkedListItem<T>::CreateEntry(Item);
 		if (this->Root == nullptr)
 		{
 			this->NumElem = 1;
 			Root = NewEntry;
+			this->OperationSpinlock.Release();
 			return;
 		}
 
 		NewEntry->SetNext(this->Root);
 		this->Root = NewEntry;
 		this->NumElem++;
+		this->OperationSpinlock.Release();
 	}
 
 	T *Front()
@@ -140,12 +145,14 @@ public:
 
 	T *PopFront()
 	{
+		this->OperationSpinlock.Acquire();
 		LinkedListItem<T> *OldRoot = this->Root;
 		this->Root = this->Root->GetNext();
 		this->NumElem--;
 
 		T *Item = OldRoot->GetValue();
 		LinkedListItem<T>::DestroyEntry(OldRoot);
+		this->OperationSpinlock.Release();
 		return Item;
 	}
 
@@ -206,6 +213,12 @@ public:
 private:
 	UINT64 NumElem;
 	LinkedListItem<T> *Root;
+
+	/* TODO: See if we can prove some invariants to relax the need for this
+	 * spinlock. We really really really should build some models for the
+	 * kernel (and all of it)...
+	 */
+	pantheon::Spinlock OperationSpinlock;
 };
 
 

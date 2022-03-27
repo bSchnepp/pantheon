@@ -1,7 +1,5 @@
+#include <arch.hpp>
 #include <kern_datatypes.hpp>
-
-#include <Proc/kern_thread.hpp>
-#include <Proc/kern_sched.hpp>
 
 #ifndef _KERN_CPU_HPP_
 #define _KERN_CPU_HPP_
@@ -11,6 +9,10 @@
 
 namespace pantheon
 {
+
+class Thread;
+class Process;
+class Scheduler;
 
 namespace CPU
 {
@@ -43,8 +45,6 @@ void InitCoreInfo(UINT8 CoreNo);
 CoreInfo *GetCoreInfo();
 
 UINT8 GetProcessorNumber();
-
-GlobalScheduler *GetGlobalScheduler();
 
 pantheon::Thread *GetCurThread();
 pantheon::Scheduler *GetCurSched();

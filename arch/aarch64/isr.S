@@ -1,6 +1,6 @@
 .globl interrupt_table
 
-.include "include.S"
+.equ TRAP_SZ, (16*17)
 
 .macro kern_entry, dpl
 	/* 31 regs, plus sp, pc, and pstate  */
@@ -135,51 +135,20 @@ spin:
 
 .align 7
 interrupt_table:
-	.align 7
 	DEFINE_ISR sync_handler_el1_sp0
-
-	.align 7
 	DEFINE_ISR irq_handler_el1_sp0
-	
-	.align 7
 	DEFINE_ISR fiq_handler_el1_sp0
-
-	.align 7
 	DEFINE_ISR err_handler_el1_sp0
-
-	.align 7
 	DEFINE_ISR sync_handler_el1
-
-	.align 7
 	DEFINE_ISR irq_handler_el1
-
-	.align 7
 	DEFINE_ISR fiq_handler_el1
-
-	.align 7
 	DEFINE_ISR err_handler_el1
-
-	.align 7
 	DEFINE_ISR_EL0 sync_handler_el0
-
-	.align 7
 	DEFINE_ISR_EL0 irq_handler_el0
-
-	.align 7
 	DEFINE_ISR_EL0 fiq_handler_el0
-
-	.align 7
 	DEFINE_ISR_EL0 err_handler_el0
-
-	.align 7
 	DEFINE_ISR_EL0 sync_handler_el0_32
-
-	.align 7
 	DEFINE_ISR_EL0 irq_handler_el0_32
-
-	.align 7
 	DEFINE_ISR_EL0 fiq_handler_el0_32
-
-	.align 7
 	DEFINE_ISR_EL0 err_handler_el0_32
 

@@ -12,19 +12,19 @@ typedef UINT64 Result;
  * For now, these are necessary since proper resource management doesn't
  * really exist in the kernel as of yet.
  */
-VOID SVCExitProcess();
-Result SVCForkProcess();
-Result SVCLogText();
-Result SVCAllocateBuffer();
-Result SVCCreateThread();
-Result SVCCreateNamedEvent();
-Result SVCSignalEvent();
-Result SVCClearEvent();
-Result SVCResetEvent();
-Result SVCPollEvent();
-Result SVCYield();
-Result SVCExitThread();
-Result SVCExecute();
+VOID SVCExitProcess(pantheon::TrapFrame *CurFrame);
+Result SVCForkProcess(pantheon::TrapFrame *CurFrame);
+Result SVCLogText(pantheon::TrapFrame *CurFrame);
+Result SVCAllocateBuffer(pantheon::TrapFrame *CurFrame);
+Result SVCCreateThread(pantheon::TrapFrame *CurFrame);
+Result SVCCreateNamedEvent(pantheon::TrapFrame *CurFrame);
+Result SVCSignalEvent(pantheon::TrapFrame *CurFrame);
+Result SVCClearEvent(pantheon::TrapFrame *CurFrame);
+Result SVCResetEvent(pantheon::TrapFrame *CurFrame);
+Result SVCPollEvent(pantheon::TrapFrame *CurFrame);
+Result SVCYield(pantheon::TrapFrame *CurFrame);
+Result SVCExitThread(pantheon::TrapFrame *CurFrame);
+Result SVCExecute(pantheon::TrapFrame *CurFrame);
 
 
 UINT64 SyscallCount();

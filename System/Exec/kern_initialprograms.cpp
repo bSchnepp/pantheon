@@ -47,8 +47,6 @@ static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, UINT32 Proc)
 			const char *FinalLocation = (ProgramLocation + (pantheon::vmm::SmallestPageSize * Count));
 			UINT64 TargetSize = (CurSize > pantheon::vmm::SmallestPageSize) ? pantheon::vmm::SmallestPageSize : CurSize;
 			
-			/* Clear the page first before we use it. */
-			SetBufferBytes((UINT8*)NewPageVirt, 0x00, pantheon::vmm::SmallestPageSize);
 			CopyMemory((void*)NewPageVirt, (void*)FinalLocation, TargetSize);
 			CurSize -= TargetSize;
 
@@ -84,7 +82,7 @@ static void RunSysm(void)
 	{
 		pantheon::StopError("sysm not an executable");
 	}
-	UINT32 PID = pantheon::GetGlobalScheduler()->CreateProcess("sysm", (void*)SysmHeader().e_entry);
+	UINT32 PID = pantheon::GlobalScheduler::CreateProcess("sysm", (void*)SysmHeader().e_entry);
 	RunElf(SysmHeader(), (const char*)ElfLocation, PID);
 	pantheon::GlobalScheduler::RunProcess(PID);
 }
@@ -102,7 +100,7 @@ static void RunPrgm(void)
 	{
 		pantheon::StopError("prgm not an executable");
 	}
-	UINT32 PID = pantheon::GetGlobalScheduler()->CreateProcess("prgm", (void*)PrgmHeader().e_entry);
+	UINT32 PID = pantheon::GlobalScheduler::CreateProcess("prgm", (void*)PrgmHeader().e_entry);
 	RunElf(PrgmHeader(), (const char*)ElfLocation, PID);
 	pantheon::GlobalScheduler::RunProcess(PID);
 }

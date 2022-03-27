@@ -5,6 +5,8 @@
 #include <kern_datatypes.hpp>
 
 #include <Proc/kern_cpu.hpp>
+#include <Proc/kern_sched.hpp>
+
 #include <Devices/kern_drivers.hpp>
 #include <System/PhyMemory/kern_alloc.hpp>
 #include <System/Exec/kern_initialprograms.hpp>
