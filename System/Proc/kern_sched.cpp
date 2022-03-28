@@ -105,6 +105,9 @@ void pantheon::Scheduler::Reschedule()
 
 	this->CurThread = New;
 	Old->SetState(pantheon::Thread::STATE_WAITING);
+	Old->RefreshTicks();
+
+	/* TODO: Make this better */
 	pantheon::GlobalScheduler::Lock();
 	pantheon::GlobalScheduler::AppendIntoReadyList(Old);
 	pantheon::GlobalScheduler::Unlock();
