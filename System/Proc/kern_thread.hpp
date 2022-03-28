@@ -80,6 +80,10 @@ public:
 	void EnableScheduling();
 	[[nodiscard]] BOOL Preempted() const;
 
+	[[nodiscard]] BOOL End() const;
+	Thread *Next();
+	void SetNext(pantheon::Thread *Item);
+
 private:
 	UINT64 TID;
 
@@ -96,6 +100,8 @@ private:
 	void *UserStackSpace;
 
 	static constexpr UINT64 InitialNumStackPages = 4;
+
+	pantheon::Atomic<pantheon::Thread*> NextThread;
 };
 
 }

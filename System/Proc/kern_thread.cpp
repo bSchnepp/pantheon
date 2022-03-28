@@ -426,3 +426,18 @@ void pantheon::Thread::Initialize(pantheon::Process *Proc, void *StartAddr, void
 		this->Unlock();
 	}
 }
+
+[[nodiscard]] BOOL pantheon::Thread::End() const
+{
+	return this->NextThread == nullptr;
+}
+
+pantheon::Thread *pantheon::Thread::Next()
+{
+	return this->NextThread.Load();
+}
+
+void pantheon::Thread::SetNext(pantheon::Thread *Item)
+{
+	this->NextThread = Item;
+}

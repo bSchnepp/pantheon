@@ -54,12 +54,23 @@ public:
 	static BOOL SetState(UINT32 PID, pantheon::Process::State State);
 	static BOOL MapPages(UINT32 PID, pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages);
 
+	static void AppendIntoReadyList(pantheon::Thread *Next);
+	static void RemoveFromReadyList(pantheon::Thread *Next);
+	static pantheon::Thread *PopFromReadyList();
+
+	/* TODO: Inherit from Lockable... */
+	static void Lock();
+	static void Unlock();
+
 private:
 	inline static Atomic<BOOL> Okay;
 	inline static Spinlock AccessSpinlock;
 
 	inline static LinkedList<Process> ProcessList;
 	inline static LinkedList<Thread> ThreadList;
+
+	inline static Thread *ReadyHead;
+	inline static Thread *ReadyTail;	
 
 private:
 	static Thread *CreateUserThreadCommon(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority);
