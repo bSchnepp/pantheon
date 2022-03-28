@@ -28,7 +28,7 @@ public:
 	Thread *MyThread();
 
 private:
-	VOID PerformCpuSwitch(Thread *Old, Thread *New);
+	VOID PerformCpuSwitch(pantheon::CpuContext *Old, pantheon::CpuContext *New);
 	Thread *CurThread;
 	Thread *IdleThread;
 };
@@ -46,8 +46,6 @@ public:
 	static pantheon::Thread *CreateUserThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
 
 	static UINT64 CountThreads(UINT64 PID);
-
-	static pantheon::Thread *AcquireThread();
 	static pantheon::Thread *CreateProcessorIdleThread();
 
 	static BOOL RunProcess(UINT32 PID);

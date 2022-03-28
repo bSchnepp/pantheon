@@ -50,15 +50,13 @@ pantheon::Scheduler::~Scheduler()
 
 extern "C" void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New, UINT32 RegOffset);
 
-VOID pantheon::Scheduler::PerformCpuSwitch(Thread *Old, Thread *New)
+VOID pantheon::Scheduler::PerformCpuSwitch(pantheon::CpuContext *Prev, pantheon::CpuContext *Next)
 {
-	pantheon::CpuContext *Prev = (Old->GetRegisters());
-	pantheon::CpuContext *Next = (New->GetRegisters());
-
-	New->Unlock();
-	Old->Unlock();
-
-	pantheon::Sync::FORCE_CLEAN_CACHE();
+	/* In case some MMIO was going on, we need to be sure we're flushing the
+	 * cache for every context switch.
+	 */
+	pantheon::Sync::DSBISH();
+	pantheon::Sync::ISB();
 	cpu_switch(Prev, Next, CpuIRegOffset);	
 }
 
@@ -81,13 +79,20 @@ void pantheon::Scheduler::Reschedule()
 		StopError("Try to reschedule with interrupts off");
 	}
 
+	GlobalScheduler::Lock();
 	pantheon::Thread *Old = this->CurThread;
-	pantheon::Thread *New = GlobalScheduler::AcquireThread();
+	pantheon::Thread *New = GlobalScheduler::PopFromReadyList();
 
 	/* If there is no next, just do the idle thread. */
 	if (New == nullptr)
 	{
 		New = this->IdleThread;
+	}
+
+	/* If it's not currently waiting, definitely don't. */
+	if (New->MyState() != pantheon::Thread::STATE_WAITING)
+	{
+		return;
 	}
 
 	/* Don't bother trying to switching threads if we don't have to. */
@@ -99,20 +104,24 @@ void pantheon::Scheduler::Reschedule()
 	New->Lock();
 	Old->Lock();
 
-	this->CurThread->BlockScheduling();
-	pantheon::Process *NewProc = New->MyProc();
-	pantheon::Process::Switch(NewProc);
-
-	this->CurThread = New;
+	Old->BlockScheduling();
 	Old->SetState(pantheon::Thread::STATE_WAITING);
 	Old->RefreshTicks();
 
+	pantheon::Process *NewProc = New->MyProc();
+	pantheon::Process::Switch(NewProc);
+	this->CurThread = New;
+
+	pantheon::CpuContext *OldContext = Old->GetRegisters();
+	pantheon::CpuContext *NewContext = New->GetRegisters();
+	New->Unlock();
+	Old->Unlock();
+
 	/* TODO: Make this better */
-	pantheon::GlobalScheduler::Lock();
 	pantheon::GlobalScheduler::AppendIntoReadyList(Old);
 	pantheon::GlobalScheduler::Unlock();
-	
-	this->PerformCpuSwitch(Old, New);
+
+	this->PerformCpuSwitch(OldContext, NewContext);
 	this->CurThread->EnableScheduling();
 }
 
@@ -228,15 +237,6 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateThread(pantheon::Process *Pro
 	GlobalScheduler::ThreadList.PushFront(T);
 	GlobalScheduler::AppendIntoReadyList(T);
 	return GlobalScheduler::ThreadList.Front();
-}
-
-pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
-{
-	pantheon::Thread *ReturnValue = nullptr;
-	GlobalScheduler::AccessSpinlock.Acquire();
-	ReturnValue = pantheon::GlobalScheduler::PopFromReadyList();
-	GlobalScheduler::AccessSpinlock.Release();
-	return ReturnValue;
 }
 
 void pantheon::GlobalScheduler::Lock()

@@ -51,8 +51,8 @@ public:
 
 	[[nodiscard]] Process *MyProc() const;
 
-	Thread::State MyState();
-	Thread::Priority MyPriority();
+	[[nodiscard]] Thread::State MyState() const;
+	[[nodiscard]] Thread::Priority MyPriority() const;
 
 	[[nodiscard]] UINT64 TicksLeft() const;
 	[[nodiscard]] UINT64 ThreadID() const;
@@ -93,8 +93,8 @@ private:
 	Thread::State CurState;
 	Thread::Priority CurPriority;
 
-	INT64 PreemptCount;
-	UINT64 RemainingTicks;
+	pantheon::Atomic<UINT64> PreemptCount;
+	pantheon::Atomic<UINT64> RemainingTicks;
 
 	void *KernelStackSpace;
 	void *UserStackSpace;
