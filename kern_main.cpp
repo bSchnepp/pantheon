@@ -76,7 +76,7 @@ void kern_init(InitialBootInfo *InitBootInfo)
 	kern_init_core();
 	for (;;)
 	{
-		pantheon::CPU::GetCoreInfo()->CurSched->Reschedule();
+		pantheon::CPU::GetCurSched()->Reschedule();
 	}
 	pantheon::StopError("Broke out of reschedule loop\n");
 }

@@ -48,17 +48,7 @@ pantheon::Scheduler::~Scheduler()
 
 }
 
-extern "C" void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New, UINT32 RegOffset);
-
-VOID pantheon::Scheduler::PerformCpuSwitch(pantheon::CpuContext *Prev, pantheon::CpuContext *Next)
-{
-	/* In case some MMIO was going on, we need to be sure we're flushing the
-	 * cache for every context switch.
-	 */
-	pantheon::Sync::DSBISH();
-	pantheon::Sync::ISB();
-	cpu_switch(Prev, Next, CpuIRegOffset);	
-}
+extern "C" void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New, UINT64 RegOffset);
 
 /**
  * \~english @brief Changes the current thread of this core.
@@ -76,7 +66,7 @@ void pantheon::Scheduler::Reschedule()
 	/* Interrupts must be enabled before we can do anything. */
 	if (pantheon::CPU::ICOUNT())
 	{
-		StopError("Try to reschedule with interrupts off");
+		return;
 	}
 
 	GlobalScheduler::Lock();
@@ -89,39 +79,49 @@ void pantheon::Scheduler::Reschedule()
 		New = this->IdleThread;
 	}
 
-	/* If it's not currently waiting, definitely don't. */
-	if (New->MyState() != pantheon::Thread::STATE_WAITING)
+	/* Don't bother trying to switching threads if we don't have to. */
+	New->Lock();
+	if (New == Old)
 	{
+		New->Unlock();
+		pantheon::GlobalScheduler::Unlock();
 		return;
 	}
 
-	/* Don't bother trying to switching threads if we don't have to. */
-	if (New == Old)
+	Old->Lock();
+	/* If it's not currently waiting, definitely don't. */
+	if (New->MyState() != pantheon::Thread::STATE_WAITING)
 	{
+		New->Unlock();
+		Old->Unlock();
+		pantheon::GlobalScheduler::Unlock();
 		return;
 	}
-	
-	New->Lock();
-	Old->Lock();
 
 	Old->BlockScheduling();
 	Old->SetState(pantheon::Thread::STATE_WAITING);
 	Old->RefreshTicks();
 
+
 	pantheon::Process *NewProc = New->MyProc();
 	pantheon::Process::Switch(NewProc);
 	this->CurThread = New;
+	this->CurThread->SetState(pantheon::Thread::STATE_RUNNING);
 
 	pantheon::CpuContext *OldContext = Old->GetRegisters();
 	pantheon::CpuContext *NewContext = New->GetRegisters();
-	New->Unlock();
-	Old->Unlock();
 
 	/* TODO: Make this better */
 	pantheon::GlobalScheduler::AppendIntoReadyList(Old);
 	pantheon::GlobalScheduler::Unlock();
 
-	this->PerformCpuSwitch(OldContext, NewContext);
+	Old->Unlock();
+	New->Unlock();
+
+	pantheon::Sync::DSBISH();
+	pantheon::Sync::ISB();
+	cpu_switch(OldContext, NewContext, CpuIRegOffset);
+
 	this->CurThread->EnableScheduling();
 }
 
