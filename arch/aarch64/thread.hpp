@@ -132,7 +132,9 @@ typedef struct TrapFrame
 	UINT64 Regs[31];
 	UINT64 PC;
 	PSTATEMode PSTATE;
+	UINT64 ESR;
 	UINT64 SP;
+	UINT64 PADDING;
 
 	VOID Wipe()
 	{
@@ -161,7 +163,7 @@ typedef struct TrapFrame
 	}
 }TrapFrame;
 
-static_assert(sizeof(TrapFrame) == (16ULL*17ULL));
+static_assert(sizeof(TrapFrame) == (8ULL *36ULL));
 
 }
 

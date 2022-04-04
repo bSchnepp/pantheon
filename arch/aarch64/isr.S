@@ -1,9 +1,9 @@
 .globl interrupt_table
 
-.equ TRAP_SZ, (16*17)
+.equ TRAP_SZ, (8 * 36)
 
 .macro kern_entry, dpl
-	/* 31 regs, plus sp, pc, and pstate  */
+	/* 31 regs, plus sp, pc, esr, and pstate  */
 	sub sp, sp, #TRAP_SZ
 	stp x0, x1, [sp, #0 * 16]
 	stp x2, x3, [sp, #1 * 16]
@@ -28,24 +28,27 @@
 	 */
 	mrs x21, elr_el1
 	mrs x22, spsr_el1
+	mrs x23, esr_el1
 	.if \dpl == 1
-	add x23, sp, #TRAP_SZ
+	add x24, sp, #TRAP_SZ
 	.else
-	mrs x23, sp_el0
+	mrs x24, sp_el0
 	.endif
 
 	/* Store the status registers (and x30)... */
 	stp x30, x21, [sp, #15 * 16]
 	stp x22, x23, [sp, #16 * 16]
+	stp x24, xzr, [sp, #17 * 16]
 .endm
 
 .macro kern_exit, dpl
 	/* Registers should be unwound backwards from the order saved to. */
+	ldp x24, xzr, [sp, #17 * 16]
 	ldp x22, x23, [sp, #16 * 16]
 	ldp x30, x21, [sp, #15 * 16]
 
 	.if \dpl != 1
-	msr sp_el0, x23
+	msr sp_el0, x24
 	.endif
 	msr spsr_el1, x22
 	msr elr_el1, x21
