@@ -15,16 +15,23 @@
 #include <BoardRuntime/BoardRT.hpp>
 
 
-extern "C" void sysm_Main();
-extern "C" void prgm_Main();
-
-/* clang-format: off */
-#ifdef __cplusplus
-extern "C"
+static void kern_basic_init(InitialBootInfo *InitBootInfo)
 {
-#endif
+	pantheon::InitBasicRuntime();
+	pantheon::PageAllocator::InitPageAllocator(InitBootInfo);
+	pantheon::InitBasicMemory();
+	pantheon::InitProcessTables();
+	pantheon::ipc::InitEventSystem();
+	pantheon::GlobalScheduler::Init();
+}
 
-void kern_init_core()
+static void kern_stage2_init()
+{
+	/* TODO: unpack initial programs properly */
+	pantheon::UnpackInitPrograms();
+}
+
+extern "C" void kern_init_core()
 {
 	UINT8 CpuNo = pantheon::CPU::GetProcessorNumber();
 
@@ -46,23 +53,8 @@ void kern_init_core()
 	pantheon::CPU::STI();
 }
 
-static void kern_basic_init(InitialBootInfo *InitBootInfo)
-{
-	pantheon::InitBasicRuntime();
-	pantheon::PageAllocator::InitPageAllocator(InitBootInfo);
-	pantheon::InitBasicMemory();
-	pantheon::InitProcessTables();
-	pantheon::ipc::InitEventSystem();
-	pantheon::GlobalScheduler::Init();
-}
 
-static void kern_stage2_init()
-{
-	/* TODO: unpack initial programs properly */
-	pantheon::UnpackInitPrograms();
-}
-
-void kern_init(InitialBootInfo *InitBootInfo)
+extern "C" void kern_init(InitialBootInfo *InitBootInfo)
 {
 	if (pantheon::CPU::GetProcessorNumber() == 0)
 	{
@@ -80,8 +72,3 @@ void kern_init(InitialBootInfo *InitBootInfo)
 	}
 	pantheon::StopError("Broke out of reschedule loop\n");
 }
-
-#ifdef __cplusplus
-}
-#endif
-/* clang-format: on */
