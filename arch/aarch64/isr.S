@@ -72,26 +72,21 @@
 	eret
 .endm
 
-.macro DEFINE_ISR func
+.macro DEFINE_ISR func, dpl
 .align 7
-	kern_entry 1
+	kern_entry \dpl
 	mov x0, sp
 	bl \func
+	.if \dpl == 1
 	b exit_isr
+	.else
+	b exit_isr_el0
+	.endif
 .endm
 
 
 exit_isr:
 	kern_exit 1
-
-.macro DEFINE_ISR_EL0 func
-.align 7
-	kern_entry 0
-	mov x0, sp
-	bl \func
-	b exit_isr_el0
-.endm
-
 
 exit_isr_el0:
 	kern_exit 0
@@ -138,20 +133,23 @@ spin:
 
 .align 7
 interrupt_table:
-	DEFINE_ISR sync_handler_el1_sp0
-	DEFINE_ISR irq_handler_el1_sp0
-	DEFINE_ISR fiq_handler_el1_sp0
-	DEFINE_ISR err_handler_el1_sp0
-	DEFINE_ISR sync_handler_el1
-	DEFINE_ISR irq_handler_el1
-	DEFINE_ISR fiq_handler_el1
-	DEFINE_ISR err_handler_el1
-	DEFINE_ISR_EL0 sync_handler_el0
-	DEFINE_ISR_EL0 irq_handler_el0
-	DEFINE_ISR_EL0 fiq_handler_el0
-	DEFINE_ISR_EL0 err_handler_el0
-	DEFINE_ISR_EL0 sync_handler_el0_32
-	DEFINE_ISR_EL0 irq_handler_el0_32
-	DEFINE_ISR_EL0 fiq_handler_el0_32
-	DEFINE_ISR_EL0 err_handler_el0_32
+	DEFINE_ISR sync_handler_el1_sp0 1
+	DEFINE_ISR irq_handler_el1_sp0 1
+	DEFINE_ISR fiq_handler_el1_sp0 1
+	DEFINE_ISR err_handler_el1_sp0 1
+
+	DEFINE_ISR sync_handler_el1 1
+	DEFINE_ISR irq_handler_el1 1
+	DEFINE_ISR fiq_handler_el1 1
+	DEFINE_ISR err_handler_el1 1
+
+	DEFINE_ISR sync_handler_el0 0
+	DEFINE_ISR irq_handler_el0 0
+	DEFINE_ISR fiq_handler_el0 0
+	DEFINE_ISR err_handler_el0 0
+
+	DEFINE_ISR sync_handler_el0_32 0
+	DEFINE_ISR irq_handler_el0_32 0
+	DEFINE_ISR fiq_handler_el0_32 0
+	DEFINE_ISR err_handler_el0_32 0
 
