@@ -42,6 +42,9 @@
 .endm
 
 .macro kern_exit, dpl
+	/* Disable interrupts, just in case. */
+	msr daifset, #0xf
+
 	/* Registers should be unwound backwards from the order saved to. */
 	ldp x24, xzr, [sp, #17 * 16]
 	ldp x22, x23, [sp, #16 * 16]
