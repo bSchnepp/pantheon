@@ -53,7 +53,6 @@ public:
 	static BOOL MapPages(UINT32 PID, pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages);
 
 	static void AppendIntoReadyList(pantheon::Thread *Next);
-	static void RemoveFromReadyList(pantheon::Thread *Next);
 	static pantheon::Thread *PopFromReadyList();
 
 	/* TODO: Inherit from Lockable... */

@@ -442,21 +442,14 @@ void pantheon::GlobalScheduler::AppendIntoReadyList(pantheon::Thread *Next)
 	{
 		GlobalScheduler::ReadyTail->SetNext(Next);
 		GlobalScheduler::ReadyTail = Next;
-		GlobalScheduler::ReadyTail->SetNext(nullptr);
 	}
 	else
 	{
 		/* Only possible if the queue really is empty. */
 		GlobalScheduler::ReadyTail = Next;
 		GlobalScheduler::ReadyHead = Next;
-		GlobalScheduler::ReadyTail->SetNext(nullptr);
 	}
-}
-
-void pantheon::GlobalScheduler::RemoveFromReadyList(pantheon::Thread *Next)
-{
-	PANTHEON_UNUSED(Next);
-	/* NYI */
+	GlobalScheduler::ReadyTail->SetNext(nullptr);
 }
 
 pantheon::Thread *pantheon::GlobalScheduler::PopFromReadyList()
