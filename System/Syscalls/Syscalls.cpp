@@ -8,6 +8,8 @@
 #include <Proc/kern_sched.hpp>
 #include <Proc/kern_thread.hpp>
 
+#include <IPC/kern_port.hpp>
+
 template<typename T>
 static T ReadArgument(UINT64 Val)
 {
@@ -149,19 +151,9 @@ pantheon::Result pantheon::SVCCreateNamedEvent(pantheon::TrapFrame *CurFrame)
 
 
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-	if (!CurThread)
-	{
-		StopError("System call with no thread");
-		return -1;
-	}
 	pantheon::ScopedLock ScopeLockThread(CurThread);
 
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
-	if (Proc == nullptr)
-	{
-		StopError("System call with no process");
-		return -1;
-	}
 	pantheon::ScopedLock ScopeLockProc(Proc);
 	pantheon::String EvtName(Name);
 
@@ -197,19 +189,8 @@ pantheon::Result pantheon::SVCSignalEvent(pantheon::TrapFrame *CurFrame)
 
 
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-	if (!CurThread)
-	{
-		StopError("System call with no thread");
-		return -1;
-	}
 	pantheon::ScopedLock ScopeLockThread(CurThread);
-
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
-	if (Proc == nullptr)
-	{
-		StopError("System call with no process");
-		return -1;
-	}
 	pantheon::ScopedLock ScopeLockProc(Proc);
 
 	pantheon::Handle *Hand = Proc->GetHandle(WriteHandle);
@@ -240,19 +221,8 @@ pantheon::Result pantheon::SVCClearEvent(pantheon::TrapFrame *CurFrame)
 	INT32 WriteHandle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-	if (!CurThread)
-	{
-		StopError("System call with no thread");
-		return -1;
-	}
 	pantheon::ScopedLock ScopeLockThread(CurThread);
-
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
-	if (Proc == nullptr)
-	{
-		StopError("System call with no process");
-		return -1;
-	}
 	pantheon::ScopedLock ScopeLockProc(Proc);
 
 	pantheon::Handle *Hand = Proc->GetHandle(WriteHandle);
@@ -281,19 +251,8 @@ pantheon::Result pantheon::SVCResetEvent(pantheon::TrapFrame *CurFrame)
 	INT32 ReadHandle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-	if (!CurThread)
-	{
-		StopError("System call with no thread");
-		return -1;
-	}
 	pantheon::ScopedLock ScopeLockThread(CurThread);
-
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
-	if (Proc == nullptr)
-	{
-		StopError("System call with no process");
-		return -1;
-	}
 	pantheon::ScopedLock ScopeLockProc(Proc);
 
 	pantheon::Handle *Hand = Proc->GetHandle(ReadHandle);
@@ -322,19 +281,8 @@ pantheon::Result pantheon::SVCPollEvent(pantheon::TrapFrame *CurFrame)
 	INT32 Handle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-	if (!CurThread)
-	{
-		StopError("System call with no thread");
-		return -1;
-	}
-	pantheon::ScopedLock ScopeLockThread(CurThread);
-
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
-	if (Proc == nullptr)
-	{
-		StopError("System call with no process");
-		return -1;
-	}
+	pantheon::ScopedLock ScopeLockThread(CurThread);
 	pantheon::ScopedLock ScopeLockProc(Proc);
 
 	pantheon::Handle *Hand = Proc->GetHandle(Handle);
@@ -394,17 +342,7 @@ pantheon::Result pantheon::SVCExecute(pantheon::TrapFrame *CurFrame)
 {
 	INT32 Handle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-	if (!CurThread)
-	{
-		StopError("System call with no thread");
-		return -1;
-	}	
-	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
-	if (Proc == nullptr)
-	{
-		StopError("System call with no process");
-		return -1;
-	}
+	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();	
 	CurThread->Lock();
 	Proc->Lock();
 
@@ -445,6 +383,27 @@ pantheon::Result pantheon::SVCExecute(pantheon::TrapFrame *CurFrame)
 	return -1;	
 }
 
+pantheon::Result pantheon::SVCCreatePort(pantheon::TrapFrame *CurFrame)
+{
+	CHAR Buffer[pantheon::ipc::PortNameLength];
+	const CHAR *Location = ReadArgumentAsCharPointer(CurFrame->GetIntArgument(0));
+	/* TODO: Proper CopyString */
+	for (UINT8 Index = 0; Index < pantheon::ipc::PortNameLength; ++Index)
+	{
+		CHAR Current = Location[Index];
+		Buffer[Index] = Current;
+		if (Current == '\0')
+		{
+			break;
+		}
+	}
+
+	PANTHEON_UNUSED(Buffer);
+
+	/* Not yet implemented... */
+	return -1;	
+}
+
 typedef pantheon::Result (*SyscallFn)(pantheon::TrapFrame *);
 
 SyscallFn syscall_table[] = 
@@ -462,6 +421,7 @@ SyscallFn syscall_table[] =
 	(SyscallFn)pantheon::SVCYield,
 	(SyscallFn)pantheon::SVCExitThread,
 	(SyscallFn)pantheon::SVCExecute,
+	(SyscallFn)pantheon::SVCCreatePort,
 };
 
 UINT64 pantheon::SyscallCount()
@@ -472,6 +432,19 @@ UINT64 pantheon::SyscallCount()
 
 BOOL pantheon::CallSyscall(UINT32 Index, pantheon::TrapFrame *Frame)
 {
+	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+	if (!CurThread)
+	{
+		StopError("System call with no thread");
+		return FALSE;
+	}	
+	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+	if (Proc == nullptr)
+	{
+		StopError("System call with no process");
+		return FALSE;
+	}
+
 	if (Index < SyscallCount() && Frame != nullptr)
 	{
 		pantheon::CPU::STI();
