@@ -195,6 +195,19 @@ void FORCE_INLINE CopyMemory(VOID *Dest, VOID *Src, UINT64 Amt)
 	}
 }
 
+void FORCE_INLINE CopyString(CHAR *Dest, const CHAR *Src, UINT64 Amt)
+{
+	for (UINT64 Index = 0; Index < Amt; ++Index)
+	{
+		CHAR Current = Src[Index];
+		Dest[Index] = Current;
+		if (Current == '\0')
+		{
+			break;
+		}
+	}
+}
+
 constexpr UINT32 ConstStrLen(const CHAR *Str)
 {
 	UINT32 Count = 0;

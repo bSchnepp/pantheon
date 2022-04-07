@@ -387,16 +387,7 @@ pantheon::Result pantheon::SVCCreatePort(pantheon::TrapFrame *CurFrame)
 {
 	CHAR Buffer[pantheon::ipc::PortNameLength];
 	const CHAR *Location = ReadArgumentAsCharPointer(CurFrame->GetIntArgument(0));
-	/* TODO: Proper CopyString */
-	for (UINT8 Index = 0; Index < pantheon::ipc::PortNameLength; ++Index)
-	{
-		CHAR Current = Location[Index];
-		Buffer[Index] = Current;
-		if (Current == '\0')
-		{
-			break;
-		}
-	}
+	CopyString(Buffer, Location, pantheon::ipc::PortNameLength);
 
 	PANTHEON_UNUSED(Buffer);
 
