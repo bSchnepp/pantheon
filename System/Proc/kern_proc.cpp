@@ -7,7 +7,7 @@
 #include <System/Proc/kern_sched.hpp>
 #include <System/Proc/kern_thread.hpp>
 
-#include <Handle/kern_lockable.hpp>
+#include <Common/Sync/kern_lockable.hpp>
 #include <Common/Structures/kern_slab.hpp>
 
 #include <System/PhyMemory/kern_alloc.hpp>

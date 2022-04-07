@@ -1,5 +1,6 @@
 #include <kern_macro.hpp>
 #include <kern_string.hpp>
+#include <kern_runtime.hpp>
 #include <Sync/kern_spinlock.hpp>
 
 #ifndef _KERN_LOCKABLE_HPP_

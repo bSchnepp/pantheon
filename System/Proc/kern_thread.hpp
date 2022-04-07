@@ -5,7 +5,7 @@
 #include <kern_container.hpp>
 
 #include <Sync/kern_atomic.hpp>
-#include <Handle/kern_lockable.hpp>
+#include <Common/Sync/kern_lockable.hpp>
 #include <Common/Structures/kern_allocatable.hpp>
 
 #ifndef _KERN_THREAD_HPP_
