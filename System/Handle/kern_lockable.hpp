@@ -40,7 +40,8 @@ public:
 		this->ObjLock.Release();
 	}
 
-	BOOL IsLocked()
+	[[nodiscard]]
+	BOOL IsLocked() const
 	{
 		OBJECT_SELF_ASSERT();
 		return this->ObjLock.IsLocked();

@@ -48,19 +48,7 @@ pantheon::Scheduler::~Scheduler()
 
 }
 
-extern "C" void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New, UINT32 RegOffset);
-
-VOID pantheon::Scheduler::PerformCpuSwitch(Thread *Old, Thread *New)
-{
-	pantheon::CpuContext *Prev = (Old->GetRegisters());
-	pantheon::CpuContext *Next = (New->GetRegisters());
-
-	New->Unlock();
-	Old->Unlock();
-
-	pantheon::Sync::FORCE_CLEAN_CACHE();
-	cpu_switch(Prev, Next, CpuIRegOffset);	
-}
+extern "C" void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New, UINT64 RegOffset);
 
 /**
  * \~english @brief Changes the current thread of this core.
@@ -78,11 +66,12 @@ void pantheon::Scheduler::Reschedule()
 	/* Interrupts must be enabled before we can do anything. */
 	if (pantheon::CPU::ICOUNT())
 	{
-		StopError("Try to reschedule with interrupts off");
+		return;
 	}
 
+	GlobalScheduler::Lock();
 	pantheon::Thread *Old = this->CurThread;
-	pantheon::Thread *New = GlobalScheduler::AcquireThread();
+	pantheon::Thread *New = GlobalScheduler::PopFromReadyList();
 
 	/* If there is no next, just do the idle thread. */
 	if (New == nullptr)
@@ -91,22 +80,48 @@ void pantheon::Scheduler::Reschedule()
 	}
 
 	/* Don't bother trying to switching threads if we don't have to. */
+	New->Lock();
 	if (New == Old)
 	{
+		New->Unlock();
+		pantheon::GlobalScheduler::Unlock();
 		return;
 	}
-	
-	New->Lock();
-	Old->Lock();
 
-	this->CurThread->BlockScheduling();
+	Old->Lock();
+	/* If it's not currently waiting, definitely don't. */
+	if (New->MyState() != pantheon::Thread::STATE_WAITING)
+	{
+		New->Unlock();
+		Old->Unlock();
+		pantheon::GlobalScheduler::Unlock();
+		return;
+	}
+
+	Old->BlockScheduling();
+	Old->SetState(pantheon::Thread::STATE_WAITING);
+	Old->RefreshTicks();
+
+
 	pantheon::Process *NewProc = New->MyProc();
 	pantheon::Process::Switch(NewProc);
-
 	this->CurThread = New;
-	Old->SetState(pantheon::Thread::STATE_WAITING);
-	
-	this->PerformCpuSwitch(Old, New);
+	this->CurThread->SetState(pantheon::Thread::STATE_RUNNING);
+
+	pantheon::CpuContext *OldContext = Old->GetRegisters();
+	pantheon::CpuContext *NewContext = New->GetRegisters();
+
+	/* TODO: Make this better */
+	pantheon::GlobalScheduler::AppendIntoReadyList(Old);
+	pantheon::GlobalScheduler::Unlock();
+
+	Old->Unlock();
+	New->Unlock();
+
+	pantheon::Sync::DSBISH();
+	pantheon::Sync::ISB();
+	cpu_switch(OldContext, NewContext, CpuIRegOffset);
+
 	this->CurThread->EnableScheduling();
 }
 
@@ -175,6 +190,7 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateUserThreadCommon(pantheon::Pr
 	pantheon::Thread *T = pantheon::Thread::Create();
 	T->Initialize(Proc, StartAddr, ThreadData, Priority, TRUE);
 	GlobalScheduler::ThreadList.PushFront(T);
+	GlobalScheduler::AppendIntoReadyList(T);
 	return GlobalScheduler::ThreadList.Front();
 }
 
@@ -219,75 +235,27 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateThread(pantheon::Process *Pro
 	pantheon::Thread *T = pantheon::Thread::Create();
 	T->Initialize(Proc, StartAddr, ThreadData, Priority, FALSE);
 	GlobalScheduler::ThreadList.PushFront(T);
+	GlobalScheduler::AppendIntoReadyList(T);
 	return GlobalScheduler::ThreadList.Front();
 }
 
-pantheon::Thread *pantheon::GlobalScheduler::AcquireThread()
+void pantheon::GlobalScheduler::Lock()
 {
-	pantheon::Thread *ReturnValue = nullptr;
-	
-	UINT64 MaxTicks = 0;
-	GlobalScheduler::AccessSpinlock.Acquire();
-	for (pantheon::Thread &Thr : GlobalScheduler::ThreadList)
-	{
-		pantheon::ScopedLock L(&Thr);
-		pantheon::Process *Proc = Thr.MyProc();
-		pantheon::Thread::State State = Thr.MyState();
+	AccessSpinlock.Acquire();
+}
 
-		if (Thr.MyProc() == nullptr)
-		{
-			StopErrorFmt("Invalid process on thread: 0x%lx\n", Thr.ThreadID());
-		}
-
-		pantheon::ScopedLock L2(Proc);
-		if (Proc->MyState() != pantheon::Process::STATE_RUNNING)
-		{
-			continue;
-		}
-
-		if (State != pantheon::Thread::STATE_WAITING)
-		{
-			continue;
-		}
-
-		UINT64 TickCount = Thr.TicksLeft();
-		if (TickCount > MaxTicks)
-		{
-			MaxTicks = TickCount;
-			Thr.SetState(pantheon::Thread::STATE_RUNNING);
-			
-			/* If we had a previous state, make sure we release it. */
-			if (ReturnValue)
-			{
-				ReturnValue->Lock();
-				ReturnValue->SetState(pantheon::Thread::STATE_WAITING);
-				ReturnValue->Unlock();
-			}
-			ReturnValue = &Thr;
-		}
-	}
-
-	if (ReturnValue != nullptr)
-	{
-		GlobalScheduler::AccessSpinlock.Release();
-		return ReturnValue;
-	}
-
-	/* Nothing was found: refresh everything, try again. */
-	for (pantheon::Thread &Thr : GlobalScheduler::ThreadList)
-	{
-		pantheon::ScopedLock L(&Thr);
-		Thr.RefreshTicks();
-	}
-
-	GlobalScheduler::AccessSpinlock.Release();
-	return ReturnValue;
+void pantheon::GlobalScheduler::Unlock()
+{
+	AccessSpinlock.Release();
 }
 
 static pantheon::Process IdleProc;
 VOID pantheon::GlobalScheduler::Init()
 {
 	IdleProc = pantheon::Process();
+
+	GlobalScheduler::ReadyHead = nullptr;
+	GlobalScheduler::ReadyTail = nullptr;
 
 	GlobalScheduler::ThreadList = LinkedList<Thread>();
 	GlobalScheduler::ProcessList = LinkedList<Process>();
@@ -454,4 +422,53 @@ BOOL pantheon::GlobalScheduler::SetState(UINT32 PID, pantheon::Process::State St
 	}
 	AccessSpinlock.Release();
 	return Success;	
+}
+
+void pantheon::GlobalScheduler::AppendIntoReadyList(pantheon::Thread *Next)
+{
+	/* Make sure we're locked before doing this... */
+	if (GlobalScheduler::AccessSpinlock.IsLocked() == FALSE)
+	{
+		StopError("Appending into readylist while not locked");
+	}
+
+	/* If this thread is null for whatever reason, don't bother. */
+	if (Next == nullptr)
+	{
+		return;
+	}
+
+	if (GlobalScheduler::ReadyTail)
+	{
+		GlobalScheduler::ReadyTail->SetNext(Next);
+		GlobalScheduler::ReadyTail = Next;
+	}
+	else
+	{
+		/* Only possible if the queue really is empty. */
+		GlobalScheduler::ReadyTail = Next;
+		GlobalScheduler::ReadyHead = Next;
+	}
+	GlobalScheduler::ReadyTail->SetNext(nullptr);
+}
+
+pantheon::Thread *pantheon::GlobalScheduler::PopFromReadyList()
+{
+	/* Make sure we're locked before doing this... */
+	if (GlobalScheduler::AccessSpinlock.IsLocked() == FALSE)
+	{
+		StopError("Poping from readylist while not locked");
+	}
+
+	pantheon::Thread *Head = GlobalScheduler::ReadyHead;
+	if (Head)
+	{
+		GlobalScheduler::ReadyHead = GlobalScheduler::ReadyHead->Next();
+	}
+
+	if (GlobalScheduler::ReadyHead == nullptr)
+	{
+		GlobalScheduler::ReadyTail = nullptr;
+	}
+	return Head;
 }

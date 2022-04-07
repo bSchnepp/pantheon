@@ -445,7 +445,7 @@ pantheon::Result pantheon::SVCExecute(pantheon::TrapFrame *CurFrame)
 	return -1;	
 }
 
-typedef void (*SyscallFn)(pantheon::TrapFrame *);
+typedef pantheon::Result (*SyscallFn)(pantheon::TrapFrame *);
 
 SyscallFn syscall_table[] = 
 {
@@ -475,7 +475,8 @@ BOOL pantheon::CallSyscall(UINT32 Index, pantheon::TrapFrame *Frame)
 	if (Index < SyscallCount() && Frame != nullptr)
 	{
 		pantheon::CPU::STI();
-		(*syscall_table[Index])(Frame);
+		pantheon::Result Result = (*syscall_table[Index])(Frame);
+		Frame->Regs[0] = Result;
 		pantheon::CPU::CLI();
 		return TRUE;
 	}

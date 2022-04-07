@@ -22,7 +22,8 @@ public:
 		this->Store(Item);
 	}
 
-	FORCE_INLINE T Load()
+	[[nodiscard]]
+	FORCE_INLINE T Load() const
 	{
 		T RetVal;
 		#ifndef ONLY_TESTS
@@ -40,6 +41,28 @@ public:
 		#else
 		this->Content = Item;
 		#endif
+	}
+
+	[[nodiscard]] 
+	bool operator==(const Atomic<T> &Other) const
+	{
+		return this->Load() == Other.Load();
+	}
+
+	[[nodiscard]] 
+	bool operator==(const T &Other) const
+	{
+		return this->Load() == Other;
+	}
+
+	void operator=(const T &Thing)
+	{
+		this->Store(Thing);
+	}
+
+	void operator=(T &&Thing)
+	{
+		this->Store(Thing);
 	}
 
 private:

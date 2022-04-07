@@ -128,13 +128,10 @@ pantheon::Process *pantheon::Thread::MyProc() const
  * \~english @author Brian Schnepp
  * \~english @return The current status of this thread
  */
-pantheon::Thread::State pantheon::Thread::MyState()
+[[nodiscard]]
+pantheon::Thread::State pantheon::Thread::MyState() const
 {
 	OBJECT_SELF_ASSERT();
-	if (this->IsLocked() == FALSE)
-	{
-		StopError("MyState without lock");
-	}
 	UINT64 State = this->CurState;	/* ubsan says this is a problem. */
 	if (State > pantheon::Thread::STATE_MAX)
 	{
@@ -149,7 +146,7 @@ pantheon::Thread::State pantheon::Thread::MyState()
  * \~english @return The current priority of this thread
  */
 [[nodiscard]]
-pantheon::Thread::Priority pantheon::Thread::MyPriority()
+pantheon::Thread::Priority pantheon::Thread::MyPriority() const
 {
 	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
@@ -181,7 +178,7 @@ BOOL pantheon::Thread::Preempted() const
 UINT64 pantheon::Thread::TicksLeft() const
 {
 	OBJECT_SELF_ASSERT();
-	return this->RemainingTicks;
+	return this->RemainingTicks.Load();
 }
 
 /**
@@ -200,7 +197,7 @@ VOID pantheon::Thread::CountTick()
 	{
 		return;
 	}
-	this->RemainingTicks--;
+	this->RemainingTicks.Store(this->RemainingTicks.Load() - 1);
 }
 
 [[nodiscard]]
@@ -221,7 +218,7 @@ VOID pantheon::Thread::AddTicks(UINT64 TickCount)
 	{
 		StopError("AddTicks without lock");
 	}
-	this->RemainingTicks += TickCount;
+	this->RemainingTicks.Store(this->RemainingTicks.Load() + TickCount);
 }
 
 VOID pantheon::Thread::RefreshTicks()
@@ -376,7 +373,7 @@ void pantheon::Thread::BlockScheduling()
 {
 	OBJECT_SELF_ASSERT();
 	pantheon::Sync::DSBISH();
-	this->PreemptCount++;
+	this->PreemptCount.Store(this->PreemptCount.Load() + 1);
 	pantheon::Sync::DSBISH();
 }
 
@@ -385,7 +382,7 @@ void pantheon::Thread::EnableScheduling()
 	OBJECT_SELF_ASSERT();
 	this->Lock();
 	pantheon::Sync::DSBISH();
-	this->PreemptCount--;
+	this->PreemptCount.Store(this->PreemptCount.Load() - 1);
 	pantheon::Sync::DSBISH();
 	this->Unlock();
 }
@@ -425,4 +422,19 @@ void pantheon::Thread::Initialize(pantheon::Process *Proc, void *StartAddr, void
 		this->SetPriority(Priority);
 		this->Unlock();
 	}
+}
+
+[[nodiscard]] BOOL pantheon::Thread::End() const
+{
+	return this->NextThread == nullptr;
+}
+
+pantheon::Thread *pantheon::Thread::Next()
+{
+	return this->NextThread.Load();
+}
+
+void pantheon::Thread::SetNext(pantheon::Thread *Item)
+{
+	this->NextThread = Item;
 }

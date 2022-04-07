@@ -51,8 +51,8 @@ public:
 
 	[[nodiscard]] Process *MyProc() const;
 
-	Thread::State MyState();
-	Thread::Priority MyPriority();
+	[[nodiscard]] Thread::State MyState() const;
+	[[nodiscard]] Thread::Priority MyPriority() const;
 
 	[[nodiscard]] UINT64 TicksLeft() const;
 	[[nodiscard]] UINT64 ThreadID() const;
@@ -80,6 +80,10 @@ public:
 	void EnableScheduling();
 	[[nodiscard]] BOOL Preempted() const;
 
+	[[nodiscard]] BOOL End() const;
+	Thread *Next();
+	void SetNext(pantheon::Thread *Item);
+
 private:
 	UINT64 TID;
 
@@ -89,13 +93,15 @@ private:
 	Thread::State CurState;
 	Thread::Priority CurPriority;
 
-	INT64 PreemptCount;
-	UINT64 RemainingTicks;
+	pantheon::Atomic<UINT64> PreemptCount;
+	pantheon::Atomic<UINT64> RemainingTicks;
 
 	void *KernelStackSpace;
 	void *UserStackSpace;
 
 	static constexpr UINT64 InitialNumStackPages = 4;
+
+	pantheon::Atomic<pantheon::Thread*> NextThread;
 };
 
 }

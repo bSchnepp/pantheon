@@ -130,8 +130,7 @@ public:
 			return;
 		}
 		
-		pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-		pantheon::Process *CurProc = CurThread->MyProc();
+		pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
 		if (CurProc && CurProc != Next)
 		{
 			pantheon::CPUReg::W_TTBR0_EL1(Next->GetTTBR0());

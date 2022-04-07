@@ -12,13 +12,8 @@
 #include <Proc/kern_sched.hpp>
 #include <Proc/kern_thread.hpp>
 
-/* Pantheon can have up to 256 processors in theory.
- * In practice, this should probably be cut down to 8 or 16, which is
- * way more realistic for a SoM I can actually buy. 
- * 256 thread x86 systems barely exist, so it's highly unlikely for any aarch64
- * systems with that many cores or more to exist.
- */
-static pantheon::CPU::CoreInfo PerCoreInfo[256];
+/* Avoid having too high a number of cores to look through. */
+static pantheon::CPU::CoreInfo PerCoreInfo[MAX_NUM_CPUS];
 
 pantheon::CPU::CoreInfo *pantheon::CPU::GetCoreInfo()
 {
@@ -36,10 +31,8 @@ pantheon::CPU::CoreInfo *pantheon::CPU::GetCoreInfo()
 void pantheon::CPU::InitCoreInfo(UINT8 CoreNo)
 {
 	static pantheon::Scheduler Scheds[MAX_NUM_CPUS];
-
-	PerCoreInfo[CoreNo].CurFrame = nullptr;
-	PerCoreInfo[CoreNo].NOff = 0;
-	PerCoreInfo[CoreNo].CurSched = reinterpret_cast<Scheduler*>(&Scheds[CoreNo]);
+	ClearBuffer((CHAR*)&PerCoreInfo[CoreNo], sizeof(pantheon::CPU::CoreInfo));
+	PerCoreInfo[CoreNo].CurSched = &Scheds[CoreNo];
 	(*PerCoreInfo[CoreNo].CurSched) = pantheon::Scheduler();
 }
 
@@ -53,6 +46,21 @@ pantheon::Thread *pantheon::CPU::GetCurThread()
 	return Sched->MyThread();
 }
 
+pantheon::Process *pantheon::CPU::GetCurProcess()
+{
+	pantheon::Scheduler *Sched = pantheon::CPU::GetCurSched();
+	if (Sched == nullptr)
+	{
+		return nullptr;
+	}
+	pantheon::Thread *CurThread = Sched->MyThread();
+	if (CurThread)
+	{
+		return CurThread->MyProc();
+	}
+	return nullptr;
+}
+
 pantheon::Scheduler *pantheon::CPU::GetCurSched()
 {
 	return pantheon::CPU::GetCoreInfo()->CurSched;
@@ -63,10 +71,9 @@ pantheon::TrapFrame *pantheon::CPU::GetCurFrame()
 	return pantheon::CPU::GetCoreInfo()->CurFrame;
 }
 
-alignas(4096) static char StackArea[MAX_NUM_CPUS * DEFAULT_STACK_SIZE];
-
 void *pantheon::CPU::GetStackArea(UINT64 Core)
 {
+	alignas(4096) static char StackArea[MAX_NUM_CPUS * DEFAULT_STACK_SIZE];
 	return StackArea + static_cast<UINT64>(Core * DEFAULT_STACK_SIZE) + DEFAULT_STACK_SIZE;
 }
 

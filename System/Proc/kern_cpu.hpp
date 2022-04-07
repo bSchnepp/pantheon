@@ -47,6 +47,7 @@ CoreInfo *GetCoreInfo();
 UINT8 GetProcessorNumber();
 
 pantheon::Thread *GetCurThread();
+pantheon::Process *GetCurProcess();
 pantheon::Scheduler *GetCurSched();
 pantheon::TrapFrame *GetCurFrame();
 
