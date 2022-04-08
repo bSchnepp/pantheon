@@ -1,3 +1,4 @@
+#include <kern_result.hpp>
 #include <kern_datatypes.hpp>
 
 #ifndef _SYSCALLS_HPP_
@@ -6,7 +7,6 @@
 namespace pantheon
 {
 
-typedef UINT64 Result;
 
 /* These will almost certainly get reordered/removed/changed etc.
  * For now, these are necessary since proper resource management doesn't

@@ -75,7 +75,7 @@ pantheon::Result pantheon::SVCForkProcess(pantheon::TrapFrame *CurFrame)
 {
 	/* nyi */
 	PANTHEON_UNUSED(CurFrame);
-	return 0;
+	return pantheon::Result::SYS_OK;
 }
 
 pantheon::Result pantheon::SVCLogText(pantheon::TrapFrame *CurFrame)
@@ -85,13 +85,13 @@ pantheon::Result pantheon::SVCLogText(pantheon::TrapFrame *CurFrame)
 	Data = ReadArgumentAsCharPointer(CurFrame->GetIntArgument(0));
 	if (Data == nullptr)
 	{
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 
 	pantheon::CPU::GetCurThread()->Lock();
 	SERIAL_LOG("%s\n", Data);
 	pantheon::CPU::GetCurThread()->Unlock();
-	return 0;
+	return pantheon::Result::SYS_OK;
 }
 
 pantheon::Result pantheon::SVCAllocateBuffer(pantheon::TrapFrame *CurFrame)
@@ -103,7 +103,7 @@ pantheon::Result pantheon::SVCAllocateBuffer(pantheon::TrapFrame *CurFrame)
 	PANTHEON_UNUSED(Sz);
 
 	/* NYI */
-	return 0;
+	return pantheon::Result::SYS_OK;
 }
 
 typedef void (*ThreadStartPtr)(void*);
@@ -119,7 +119,7 @@ pantheon::Result pantheon::SVCCreateThread(pantheon::TrapFrame *CurFrame)
 {
 	/* Not yet implemented! */
 	PANTHEON_UNUSED(CurFrame);
-	return 0;
+	return pantheon::Result::SYS_OK;
 }
 
 
@@ -146,7 +146,7 @@ pantheon::Result pantheon::SVCCreateNamedEvent(pantheon::TrapFrame *CurFrame)
 
 	if (Name == nullptr || ReadHandle == nullptr || WriteHandle == nullptr)
 	{
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 
 
@@ -165,7 +165,7 @@ pantheon::Result pantheon::SVCCreateNamedEvent(pantheon::TrapFrame *CurFrame)
 
 		*WriteHandle = Write;
 		*ReadHandle = Read;
-		return 0;
+		return pantheon::Result::SYS_OK;
 	}
 
 	Evt = pantheon::ipc::CreateNamedEvent(EvtName, Proc);
@@ -178,9 +178,9 @@ pantheon::Result pantheon::SVCCreateNamedEvent(pantheon::TrapFrame *CurFrame)
 
 		*WriteHandle = Write;
 		*ReadHandle = Read;
-		return 0;
+		return pantheon::Result::SYS_OK;
 	}
-	return -1;
+	return pantheon::Result::SYS_FAIL;
 }
 
 pantheon::Result pantheon::SVCSignalEvent(pantheon::TrapFrame *CurFrame)
@@ -196,12 +196,12 @@ pantheon::Result pantheon::SVCSignalEvent(pantheon::TrapFrame *CurFrame)
 	pantheon::Handle *Hand = Proc->GetHandle(WriteHandle);
 	if (Hand == nullptr)
 	{
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 
 	if (Hand->GetType() != pantheon::HANDLE_TYPE_WRITE_SIGNAL)
 	{
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 
 	pantheon::ipc::WritableEvent *Evt = Hand->GetContent().WriteEvent;
@@ -213,7 +213,7 @@ pantheon::Result pantheon::SVCSignalEvent(pantheon::TrapFrame *CurFrame)
 	}
 
 	/* TODO: wakeup every process waiting on it */
-	return 0;
+	return pantheon::Result::SYS_OK;
 }
 
 pantheon::Result pantheon::SVCClearEvent(pantheon::TrapFrame *CurFrame)
@@ -228,12 +228,12 @@ pantheon::Result pantheon::SVCClearEvent(pantheon::TrapFrame *CurFrame)
 	pantheon::Handle *Hand = Proc->GetHandle(WriteHandle);
 	if (Hand == nullptr)
 	{
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 	
 	if (Hand->GetType() != pantheon::HANDLE_TYPE_WRITE_SIGNAL)
 	{
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 
 	pantheon::ipc::WritableEvent *Evt = Hand->GetContent().WriteEvent;
@@ -243,7 +243,7 @@ pantheon::Result pantheon::SVCClearEvent(pantheon::TrapFrame *CurFrame)
 		Evt->Parent->Readable->Clearer = Proc;
 		Evt->Parent->Status = pantheon::ipc::EVENT_TYPE_UNSIGNALED;
 	}
-	return 0;
+	return pantheon::Result::SYS_OK;
 }
 
 pantheon::Result pantheon::SVCResetEvent(pantheon::TrapFrame *CurFrame)
@@ -258,12 +258,12 @@ pantheon::Result pantheon::SVCResetEvent(pantheon::TrapFrame *CurFrame)
 	pantheon::Handle *Hand = Proc->GetHandle(ReadHandle);
 	if (Hand == nullptr)
 	{
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 	
 	if (Hand->GetType() != pantheon::HANDLE_TYPE_READ_SIGNAL)
 	{
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 
 	pantheon::ipc::ReadableEvent *Evt = Hand->GetContent().ReadEvent;
@@ -271,9 +271,9 @@ pantheon::Result pantheon::SVCResetEvent(pantheon::TrapFrame *CurFrame)
 	{
 		Evt->Clearer = Proc;
 		Evt->Parent->Status = pantheon::ipc::EVENT_TYPE_UNSIGNALED;
-		return 0;
+		return pantheon::Result::SYS_OK;
 	}
-	return -1;
+	return pantheon::Result::SYS_FAIL;
 }
 
 pantheon::Result pantheon::SVCPollEvent(pantheon::TrapFrame *CurFrame)
@@ -288,21 +288,26 @@ pantheon::Result pantheon::SVCPollEvent(pantheon::TrapFrame *CurFrame)
 	pantheon::Handle *Hand = Proc->GetHandle(Handle);
 	if (Hand == nullptr)
 	{
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 	
 	if (Hand->GetType() != pantheon::HANDLE_TYPE_READ_SIGNAL)
 	{
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 
 	pantheon::ipc::ReadableEvent *Evt = Hand->GetContent().ReadEvent;
 	if (Evt)
 	{
+		/* FIXME: Express this in a better way! */
 		BOOL Result = Evt->Parent->Status == pantheon::ipc::EVENT_TYPE_SIGNALED;
-		return Result;
+		if (Result)
+		{
+			return (pantheon::Result)1;
+		}
+		return (pantheon::Result)0;
 	}
-	return -1;
+	return pantheon::Result::SYS_FAIL;
 }
 
 pantheon::Result pantheon::SVCYield(pantheon::TrapFrame *CurFrame)
@@ -315,7 +320,7 @@ pantheon::Result pantheon::SVCYield(pantheon::TrapFrame *CurFrame)
 		CurThread->SetTicks(0);
 	}
 	CurSched->Reschedule();
-	return 0;
+	return pantheon::Result::SYS_OK;
 }
 
 pantheon::Result pantheon::SVCExitThread(pantheon::TrapFrame *CurFrame)
@@ -335,7 +340,7 @@ pantheon::Result pantheon::SVCExitThread(pantheon::TrapFrame *CurFrame)
 	}
 	CurProc->Unlock();
 	CurSched->Reschedule();
-	return 0;
+	return pantheon::Result::SYS_OK;
 }
 
 pantheon::Result pantheon::SVCExecute(pantheon::TrapFrame *CurFrame)
@@ -351,7 +356,7 @@ pantheon::Result pantheon::SVCExecute(pantheon::TrapFrame *CurFrame)
 	{
 		Proc->Unlock();
 		CurThread->Unlock();
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 	
 	/* Is this a handle to a process, or to a thread? */
@@ -364,7 +369,7 @@ pantheon::Result pantheon::SVCExecute(pantheon::TrapFrame *CurFrame)
 
 		Proc->Unlock();
 		CurThread->Unlock();
-		return 0;
+		return pantheon::Result::SYS_OK;
 	}
 	else if (Hand->GetType() == pantheon::HANDLE_TYPE_THREAD)
 	{
@@ -375,12 +380,12 @@ pantheon::Result pantheon::SVCExecute(pantheon::TrapFrame *CurFrame)
 
 		Proc->Unlock();
 		CurThread->Unlock();
-		return 0;
+		return pantheon::Result::SYS_OK;
 	}
 
 	Proc->Unlock();
 	CurThread->Unlock();
-	return -1;	
+	return pantheon::Result::SYS_FAIL;	
 }
 
 pantheon::Result pantheon::SVCCreatePort(pantheon::TrapFrame *CurFrame)
@@ -392,7 +397,7 @@ pantheon::Result pantheon::SVCCreatePort(pantheon::TrapFrame *CurFrame)
 	PANTHEON_UNUSED(Buffer);
 
 	/* Not yet implemented... */
-	return -1;	
+	return pantheon::Result::SYS_FAIL;	
 }
 
 typedef pantheon::Result (*SyscallFn)(pantheon::TrapFrame *);
@@ -440,7 +445,7 @@ BOOL pantheon::CallSyscall(UINT32 Index, pantheon::TrapFrame *Frame)
 	{
 		pantheon::CPU::STI();
 		pantheon::Result Result = (*syscall_table[Index])(Frame);
-		Frame->Regs[0] = Result;
+		Frame->Regs[0] = (UINT64)Result;
 		pantheon::CPU::CLI();
 		return TRUE;
 	}
