@@ -98,7 +98,7 @@ void pantheon::Scheduler::Reschedule()
 		return;
 	}
 
-	Old->BlockScheduling();
+	pantheon::ScopedLocalSchedulerLock _L;
 	Old->SetState(pantheon::Thread::STATE_WAITING);
 	Old->RefreshTicks();
 
@@ -121,8 +121,6 @@ void pantheon::Scheduler::Reschedule()
 	pantheon::Sync::DSBISH();
 	pantheon::Sync::ISB();
 	cpu_switch(OldContext, NewContext, CpuIRegOffset);
-
-	this->CurThread->EnableScheduling();
 }
 
 pantheon::Process *pantheon::Scheduler::MyProc()

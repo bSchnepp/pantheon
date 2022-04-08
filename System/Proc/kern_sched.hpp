@@ -35,7 +35,6 @@ private:
 
 class GlobalScheduler
 {
-
 public:
 	static void Init();
 
@@ -71,6 +70,20 @@ private:
 
 private:
 	static Thread *CreateUserThreadCommon(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority);
+};
+
+class ScopedGlobalSchedulerLock
+{
+public:
+	FORCE_INLINE ScopedGlobalSchedulerLock() { pantheon::GlobalScheduler::Lock(); }
+	FORCE_INLINE ~ScopedGlobalSchedulerLock() { pantheon::GlobalScheduler::Unlock(); }	
+};
+
+class ScopedLocalSchedulerLock
+{
+public:
+	FORCE_INLINE ScopedLocalSchedulerLock() { pantheon::CPU::GetCurThread()->BlockScheduling(); }
+	FORCE_INLINE ~ScopedLocalSchedulerLock() { pantheon::CPU::GetCurThread()->EnableScheduling(); }	
 };
 
 UINT32 AcquireProcessID();
