@@ -7,6 +7,9 @@ LIST(APPEND SYSTEM_SOURCES IPC/kern_event.cpp)
 LIST(APPEND SYSTEM_HEADERS IPC/kern_port.hpp)
 LIST(APPEND SYSTEM_SOURCES IPC/kern_port.cpp)
 
+LIST(APPEND SYSTEM_HEADERS IPC/kern_connection.hpp)
+LIST(APPEND SYSTEM_SOURCES IPC/kern_connection.cpp)
+
 LIST(APPEND SYSTEM_HEADERS PhyMemory/kern_alloc.hpp)
 LIST(APPEND SYSTEM_SOURCES PhyMemory/kern_alloc.cpp)
 

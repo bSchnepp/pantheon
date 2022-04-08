@@ -2,6 +2,11 @@
 #include <kern_datatypes.hpp>
 #include <System/IPC/kern_port.hpp>
 
+/**
+ * @file System/IPC/kern_port.cpp
+ * @brief Description and definition of a pantheon port.
+ */
+
 pantheon::ipc::Port::Port() : pantheon::Lockable("Port")
 {
 	this->Name.AsNumber = 0;
