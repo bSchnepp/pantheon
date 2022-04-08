@@ -9,6 +9,7 @@
 #include <Proc/kern_thread.hpp>
 
 #include <IPC/kern_port.hpp>
+#include <IPC/kern_event.hpp>
 
 template<typename T>
 static T ReadArgument(UINT64 Val)

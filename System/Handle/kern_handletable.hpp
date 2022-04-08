@@ -1,3 +1,4 @@
+#include <kern_datatypes.hpp>
 #include <System/Handle/kern_handle.hpp>
 
 #ifndef _KERN_HANDLE_TABLE_HPP_

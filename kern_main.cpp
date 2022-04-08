@@ -14,6 +14,8 @@
 #include <Boot/Boot.hpp>
 #include <BoardRuntime/BoardRT.hpp>
 
+#include <System/IPC/kern_event.hpp>
+
 
 static void kern_basic_init(InitialBootInfo *InitBootInfo)
 {

@@ -1,6 +1,12 @@
 #include <kern_runtime.hpp>
 #include <System/Handle/kern_handle.hpp>
 
+#include <System/IPC/kern_event.hpp>
+#include <System/IPC/kern_port.hpp>
+#include <System/IPC/kern_client_port.hpp>
+#include <System/IPC/kern_client_connection.hpp>
+#include <System/IPC/kern_connection.hpp>
+
 pantheon::Handle::Handle()
 {
 	this->Type = pantheon::HANDLE_TYPE_INVALID;
@@ -29,6 +35,26 @@ pantheon::Handle::Handle(pantheon::Thread *Thr)
 {
 	this->Type = pantheon::HANDLE_TYPE_THREAD;
 	this->Content.Thread = Thr;
+}
+
+pantheon::Handle::Handle(pantheon::ipc::Port *Port)
+{
+	this->Content.Port = Port;
+}
+
+pantheon::Handle::Handle(pantheon::ipc::ClientPort *ClientPort)
+{
+	this->Content.ClientPort = ClientPort;
+}
+
+pantheon::Handle::Handle(pantheon::ipc::Connection *Connection)
+{
+	this->Content.Connection = Connection;
+}
+
+pantheon::Handle::Handle(pantheon::ipc::ClientConnection *ClientConnection)
+{
+	this->Content.ClientConnection = ClientConnection;
 }
 
 pantheon::HandleContent &pantheon::Handle::GetContent()
