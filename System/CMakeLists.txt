@@ -7,6 +7,12 @@ LIST(APPEND SYSTEM_SOURCES IPC/kern_event.cpp)
 LIST(APPEND SYSTEM_HEADERS IPC/kern_port.hpp)
 LIST(APPEND SYSTEM_SOURCES IPC/kern_port.cpp)
 
+LIST(APPEND SYSTEM_HEADERS IPC/kern_client_port.hpp)
+LIST(APPEND SYSTEM_SOURCES IPC/kern_client_port.cpp)
+
+LIST(APPEND SYSTEM_HEADERS IPC/kern_client_connection.hpp)
+LIST(APPEND SYSTEM_SOURCES IPC/kern_client_connection.cpp)
+
 LIST(APPEND SYSTEM_HEADERS IPC/kern_connection.hpp)
 LIST(APPEND SYSTEM_SOURCES IPC/kern_connection.cpp)
 

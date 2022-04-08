@@ -24,10 +24,13 @@ public:
 	~Port() override;
 
 	void Initialize(PortName Name, INT64 MaxConnections);
-	void CloseServer();
-	void CloseClient();
+	void CloseServerHandler();
+	void CloseClientHandler();
 
 	/* TODO: Implement ServerBind(), ClientBind(), etc. */
+
+	[[nodiscard]] BOOL IsServerClosed() const { return this->CurrentState == State::CLOSED_SERVER; }
+	[[nodiscard]] BOOL IsClientClosed() const { return this->CurrentState == State::CLOSED_CLIENT; }
 
 private:
 	enum class State : UINT8

@@ -2,7 +2,7 @@
 #include <kern_datatypes.hpp>
 #include <System/IPC/kern_connection.hpp>
 
-void pantheon::ipc::Connection::CloseServer()
+void pantheon::ipc::Connection::CloseServerHandler()
 {
 	OBJECT_SELF_ASSERT();
 	pantheon::ipc::Connection::State CurrentState = this->CurState.Load();
@@ -17,7 +17,7 @@ void pantheon::ipc::Connection::CloseServer()
 	}
 }
 
-void pantheon::ipc::Connection::CloseClient()
+void pantheon::ipc::Connection::CloseClientHandler()
 {
 	OBJECT_SELF_ASSERT();
 	pantheon::ipc::Connection::State CurrentState = this->CurState.Load();

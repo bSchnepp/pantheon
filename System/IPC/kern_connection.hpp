@@ -28,8 +28,8 @@ public:
 		return this->CurState == State::CLOSED_CLIENT;
 	}
 
-	void CloseServer();
-	void CloseClient();
+	void CloseServerHandler();
+	void CloseClientHandler();
 
 
 

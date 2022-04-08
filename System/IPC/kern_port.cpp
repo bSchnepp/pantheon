@@ -24,7 +24,7 @@ void pantheon::ipc::Port::Initialize(PortName Name, INT64 MaxConnections)
 	this->Name = Name;
 }
 
-void pantheon::ipc::Port::CloseServer()
+void pantheon::ipc::Port::CloseServerHandler()
 {
 	OBJECT_SELF_ASSERT();
 	pantheon::ScopedLock _L(this);
@@ -34,7 +34,7 @@ void pantheon::ipc::Port::CloseServer()
 	}
 }
 
-void pantheon::ipc::Port::CloseClient()
+void pantheon::ipc::Port::CloseClientHandler()
 {
 	OBJECT_SELF_ASSERT();
 	pantheon::ScopedLock _L(this);
