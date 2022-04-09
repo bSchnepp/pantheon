@@ -9,6 +9,8 @@
 namespace pantheon::ipc
 {
 
+class ClientPort;
+
 static const UINT32 PortNameLength = 8;
 
 typedef union PortName
@@ -32,6 +34,8 @@ public:
 	[[nodiscard]] BOOL IsServerClosed() const { return this->CurrentState == State::CLOSED_SERVER; }
 	[[nodiscard]] BOOL IsClientClosed() const { return this->CurrentState == State::CLOSED_CLIENT; }
 
+	pantheon::ipc::ClientPort *GetClientPort() { return this->Client; }
+
 private:
 	enum class State : UINT8
 	{
@@ -45,6 +49,8 @@ private:
 	PortName Name;
 	State CurrentState;
 	INT64 MaxConnectionCount;
+
+	ClientPort *Client;
 };
 
 

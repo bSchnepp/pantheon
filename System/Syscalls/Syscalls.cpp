@@ -49,6 +49,39 @@ static const CHAR *ReadArgumentAsCharPointer(UINT64 Val)
 	return Result;
 }
 
+template<typename T>
+static T *ReadArgumentAsPointer(UINT64 Val)
+{
+	/* Don't allow reading of kernel memory */
+	if (Val > pantheon::vmm::HigherHalfAddress)
+	{
+		return nullptr;
+	}
+
+	/* Make sure we translate this to something in kernel memory, 
+	 * just to be safe. */
+	pantheon::vmm::VirtualAddress RawPtr = Val;
+	T *Result = nullptr;
+
+	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+	CurThread->Lock();
+
+	pantheon::Process *CurProc = CurThread->MyProc();
+	CurProc->Lock();
+
+	pantheon::vmm::PhysicalAddress PAddr = pantheon::vmm::VirtualToPhysicalAddress(CurProc->GetPageTable(), RawPtr);
+	pantheon::vmm::VirtualAddress VAddr = pantheon::vmm::PhysicalToVirtualAddress(PAddr);
+
+	Result = reinterpret_cast<T*>(VAddr);
+
+	CurProc->Unlock();
+	CurThread->Unlock();
+
+	return Result;	
+
+
+}
+
 static UINT64 ReadArgumentAsInteger(UINT64 Val)
 {
 	/* This is a hack: this should be validated later!!! */
@@ -391,14 +424,44 @@ pantheon::Result pantheon::SVCExecute(pantheon::TrapFrame *CurFrame)
 
 pantheon::Result pantheon::SVCCreatePort(pantheon::TrapFrame *CurFrame)
 {
-	CHAR Buffer[pantheon::ipc::PortNameLength];
+	/* svc_CreatePort(PortName Name, INT64 SessionMax, INT32 *SrvHandle, INT32 *CliHandle) */
+	CHAR Buffer[pantheon::ipc::PortNameLength] = {0};
 	const CHAR *Location = ReadArgumentAsCharPointer(CurFrame->GetIntArgument(0));
 	CopyString(Buffer, Location, pantheon::ipc::PortNameLength);
 
-	PANTHEON_UNUSED(Buffer);
+	pantheon::ipc::PortName Name;
+	CopyMemory((VOID*)&Name.AsNumber, (VOID*)Buffer, sizeof(pantheon::ipc::PortNameLength));
 
-	/* Not yet implemented... */
-	return pantheon::Result::SYS_FAIL;	
+	INT64 SessionMax = (INT64)CurFrame->GetIntArgument(1);
+
+	pantheon::ipc::Port *NewPort = pantheon::ipc::Port::Create();
+	if (NewPort == nullptr)
+	{
+		/* No such port is possible to create: out of resources. */
+		return pantheon::Result::SYS_OOM;
+	}
+
+	NewPort->Initialize(Name, SessionMax);
+
+	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
+	pantheon::ScopedLock _PL(CurProc);
+
+	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+	pantheon::ScopedLock _TL(CurThread);
+
+	pantheon::Handle ServHandle = pantheon::Handle(NewPort);
+	INT32 IndexS = CurProc->EncodeHandle(ServHandle);
+
+	pantheon::Handle ClientHandle = pantheon::Handle(NewPort->GetClientPort());
+	INT32 IndexC = CurProc->EncodeHandle(ClientHandle);
+
+	INT32 *SrvPtr = ReadArgumentAsPointer<INT32>(CurFrame->GetIntArgument(2));
+	INT32 *CliPtr = ReadArgumentAsPointer<INT32>(CurFrame->GetIntArgument(3));
+
+	*SrvPtr = IndexS;
+	*CliPtr = IndexC;
+
+	return pantheon::Result::SYS_OK;	
 }
 
 typedef pantheon::Result (*SyscallFn)(pantheon::TrapFrame *);

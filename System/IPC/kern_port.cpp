@@ -1,6 +1,7 @@
 #include <kern_runtime.hpp>
 #include <kern_datatypes.hpp>
 #include <System/IPC/kern_port.hpp>
+#include <System/IPC/kern_client_port.hpp>
 
 /**
  * @file System/IPC/kern_port.cpp
@@ -22,6 +23,9 @@ void pantheon::ipc::Port::Initialize(PortName Name, INT64 MaxConnections)
 {
 	this->MaxConnectionCount = MaxConnections;
 	this->Name = Name;
+
+	this->Client = pantheon::ipc::ClientPort::Create();
+	this->Client->Initialize(this, MaxConnections);
 }
 
 void pantheon::ipc::Port::CloseServerHandler()
