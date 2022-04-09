@@ -7,6 +7,13 @@ void sysm_Main()
 	UINT8 Read;
 	UINT8 Write;
 
+	INT32 ServerPortRegistration;
+	INT32 ClientPortRegistration;
+
+	svc_CreatePort("sysm:reg", 64, &ServerPortRegistration, &ClientPortRegistration);
+
+	/* TODO: Accept data from it... */
+
 	svc_CreateNamedEvent("signal", &Read, &Write);
 	for (;;)
 	{

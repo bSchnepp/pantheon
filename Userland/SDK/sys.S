@@ -69,3 +69,15 @@ svc_ExitThread:
 	mov w8, #11
 	svc #0
 	ret
+
+.globl svc_Execute
+svc_Execute:
+	mov w8, #12
+	svc #0
+	ret
+
+.globl svc_CreatePort
+svc_CreatePort:
+	mov w8, #13
+	svc #0
+	ret

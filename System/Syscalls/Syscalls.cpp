@@ -434,6 +434,9 @@ pantheon::Result pantheon::SVCCreatePort(pantheon::TrapFrame *CurFrame)
 
 	INT64 SessionMax = (INT64)CurFrame->GetIntArgument(1);
 
+	INT32 *SrvPtr = ReadArgumentAsPointer<INT32>(CurFrame->GetIntArgument(2));
+	INT32 *CliPtr = ReadArgumentAsPointer<INT32>(CurFrame->GetIntArgument(3));
+
 	pantheon::ipc::Port *NewPort = pantheon::ipc::Port::Create();
 	if (NewPort == nullptr)
 	{
@@ -454,9 +457,6 @@ pantheon::Result pantheon::SVCCreatePort(pantheon::TrapFrame *CurFrame)
 
 	pantheon::Handle ClientHandle = pantheon::Handle(NewPort->GetClientPort());
 	INT32 IndexC = CurProc->EncodeHandle(ClientHandle);
-
-	INT32 *SrvPtr = ReadArgumentAsPointer<INT32>(CurFrame->GetIntArgument(2));
-	INT32 *CliPtr = ReadArgumentAsPointer<INT32>(CurFrame->GetIntArgument(3));
 
 	*SrvPtr = IndexS;
 	*CliPtr = IndexC;

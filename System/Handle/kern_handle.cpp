@@ -39,21 +39,25 @@ pantheon::Handle::Handle(pantheon::Thread *Thr)
 
 pantheon::Handle::Handle(pantheon::ipc::Port *Port)
 {
+	this->Type = pantheon::HANDLE_TYPE_SERVER_PORT;
 	this->Content.Port = Port;
 }
 
 pantheon::Handle::Handle(pantheon::ipc::ClientPort *ClientPort)
 {
+	this->Type = pantheon::HANDLE_TYPE_CLIENT_PORT;
 	this->Content.ClientPort = ClientPort;
 }
 
 pantheon::Handle::Handle(pantheon::ipc::Connection *Connection)
 {
+	this->Type = pantheon::HANDLE_TYPE_SERVER_CONNECTION;
 	this->Content.Connection = Connection;
 }
 
 pantheon::Handle::Handle(pantheon::ipc::ClientConnection *ClientConnection)
 {
+	this->Type = pantheon::HANDLE_TYPE_CLIENT_CONNECTION;
 	this->Content.ClientConnection = ClientConnection;
 }
 
