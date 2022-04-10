@@ -16,6 +16,9 @@ LIST(APPEND SYSTEM_SOURCES IPC/kern_client_connection.cpp)
 LIST(APPEND SYSTEM_HEADERS IPC/kern_connection.hpp)
 LIST(APPEND SYSTEM_SOURCES IPC/kern_connection.cpp)
 
+LIST(APPEND SYSTEM_HEADERS IPC/kern_packet.hpp)
+LIST(APPEND SYSTEM_SOURCES IPC/kern_packet.cpp)
+
 LIST(APPEND SYSTEM_HEADERS PhyMemory/kern_alloc.hpp)
 LIST(APPEND SYSTEM_SOURCES PhyMemory/kern_alloc.cpp)
 
