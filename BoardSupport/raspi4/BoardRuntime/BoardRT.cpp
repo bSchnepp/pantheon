@@ -14,6 +14,7 @@
 
 void WriteSerialChar(CHAR Char)
 {
+	PANTHEON_UNUSED(Char);
 	/* FIXME: Use the miniUART! */
 }
 
