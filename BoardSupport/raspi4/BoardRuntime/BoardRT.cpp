@@ -14,7 +14,7 @@
 
 void WriteSerialChar(CHAR Char)
 {
-	pantheon::pl011::PL011WriteChar(0, Char);
+	/* FIXME: Use the miniUART! */
 }
 
 void WriteString(const CHAR *String)
@@ -35,5 +35,5 @@ void WriteString(const CHAR *String)
 
 void BoardRuntimeInit()
 {
-	pantheon::pl011::PL011Init(DEVICE_TYPE_UART, 0);
+	/* FIXME: Initialize the AUX driver, and use the miniUART! */
 }
