@@ -1,0 +1,15 @@
+LIST(APPEND BOARD_HEADERS Board.hpp)
+LIST(APPEND BOARD_SOURCES Board.cpp)
+
+LIST(APPEND BOARD_HEADERS ../../Common/Boot/BootDriver.hpp)
+LIST(APPEND BOARD_SOURCES ../../Common/Boot/BootDriver.cpp)
+
+LIST(APPEND BOARD_HEADERS ../../Common/DeviceTree/DeviceTree.hpp)
+LIST(APPEND BOARD_SOURCES ../../Common/DeviceTree/DeviceTree.cpp)
+
+LIST(APPEND BOARD_HEADERS ../../Common/PSCI/PSCI.hpp)
+LIST(APPEND BOARD_SOURCES ../../Common/PSCI/PSCI.cpp)
+
+ADD_LIBRARY(Board STATIC
+	${BOARD_HEADERS}
+	${BOARD_SOURCES})
