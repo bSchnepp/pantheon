@@ -26,6 +26,8 @@ Result SVCYield(pantheon::TrapFrame *CurFrame);
 Result SVCExitThread(pantheon::TrapFrame *CurFrame);
 Result SVCExecute(pantheon::TrapFrame *CurFrame);
 Result SVCCreatePort(pantheon::TrapFrame *CurFrame);
+Result SVCConnectToPort(pantheon::TrapFrame *CurFrame);
+Result SVCConnectToNamedPort(pantheon::TrapFrame *CurFrame);
 
 UINT64 SyscallCount();
 BOOL CallSyscall(UINT32 Index, pantheon::TrapFrame *Frame);

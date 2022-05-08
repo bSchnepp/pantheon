@@ -21,6 +21,8 @@ extern "C" BOOL svc_PollEvent(UINT8 Handle);
 extern "C" VOID svc_Yield();
 extern "C" VOID svc_Execute(UINT8 Handle);
 extern "C" VOID svc_CreatePort(const CHAR *Name, INT64 MaxConnections, INT32 *HandleServer, INT32 *HandleClient);
+extern "C" VOID svc_ConnectToPort(INT32 *ClientPortHandle, INT32 *OutClientConnectionHandle);
+extern "C" VOID svc_ConnectToNamedPort(const char *Name, INT32 *OutClientConnectionHandle);
 
 #ifdef __cplusplus
 }

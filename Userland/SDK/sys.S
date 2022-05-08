@@ -81,3 +81,15 @@ svc_CreatePort:
 	mov w8, #13
 	svc #0
 	ret
+
+.globl svc_ConnectToPort
+svc_ConnectToPort:
+	mov w8, #14
+	svc #0
+	ret
+
+.globl svc_ConnectToNamedPort
+svc_ConnectToNamedPort:
+	mov w8, #15
+	svc #0
+	ret
