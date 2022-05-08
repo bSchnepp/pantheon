@@ -1,6 +1,8 @@
 #include <kern_runtime.hpp>
 #include <kern_datatypes.hpp>
+
 #include <System/IPC/kern_port.hpp>
+#include <System/IPC/kern_connection.hpp>
 #include <System/IPC/kern_client_port.hpp>
 #include <System/IPC/kern_server_port.hpp>
 
@@ -132,4 +134,19 @@ pantheon::Result pantheon::ipc::Port::Enqueue(pantheon::ipc::ServerConnection *C
 	}
 	this->Server->Enqueue(Conn);
 	return pantheon::Result::SYS_OK;
+}
+
+pantheon::ipc::ClientConnection *pantheon::ipc::Port::CreateConnection()
+{
+	OBJECT_SELF_ASSERT();
+
+	/* FIXME: Use reference counting! Otherwise, this will OOM fast! */
+	pantheon::ipc::Connection *NewConn = pantheon::ipc::Connection::Create();
+	if (NewConn == nullptr)
+	{
+		return nullptr;
+	}
+
+	NewConn->Initialize(this->Client, this->Server);
+	return NewConn->GetClientConnection();
 }

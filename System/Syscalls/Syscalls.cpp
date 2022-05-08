@@ -11,6 +11,12 @@
 #include <IPC/kern_port.hpp>
 #include <IPC/kern_event.hpp>
 
+#include <IPC/kern_server_port.hpp>
+#include <IPC/kern_server_connection.hpp>
+
+#include <IPC/kern_client_port.hpp>
+#include <IPC/kern_client_connection.hpp>
+
 template<typename T>
 static T ReadArgument(UINT64 Val)
 {
@@ -471,6 +477,12 @@ pantheon::Result pantheon::SVCConnectToPort(pantheon::TrapFrame *CurFrame)
 	return pantheon::Result::SYS_FAIL;
 }
 
+/**
+ * @brief Establish a Connection to a named Port
+ * @details A connection is created with a named Port, which is globally available and does not enforce any permission checks.
+ * Ordinary processes generally cannot create named Ports, so this system call is typically used for connecting to Ports
+ * which provide essential runtime services, such as sysm.
+ */
 pantheon::Result pantheon::SVCConnectToNamedPort(pantheon::TrapFrame *CurFrame)
 {
 	/* svc_ConnectToNamedPort(const char *Name, INT32 *OutConn) */
@@ -488,6 +500,38 @@ pantheon::Result pantheon::SVCConnectToNamedPort(pantheon::TrapFrame *CurFrame)
 	{
 		return pantheon::Result::SYS_FAIL;
 	}
+
+	INT32 *HandleLocation = ReadArgumentAsPointer<INT32>(CurFrame->GetIntArgument(1));
+	if (HandleLocation == nullptr)
+	{
+		return pantheon::Result::SYS_FAIL;
+	}
+
+	pantheon::ipc::ClientPort *CliPort = NamedPort->GetClientPort();
+
+	/* If, for *whatever* reason this is null (ie, client port is closed), return an error.
+	 * These results should probably be more descriptive in the future, but for now this is OK. 
+	 */
+	if (CliPort == nullptr)
+	{
+		return pantheon::Result::SYS_FAIL;
+	}
+
+	/* TODO: Enforce resource limits, or some kind of reference counting.
+	 * This will OOM very fast!!!
+	 */
+	pantheon::ipc::ClientConnection *NewConn = NamedPort->CreateConnection();
+	if (NewConn == nullptr)
+	{
+		/* We might have run out of connections... */
+		return pantheon::Result::SYS_OOM;	
+	}
+
+	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
+	pantheon::ScopedLock _L(CurProc);
+
+	/* TODO: Create a ClientConnection and write it to NewConn. */
+	*HandleLocation = -1;
 
 	return pantheon::Result::SYS_OK;
 }

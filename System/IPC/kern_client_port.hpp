@@ -11,6 +11,7 @@ namespace pantheon::ipc
 {
 
 class Port;
+class ClientConnection;
 
 class ClientPort : public pantheon::Allocatable<ClientPort, 1024>, public Lockable
 {

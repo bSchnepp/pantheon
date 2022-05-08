@@ -4,6 +4,9 @@
 #include <Common/Sync/kern_lockable.hpp>
 #include <Common/Structures/kern_allocatable.hpp>
 
+#include <System/IPC/kern_connection.hpp>
+#include <System/IPC/kern_client_connection.hpp>
+
 #ifndef _KERN_PORT_HPP_
 #define _KERN_PORT_HPP_
 
@@ -46,6 +49,8 @@ public:
 
 	Result Enqueue(pantheon::ipc::ServerConnection *Conn);
 	[[nodiscard]] PortName GetName() const { return this->Name; }
+
+	pantheon::ipc::ClientConnection *CreateConnection();
 
 private:
 	enum class State : UINT8

@@ -11,7 +11,7 @@ namespace pantheon::ipc
 
 class Connection;
 
-class ClientConnection : public Allocatable<ClientConnection, 1024>
+class ClientConnection
 {
 public:
 	explicit ClientConnection() = default;

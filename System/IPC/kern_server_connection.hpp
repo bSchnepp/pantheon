@@ -14,7 +14,7 @@ namespace pantheon::ipc
 
 class Connection;
 
-class ServerConnection : public Allocatable<ServerConnection, 1024>
+class ServerConnection
 {
 public:
 	explicit ServerConnection() = default;

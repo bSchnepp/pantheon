@@ -31,3 +31,16 @@ void pantheon::ipc::Connection::CloseClientHandler()
 		/* Close it directly */
 	}
 }
+
+void pantheon::ipc::Connection::Initialize(ClientPort *Client, ServerPort *Server)
+{
+	OBJECT_SELF_ASSERT();
+
+	this->SrvConn.Initialize(this);
+	this->CliConn.Initialize(this);
+
+	this->CliPort = Client;
+	this->SrvPort = Server;
+
+	this->CurState = pantheon::ipc::Connection::State::OPEN;
+}
