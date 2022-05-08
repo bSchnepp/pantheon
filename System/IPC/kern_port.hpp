@@ -30,6 +30,7 @@ public:
 	~Port() override;
 
 	static void Setup();
+	static Port *GetRegistered(const PortName &Name);
 
 	void Initialize(PortName Name, INT64 MaxConnections);
 	void CloseServerHandler();

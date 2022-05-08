@@ -473,9 +473,23 @@ pantheon::Result pantheon::SVCConnectToPort(pantheon::TrapFrame *CurFrame)
 
 pantheon::Result pantheon::SVCConnectToNamedPort(pantheon::TrapFrame *CurFrame)
 {
-	/* NYI */
-	PANTHEON_UNUSED(CurFrame);
-	return pantheon::Result::SYS_FAIL;
+	/* svc_ConnectToNamedPort(const char *Name, INT32 *OutConn) */
+	const char *Name = ReadArgumentAsCharPointer(CurFrame->GetIntArgument(0));
+	if (Name == nullptr)
+	{
+		return pantheon::Result::SYS_FAIL;	
+	}
+
+	pantheon::ipc::PortName PName;
+	CopyString(PName.AsChars, Name, pantheon::ipc::PortNameLength);
+
+	pantheon::ipc::Port *NamedPort = pantheon::ipc::Port::GetRegistered(PName);
+	if (NamedPort == nullptr)
+	{
+		return pantheon::Result::SYS_FAIL;
+	}
+
+	return pantheon::Result::SYS_OK;
 }
 
 typedef pantheon::Result (*SyscallFn)(pantheon::TrapFrame *);
@@ -496,6 +510,8 @@ SyscallFn syscall_table[] =
 	(SyscallFn)pantheon::SVCExitThread,
 	(SyscallFn)pantheon::SVCExecute,
 	(SyscallFn)pantheon::SVCCreatePort,
+	(SyscallFn)pantheon::SVCConnectToPort,
+	(SyscallFn)pantheon::SVCConnectToNamedPort,
 };
 
 UINT64 pantheon::SyscallCount()

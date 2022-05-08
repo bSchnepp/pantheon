@@ -21,22 +21,58 @@ pantheon::ipc::Port::~Port()
 
 }
 
-static pantheon::LinkedList<pantheon::ipc::Port> NamedPortsList;
+typedef union PortAlias
+{
+	pantheon::ipc::Port *Ptr;
+	pantheon::vmm::VirtualAddress VAddr;
+}PortAlias;
+
+static ArrayList<PortAlias> NamedPortsList;
 void pantheon::ipc::Port::Setup()
 {
-	NamedPortsList = LinkedList<pantheon::ipc::Port>();
+	NamedPortsList = ArrayList<PortAlias>(1024);
 }
 
 static void Register(pantheon::ipc::Port *Current)
 {
 	/* Make sure this exists precisely once in the list? */
-	NamedPortsList.PushBack(Current);
+	NamedPortsList.Add({Current});
 }
 
 static void Unregister(pantheon::ipc::Port *Current)
 {
-	PANTHEON_UNUSED(Current);
-	/* NYI */
+	INT64 DelIndex = -1;
+	for (UINT64 Index = 0; Index < NamedPortsList.Size(); ++Index)
+	{
+		if (NamedPortsList[Index].Ptr == Current)
+		{
+			DelIndex = (INT64)Index;
+			break;
+		}
+	}
+
+	if (DelIndex >= 0)
+	{
+		NamedPortsList.Delete(DelIndex);
+	}
+}
+
+pantheon::ipc::Port *pantheon::ipc::Port::GetRegistered(const PortName &Name)
+{
+	if (Name.AsNumber == 0)
+	{
+		return nullptr;
+	}
+
+	for (const PortAlias &Item : NamedPortsList)
+	{
+		if (Item.Ptr->GetName().AsNumber == Name.AsNumber)
+		{
+			return Item.Ptr;
+		}
+	}
+
+	return nullptr;
 }
 
 void pantheon::ipc::Port::Initialize(PortName Name, INT64 MaxConnections)

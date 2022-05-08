@@ -10,13 +10,30 @@ void sysm_Main()
 	INT32 ServerPortRegistration;
 	INT32 ClientPortRegistration;
 
-	svc_CreatePort("sysm:reg", 64, &ServerPortRegistration, &ClientPortRegistration);
+	pantheon::Result Status = svc_CreatePort("sysm:reg", 64, &ServerPortRegistration, &ClientPortRegistration);
+	if (Status != pantheon::Result::SYS_OK)
+	{
+		svc_LogText("sysm:reg port creation failed. ABORT!");
+		for(;;){}
+	}
 
 	/* TODO: Accept data from it... */
 
-	svc_CreateNamedEvent("signal", &Read, &Write);
+	Status = svc_CreateNamedEvent("signal", &Read, &Write);
+	if (Status != pantheon::Result::SYS_OK)
+	{
+		svc_LogText("signal creation failed. ABORT!");
+		for(;;){}
+	}
+
 	for (;;)
 	{
+		INT32 ClientConn;
+		Status = svc_ConnectToNamedPort("sysm:reg", &ClientConn);
+		if (Status != pantheon::Result::SYS_OK)
+		{
+			svc_LogText("Cannot connect to sysm:reg!");
+		}
 		svc_SignalEvent(Write);
 		svc_LogText("IN USERSPACE [sysm]");
 	}
