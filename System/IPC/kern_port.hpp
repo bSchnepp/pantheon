@@ -29,6 +29,8 @@ public:
 	Port();
 	~Port() override;
 
+	static void Setup();
+
 	void Initialize(PortName Name, INT64 MaxConnections);
 	void CloseServerHandler();
 	void CloseClientHandler();
@@ -42,15 +44,16 @@ public:
 	pantheon::ipc::ServerPort *GetServerPort() { return this->Server; }
 
 	Result Enqueue(pantheon::ipc::ServerConnection *Conn);
+	[[nodiscard]] PortName GetName() const { return this->Name; }
 
 private:
 	enum class State : UINT8
 	{
-		UNUSED = 0,
-		OPEN = 1,
-		CLOSED_CLIENT = 3,
-		CLOSED_SERVER = 4,
-		CLOSED = 5,
+		UNUSED,
+		OPEN,
+		CLOSED_CLIENT,
+		CLOSED_SERVER,
+		CLOSED,
 	};
 
 private:

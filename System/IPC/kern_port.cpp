@@ -21,6 +21,24 @@ pantheon::ipc::Port::~Port()
 
 }
 
+static pantheon::LinkedList<pantheon::ipc::Port> NamedPortsList;
+void pantheon::ipc::Port::Setup()
+{
+	NamedPortsList = LinkedList<pantheon::ipc::Port>();
+}
+
+static void Register(pantheon::ipc::Port *Current)
+{
+	/* Make sure this exists precisely once in the list? */
+	NamedPortsList.PushBack(Current);
+}
+
+static void Unregister(pantheon::ipc::Port *Current)
+{
+	PANTHEON_UNUSED(Current);
+	/* NYI */
+}
+
 void pantheon::ipc::Port::Initialize(PortName Name, INT64 MaxConnections)
 {
 	this->Name = Name;
@@ -33,7 +51,10 @@ void pantheon::ipc::Port::Initialize(PortName Name, INT64 MaxConnections)
 
 	this->CurrentState = pantheon::ipc::Port::State::OPEN;
 
-
+	if (Name.AsNumber != 0)
+	{
+		Register(this);
+	}
 }
 
 void pantheon::ipc::Port::CloseServerHandler()
@@ -47,6 +68,7 @@ void pantheon::ipc::Port::CloseServerHandler()
 	else if (this->CurrentState == pantheon::ipc::Port::State::CLOSED_CLIENT)
 	{
 		this->CurrentState = pantheon::ipc::Port::State::CLOSED;
+		Unregister(this);
 	}
 }
 
@@ -61,6 +83,7 @@ void pantheon::ipc::Port::CloseClientHandler()
 	else if (this->CurrentState == pantheon::ipc::Port::State::CLOSED_SERVER)
 	{
 		this->CurrentState = pantheon::ipc::Port::State::CLOSED;
+		Unregister(this);
 	}
 }
 
