@@ -23,7 +23,7 @@ pantheon::Result pantheon::ipc::ServerConnection::RequestHandler(pantheon::Threa
 	/* Were we already closed? */
 	if (this->Owner->IsServerClosed())
 	{
-		return pantheon::Result::SYS_CONN_CLOSED;
+		return pantheon::Result::KERN_CONN_CLOSED;
 	}
 
 	/* TODO: Sleep the client thread */

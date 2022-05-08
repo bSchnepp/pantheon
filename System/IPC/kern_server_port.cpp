@@ -34,3 +34,15 @@ void pantheon::ipc::ServerPort::Cleanup()
 		}
 	}
 }
+
+void pantheon::ipc::ServerPort::Enqueue(pantheon::ipc::ServerConnection *Conn)
+{
+	/* NYI */
+	this->ConnectionList.PushBack(Conn);
+}
+
+pantheon::ipc::ServerConnection *pantheon::ipc::ServerPort::Dequeue()
+{
+	/* NYI */
+	return this->ConnectionList.PopFront();
+}

@@ -14,11 +14,13 @@ enum ResultClass
 
 enum class Result : INT32
 {
-	SYS_CONN_CLOSED = 3 | CLASS_KERN,
-	SYS_OOM = 2 | CLASS_KERN,
-	SYS_FAIL = 1 | CLASS_KERN,
-
 	SYS_OK = 0 | CLASS_NONE,
+
+	SYS_FAIL = 1 | CLASS_KERN,
+	SYS_OOM = 2 | CLASS_KERN,
+
+	KERN_CONN_CLOSED = 3 | CLASS_KERN,
+	KERN_PORT_CLOSED = 4 | CLASS_KERN,	
 };
 
 }

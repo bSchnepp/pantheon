@@ -1,3 +1,4 @@
+#include <kern_result.hpp>
 #include <kern_datatypes.hpp>
 
 #include <Common/Sync/kern_lockable.hpp>
@@ -10,6 +11,9 @@ namespace pantheon::ipc
 {
 
 class ClientPort;
+class ServerPort;
+
+class ServerConnection;
 
 static const UINT32 PortNameLength = 8;
 
@@ -35,6 +39,9 @@ public:
 	[[nodiscard]] BOOL IsClientClosed() const { return this->CurrentState == State::CLOSED_CLIENT; }
 
 	pantheon::ipc::ClientPort *GetClientPort() { return this->Client; }
+	pantheon::ipc::ServerPort *GetServerPort() { return this->Server; }
+
+	Result Enqueue(pantheon::ipc::ServerConnection *Conn);
 
 private:
 	enum class State : UINT8
@@ -43,14 +50,15 @@ private:
 		OPEN = 1,
 		CLOSED_CLIENT = 3,
 		CLOSED_SERVER = 4,
+		CLOSED = 5,
 	};
 
 private:
 	PortName Name;
 	State CurrentState;
-	INT64 MaxConnectionCount;
 
 	ClientPort *Client;
+	ServerPort *Server;
 };
 
 

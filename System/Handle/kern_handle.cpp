@@ -37,10 +37,10 @@ pantheon::Handle::Handle(pantheon::Thread *Thr)
 	this->Content.Thread = Thr;
 }
 
-pantheon::Handle::Handle(pantheon::ipc::Port *Port)
+pantheon::Handle::Handle(pantheon::ipc::ServerPort *Port)
 {
 	this->Type = pantheon::HANDLE_TYPE_SERVER_PORT;
-	this->Content.Port = Port;
+	this->Content.ServerPort = Port;
 }
 
 pantheon::Handle::Handle(pantheon::ipc::ClientPort *ClientPort)

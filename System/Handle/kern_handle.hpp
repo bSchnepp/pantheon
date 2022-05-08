@@ -13,7 +13,7 @@ namespace ipc
 	struct ReadableEvent;
 	struct WritableEvent;
 
-	class Port;
+	class ServerPort;
 	class ClientPort;
 
 	class Connection;
@@ -39,7 +39,7 @@ typedef union HandleContent
 	pantheon::ipc::WritableEvent *WriteEvent;
 	pantheon::Process *Process;
 	pantheon::Thread *Thread;
-	pantheon::ipc::Port *Port;
+	pantheon::ipc::ServerPort *ServerPort;
 	pantheon::ipc::ClientPort *ClientPort;
 	pantheon::ipc::Connection *Connection;
 	pantheon::ipc::ClientConnection *ClientConnection;
@@ -53,7 +53,7 @@ public:
 	Handle(pantheon::ipc::WritableEvent *Evt);
 	Handle(pantheon::Process *Proc);
 	Handle(pantheon::Thread *Thr);
-	Handle(pantheon::ipc::Port *Port);
+	Handle(pantheon::ipc::ServerPort *Port);
 	Handle(pantheon::ipc::ClientPort *ClientPort);
 	Handle(pantheon::ipc::Connection *Connection);
 	Handle(pantheon::ipc::ClientConnection *ClientConnection);

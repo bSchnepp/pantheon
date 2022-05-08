@@ -452,7 +452,7 @@ pantheon::Result pantheon::SVCCreatePort(pantheon::TrapFrame *CurFrame)
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	pantheon::ScopedLock _TL(CurThread);
 
-	pantheon::Handle ServHandle = pantheon::Handle(NewPort);
+	pantheon::Handle ServHandle = pantheon::Handle(NewPort->GetServerPort());
 	INT32 IndexS = CurProc->EncodeHandle(ServHandle);
 
 	pantheon::Handle ClientHandle = pantheon::Handle(NewPort->GetClientPort());

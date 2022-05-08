@@ -16,6 +16,7 @@
 
 #include <System/IPC/kern_event.hpp>
 #include <System/IPC/kern_port.hpp>
+#include <System/IPC/kern_server_port.hpp>
 #include <System/IPC/kern_client_port.hpp>
 
 
@@ -27,6 +28,7 @@ static void kern_basic_init(InitialBootInfo *InitBootInfo)
 	pantheon::InitProcessTables();
 	pantheon::ipc::InitEventSystem();
 	pantheon::ipc::Port::Init();
+	pantheon::ipc::ServerPort::Init();
 	pantheon::ipc::ClientPort::Init();
 	pantheon::GlobalScheduler::Init();
 }
