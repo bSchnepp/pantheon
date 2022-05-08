@@ -15,18 +15,28 @@ void pantheon::ipc::ServerConnection::ReplyAndRecv(const UINT32 *Content)
 	/* NYI */
 }
 
-void pantheon::ipc::ServerConnection::RequestHandler(pantheon::Thread *RqThread)
+pantheon::Result pantheon::ipc::ServerConnection::RequestHandler(pantheon::Thread *RqThread)
 {
 	OBJECT_SELF_ASSERT();
-	PANTHEON_UNUSED(RqThread);
+	pantheon::ScopedGlobalSchedulerLock SchedLock;
+
+	/* Were we already closed? */
+	if (this->Owner->IsServerClosed())
+	{
+		return pantheon::Result::SYS_CONN_CLOSED;
+	}
+
+	/* TODO: Sleep the client thread */
+
+	this->WaitingThreads.PushBack(RqThread);
 	/* NYI */
+	return pantheon::Result::SYS_OK;
 }
 
 void pantheon::ipc::ServerConnection::ClientClosedHandler()
 {
 	OBJECT_SELF_ASSERT();
 	this->Cleanup();
-	/* NYI */
 }
 
 void pantheon::ipc::ServerConnection::Close()
@@ -34,7 +44,6 @@ void pantheon::ipc::ServerConnection::Close()
 	OBJECT_SELF_ASSERT();
 	this->Cleanup();
 	this->Owner->CloseServerHandler();
-	/* NYI */
 }
 
 void pantheon::ipc::ServerConnection::Cleanup()
