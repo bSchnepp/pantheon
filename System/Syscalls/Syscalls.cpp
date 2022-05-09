@@ -536,6 +536,20 @@ pantheon::Result pantheon::SVCConnectToNamedPort(pantheon::TrapFrame *CurFrame)
 	return pantheon::Result::SYS_OK;
 }
 
+pantheon::Result pantheon::SVCAcceptConnection(pantheon::TrapFrame *CurFrame)
+{
+	/* NYI */
+	PANTHEON_UNUSED(CurFrame);
+	return pantheon::Result::SYS_FAIL;
+}
+
+pantheon::Result pantheon::SVCReplyAndRecieve(pantheon::TrapFrame *CurFrame)
+{
+	/* NYI */
+	PANTHEON_UNUSED(CurFrame);
+	return pantheon::Result::SYS_FAIL;
+}
+
 typedef pantheon::Result (*SyscallFn)(pantheon::TrapFrame *);
 
 SyscallFn syscall_table[] = 
@@ -556,6 +570,8 @@ SyscallFn syscall_table[] =
 	(SyscallFn)pantheon::SVCCreatePort,
 	(SyscallFn)pantheon::SVCConnectToPort,
 	(SyscallFn)pantheon::SVCConnectToNamedPort,
+	(SyscallFn)pantheon::SVCAcceptConnection,
+	(SyscallFn)pantheon::SVCReplyAndRecieve,
 };
 
 UINT64 pantheon::SyscallCount()

@@ -94,3 +94,15 @@ svc_ConnectToNamedPort:
 	svc #0
 	ret
 
+.globl svc_AcceptConnection
+svc_AcceptConnection:
+	mov w8, #16
+	svc #0
+	ret
+
+.globl svc_ReplyAndRecieve
+svc_ReplyAndRecieve:
+	mov w8, #17
+	svc #0
+	ret
+

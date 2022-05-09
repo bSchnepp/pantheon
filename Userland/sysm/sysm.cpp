@@ -18,6 +18,21 @@ void sysm_Main()
 	}
 
 	/* TODO: Accept data from it... */
+	INT32 ServerConnection;
+	Status = svc_AcceptConnection(ServerPortRegistration, &ServerConnection);
+	if (Status == pantheon::Result::SYS_FAIL)
+	{
+		svc_LogText("Unable to accept a session");
+	}
+	else
+	{
+		for (;;)
+		{
+			/* Reply with nothing, forever. */
+			svc_ReplyAndRecieve(0, nullptr, &ServerConnection, 1000);
+		}
+	}
+	
 
 	Status = svc_CreateNamedEvent("signal", &Read, &Write);
 	if (Status != pantheon::Result::SYS_OK)
@@ -46,7 +61,7 @@ uintptr_t __stack_chk_guard = 0xDEADBEEFDEADC0DE;
 
 [[noreturn]] VOID __stack_chk_fail(void)
 {
-	svc_LogText("CRASH: prgm has stack canary smashed.\n");
+	svc_LogText("CRASH: sysm has stack canary smashed.\n");
 	svc_ExitProcess();
 	for(;;){}
 }

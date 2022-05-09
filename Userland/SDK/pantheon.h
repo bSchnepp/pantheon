@@ -19,5 +19,7 @@ extern "C" pantheon::Result svc_Execute(UINT8 Handle);
 extern "C" pantheon::Result svc_CreatePort(const CHAR *Name, INT64 MaxConnections, INT32 *HandleServer, INT32 *HandleClient);
 extern "C" pantheon::Result svc_ConnectToPort(INT32 *ClientPortHandle, INT32 *OutClientConnectionHandle);
 extern "C" pantheon::Result svc_ConnectToNamedPort(const char *Name, INT32 *OutClientConnectionHandle);
+extern "C" pantheon::Result svc_AcceptConnection(INT32 InServerPortHandle, INT32 *OutConnection);
+extern "C" pantheon::Result svc_ReplyAndRecieve(UINT32 ContentSize, UINT32 *ReplyData, INT32 *NewConnection, UINT16 TimeoutTicks);
 
 #endif
