@@ -211,9 +211,26 @@ void FORCE_INLINE SetBufferBytes(UINT8 *Location, UINT8 Value, UINT32 Amount)
 	UINT32 Index = 0;
 
 	UINT64 *AsUINT64 = (UINT64*)Location;
-	for (Index = 0; Index < Amount; Index += 8)
+	UINT64 NValue = ((UINT64)Value << 8*7) | ((UINT64)Value << 8*6) 
+		| ((UINT64)Value << 8*5) | ((UINT64)Value << 8*4) 
+		| ((UINT64)Value << 8*3) | ((UINT64)Value << 8*2) 
+		| ((UINT64)Value << 8) | (UINT64)Value;
+
+	for (Index = 0; Index < Amount; Index += 64)
 	{
-		AsUINT64[Index / 8] = 0;
+		AsUINT64[(Index + 0) / 8] = NValue;
+		AsUINT64[(Index + 1) / 8] = NValue;
+		AsUINT64[(Index + 2) / 8] = NValue;
+		AsUINT64[(Index + 3) / 8] = NValue;
+		AsUINT64[(Index + 4) / 8] = NValue;
+		AsUINT64[(Index + 5) / 8] = NValue;
+		AsUINT64[(Index + 6) / 8] = NValue;
+		AsUINT64[(Index + 7) / 8] = NValue;		
+	}
+
+	for (; Index < Amount; Index += 8)
+	{
+		AsUINT64[Index / 8] = NValue;
 	}
 
 	for (; Index < Amount; ++Index)

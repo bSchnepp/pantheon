@@ -40,7 +40,7 @@ static UINT64 USER_END = 0;
 pantheon::Scheduler::Scheduler()
 {
 	this->IdleThread = pantheon::GlobalScheduler::CreateProcessorIdleThread();
-	this->CurThread = this->IdleThread;
+	this->CurThread = this->IdleThread;	
 }
 
 pantheon::Scheduler::~Scheduler()
@@ -246,6 +246,15 @@ void pantheon::GlobalScheduler::Unlock()
 {
 	AccessSpinlock.Release();
 }
+
+pantheon::Atomic<BOOL> pantheon::GlobalScheduler::Okay;
+pantheon::Spinlock pantheon::GlobalScheduler::AccessSpinlock;
+
+pantheon::LinkedList<pantheon::Process> pantheon::GlobalScheduler::ProcessList;
+pantheon::LinkedList<pantheon::Thread> pantheon::GlobalScheduler::ThreadList;
+
+pantheon::Thread *pantheon::GlobalScheduler::ReadyHead;
+pantheon::Thread *pantheon::GlobalScheduler::ReadyTail;
 
 static pantheon::Process IdleProc;
 VOID pantheon::GlobalScheduler::Init()

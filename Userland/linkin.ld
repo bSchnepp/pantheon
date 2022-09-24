@@ -2,36 +2,48 @@ ENTRY(_start)
 
 SECTIONS
 {
-	/* Start at 4MB */
-	. = 4 * 1024 * 1024;
-
-	. = ALIGN(0x1000);
-	.text :
+	.text : ALIGN(4K)
 	{
-		*(.text)
+		*(.text*)
 	}
-	. = ALIGN(0x1000);
 
-	. = ALIGN(0x1000);
-	.rodata :
+	.rodata : ALIGN(4K)
 	{
 		*(.rodata*)
 	}
-	. = ALIGN(0x1000);
 
-	. = ALIGN(0x1000);
-	.data :
+	.data : ALIGN(4K)
 	{
 		*(.data*)
 	}
-	. = ALIGN(0x1000);
 
-	. = ALIGN(0x1000);
-	.bss :
+	.bss : ALIGN(4K)
 	{
 		*(.bss*)
 	}
-	. = ALIGN(0x1000);
+
+	.plt : ALIGN(4K)
+	{
+		*(.plt)
+		*(.iplt)
+	}
+
+	.got : ALIGN(4K)
+	{
+		*(.got)
+		*(.igot)
+	}
+
+	.got.plt : ALIGN(4K)
+	{
+		*(.got.plt)
+		*(.igot.plt)
+	}
+
+	.dynamic : { *(.dynamic) }
+	.dynsym : { *(.dynsym) }
+	.dynstr : { *(.dynstr) }
+	.rela.dyn : { *(.rela.dyn) }
 
 	/DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }	
 }

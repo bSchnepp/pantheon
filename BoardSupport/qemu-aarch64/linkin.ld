@@ -1,56 +1,81 @@
 ENTRY(_cpu_start)
 
+PHDRS
+{
+	dyn PT_DYNAMIC;
+}
+
 SECTIONS
 {
-	/* On qemu-aarch64, this is the load address with -kernel */
-	BSP_LOAD_ADDRESS = 0x80000 + 0x40000000;
-	. = BSP_LOAD_ADDRESS;
-
 	PRE_KERN_AREA = .;
 	. = ALIGN(0x1000);
 	.text :
 	{
-		TEXT_PHY_AREA = .;
-		TEXT_AREA = .;
-		*(.text*)
+		KEEP(*(.text.early))
+		KEEP(*(.text))
+		. = ALIGN(0x1000);
 		BoardSupport/qemu-aarch64/libBoard.a*(*.text*)
 		BoardSupport/qemu-aarch64/Boot/libBoot.a*(*.text*)
-		TEXT_END = .;
-		TEXT_SIZE = TEXT_END - TEXT_AREA;
+		. = ALIGN(0x1000);
 	}
 
 	. = ALIGN(0x1000);
 	.rodata :
 	{
-		RODATA_PHY_AREA = .;
-		RODATA_AREA = .;
+		KEEP(*(.rodata*))
 		. = ALIGN(0x1000);
-		*(.rodata*)
 		BoardSupport/qemu-aarch64/libBoard.a*(*.rodata*)
 		BoardSupport/qemu-aarch64/Boot/libBoot.a*(*.rodata*)
-		RODATA_END = .;
-		RODATA_SIZE = RODATA_END - RODATA_AREA;
+		. = ALIGN(0x1000);
 	}
 
+	. = ALIGN(0x1000);
 	.data :
 	{
-		DATA_PHY_AREA = .;
-		DATA_AREA = .;
 		. = ALIGN(0x1000);
-		*(.data*)
+		KEEP(*(.data.kernel*))
+		. = ALIGN(0x1000);
+		KEEP(*(.data*))
+		. = ALIGN(0x1000);
 		BoardSupport/qemu-aarch64/libBoard.a*(*.data*)
 		BoardSupport/qemu-aarch64/Boot/libBoot.a*(*.data*)
-		DATA_END = .;
-		DATA_SIZE = DATA_END - DATA_AREA;
-
-		BSS_PHY_AREA = .;
-		BSS_AREA = .;
 		. = ALIGN(0x1000);
-		*(.bss*)
+	}
+
+	. = ALIGN(0x1000);
+	.bss :
+	{
+		BSS_AREA = .;
+		KEEP(*(.bss*))
+		. = ALIGN(0x1000);
 		BoardSupport/qemu-aarch64/libBoard.a*(*.bss*)
 		BoardSupport/qemu-aarch64/Boot/libBoot.a*(*.bss*)
+		. = ALIGN(0x1000);
 		BSS_END = .;
-		BSS_SIZE = BSS_END - BSS_AREA;
 	}
+
+	.plt : ALIGN(4K)
+	{
+		*(.plt)
+		*(.iplt)
+	}
+
+	.got : ALIGN(4K)
+	{
+		*(.got)
+		*(.igot)
+	}
+
+	.got.plt : ALIGN(4K)
+	{
+		*(.got.plt)
+		*(.igot.plt)
+	}
+
+	.dynamic : { KEEP(*(.dynamic)) } :dyn
+	.dynsym : { KEEP(*(.dynsym)) }
+	.dynstr : { KEEP(*(.dynstr)) }
+	.rela.dyn : { KEEP(*(.rela.dyn)) }
+
 	PRE_KERN_END = .;	
 }

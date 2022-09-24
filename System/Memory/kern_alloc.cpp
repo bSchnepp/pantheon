@@ -117,6 +117,7 @@ void pantheon::PageAllocator::InitPageAllocator(InitialBootInfo *BootInfo)
 		Offset += BootInfo->InitMemoryAreas->Size;
 	}
 
+#if 0
 	pantheon::vmm::PhysicalAddress TextBegin = (pantheon::vmm::PhysicalAddress)&TEXT_PHY_AREA;
 	pantheon::vmm::PhysicalAddress TextEnd = TextBegin + ((pantheon::vmm::PhysicalAddress)&TEXT_END - (pantheon::vmm::PhysicalAddress)&TEXT_AREA);
 
@@ -140,6 +141,7 @@ void pantheon::PageAllocator::InitPageAllocator(InitialBootInfo *BootInfo)
 	{
 		AllocatePage(Addr);
 	}
+#endif
 }
 
 #ifdef ONLY_TESTS

@@ -13,9 +13,9 @@ SET(CMAKE_OBJCOPY "aarch64-none-elf-objcopy")
 SET(BOOT_LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/BoardSupport/qemu-aarch64/linkin.ld)
 SET(KLINKER_SCRIPT ${CMAKE_SOURCE_DIR}/BoardSupport/klinkin.ld)
 
-SET(CMAKE_ASM_NASM_OBJECT_FORMAT "elf64")
-SET(CMAKE_C_FLAGS "-target aarch64-none-elf -mgeneral-regs-only -mcmodel=large -ffreestanding -nostdlib -c -Wall -Wextra -Wvla -mcpu=cortex-a72 -mtune=cortex-a72 -fno-builtin -fstack-protector ${CMAKE_C_FLAGS}")
-SET(CMAKE_CXX_FLAGS "-target aarch64-none-elf -mcmodel=large -mgeneral-regs-only -ffreestanding -nostdlib -c -Wall -Wextra -Wvla -fno-rtti -fno-exceptions -mcpu=cortex-a72 -mtune=cortex-a72 -fno-builtin -fstack-protector ${CMAKE_CXX_FLAGS}")
+SET(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS}")
+SET(CMAKE_C_FLAGS "-target aarch64-none-elf -fPIE -mgeneral-regs-only -ffreestanding -nostdlib -c -Wall -Wextra -Wvla -mcpu=cortex-a72 -mtune=cortex-a72 -fno-builtin -fstack-protector ${CMAKE_C_FLAGS}")
+SET(CMAKE_CXX_FLAGS "-target aarch64-none-elf -fPIE -mgeneral-regs-only -ffreestanding -nostdlib -c -Wall -Wextra -Wvla -fno-rtti -fno-exceptions -mcpu=cortex-a72 -mtune=cortex-a72 -fno-builtin -fstack-protector ${CMAKE_CXX_FLAGS}")
 SET(FSANITIZE_FLAGS "-fsanitize=undefined")
 
 SET(TARGET_SYSTEM "qemu-aarch64-virt")
@@ -32,6 +32,6 @@ SET(CMAKE_SHARED_MODULE_PREFIX "")
 
 
 # Force the appropriate linker usage.
-SET(CMAKE_C_LINK_EXECUTABLE "<CMAKE_LINKER> <CMAKE_C_LINK_FLAGS> <LINK_FLAGS> -m aarch64elf -nostdlib <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
-SET(CMAKE_CXX_LINK_EXECUTABLE "<CMAKE_LINKER> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> -m aarch64elf -nostdlib <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
+SET(CMAKE_C_LINK_EXECUTABLE "<CMAKE_LINKER> <CMAKE_C_LINK_FLAGS> <LINK_FLAGS> -m aarch64elf -pie -nostdlib <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
+SET(CMAKE_CXX_LINK_EXECUTABLE "<CMAKE_LINKER> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> -m aarch64elf -pie -nostdlib <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
 

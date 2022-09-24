@@ -23,7 +23,7 @@ class SlabCache
 public:
 	/* Implicitly assume that sizeof(T) >= sizeof(SlabCache<T>) */
 
-	FORCE_INLINE SlabCache()
+	constexpr FORCE_INLINE SlabCache()
 	{
 		this->Size = 0;
 		this->Used = 0;
@@ -31,7 +31,7 @@ public:
 		this->Area = nullptr;
 	}
 
-	FORCE_INLINE SlabCache(VOID *Area, UINT16 Count = 64)
+	constexpr FORCE_INLINE SlabCache(VOID *Area, UINT16 Count = 64)
 	{
 		this->Area = reinterpret_cast<T*>(Area);
 		#if POISON_MEMORY
@@ -59,7 +59,7 @@ public:
 		this->FreeList = reinterpret_cast<SlabNext<T>*>(this->Area);
 	}
 
-	FORCE_INLINE ~SlabCache()
+	constexpr FORCE_INLINE ~SlabCache()
 	{
 
 	}

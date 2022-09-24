@@ -12,6 +12,9 @@ template<typename T, UINT64 Count>
 class Allocatable
 {
 public:
+	Allocatable() = default;
+	~Allocatable() = default;
+
 	static void Init()
 	{
 		AllocSpinlock = pantheon::Spinlock("Allocatable Lock");

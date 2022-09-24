@@ -17,19 +17,10 @@
 #include "Boot/BootDriver.hpp"
 
 #include <Common/Sync/kern_atomic.hpp>
+#include <System/Exec/kern_elf.hpp>
 
-extern "C" CHAR *TEXT_AREA;
-extern "C" CHAR *TEXT_PHY_AREA;
-extern "C" CHAR *TEXT_END;
-extern "C" CHAR *RODATA_AREA;
-extern "C" CHAR *RODATA_PHY_AREA;
-extern "C" CHAR *RODATA_END;
-extern "C" CHAR *DATA_AREA;
-extern "C" CHAR *DATA_PHY_AREA;
-extern "C" CHAR *DATA_END;
-extern "C" CHAR *BSS_AREA;
-extern "C" CHAR *BSS_PHY_AREA;
-extern "C" CHAR *BSS_END;
+
+extern "C" CHAR *kernel_location;
 
 
 static InitialBootInfo InitBootInfo;
@@ -384,6 +375,7 @@ void Initialize(fdt_header *dtb, pantheon::vmm::PageAllocator &Allocator)
 }
 
 static pantheon::vmm::PageAllocator InitialPageTables;
+static UINT64 VirtualAddress = 0xFFFFFFFF70000000;
 
 static void SetupPageTables()
 {
@@ -412,6 +404,24 @@ static void SetupPageTables()
 	Entry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
 	Entry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
 
+	KernelHeader Hdr;
+	memcpy(&Hdr, (void*)&kernel_location, sizeof(KernelHeader));
+
+	pantheon::vmm::PhysicalAddress KPAddr = (pantheon::vmm::PhysicalAddress)&kernel_location;
+	pantheon::vmm::PhysicalAddress KPTextArea = KPAddr + Hdr.TextBegin;
+	pantheon::vmm::PhysicalAddress KPTextEnd = KPAddr + Hdr.TextEnd;
+	pantheon::vmm::PhysicalAddress KPRodataArea = KPAddr + Hdr.RodataBegin;
+	pantheon::vmm::PhysicalAddress KPRodataEnd = KPAddr + Hdr.RodataEnd;
+	pantheon::vmm::PhysicalAddress KPDataArea = KPAddr + Hdr.DataBegin;
+	pantheon::vmm::PhysicalAddress KPDataEnd = KPAddr + Hdr.DataEnd;
+	pantheon::vmm::PhysicalAddress KPBssArea = KPAddr + Hdr.BSSBegin;
+	pantheon::vmm::PhysicalAddress KPBssEnd = KPAddr + Hdr.BSSEnd;
+
+	pantheon::vmm::VirtualAddress KVText = VirtualAddress + Hdr.TextBegin;
+	pantheon::vmm::VirtualAddress KVRodata = VirtualAddress + Hdr.RodataBegin;
+	pantheon::vmm::VirtualAddress KVData = VirtualAddress + Hdr.DataBegin;
+	pantheon::vmm::VirtualAddress KVBss = VirtualAddress + Hdr.BSSBegin;
+
 	/* 
 	 * TODO:
 	 * 0. Utilize TTBR1 for a higher-half mapping, and then
@@ -429,10 +439,7 @@ static void SetupPageTables()
 	pantheon::vmm::PageTableEntry NoWrite(Entry);
 	NoWrite.SetPagePermissions(NoWritePermission);
 
-	pantheon::vmm::PhysicalAddress BaseAddrPhysText = reinterpret_cast<pantheon::vmm::PhysicalAddress>(&TEXT_PHY_AREA);
-	pantheon::vmm::VirtualAddress BaseAddrText = reinterpret_cast<pantheon::vmm::VirtualAddress>(&TEXT_AREA);
-	pantheon::vmm::VirtualAddress EndAddrText = reinterpret_cast<pantheon::vmm::VirtualAddress>(&TEXT_END);
-	InitialPageTables.MapLower(&TTBR1, BaseAddrText, BaseAddrPhysText, EndAddrText - BaseAddrText, NoWrite);
+	InitialPageTables.MapLower(&TTBR1, KVText, KPTextArea, KPTextEnd - KPTextArea, NoWrite);
 
 	UINT64 NoExecutePermission = 0;
 	NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_KERN;
@@ -441,27 +448,9 @@ static void SetupPageTables()
 	pantheon::vmm::PageTableEntry NoExecute(Entry);
 	NoExecute.SetPagePermissions(NoExecutePermission);
 
-	pantheon::vmm::PhysicalAddress BaseAddrPhysRodata = reinterpret_cast<pantheon::vmm::PhysicalAddress>(&RODATA_PHY_AREA);
-	pantheon::vmm::VirtualAddress BaseAddrRodata = reinterpret_cast<pantheon::vmm::VirtualAddress>(&RODATA_AREA);
-	pantheon::vmm::VirtualAddress EndAddrRodata = reinterpret_cast<pantheon::vmm::VirtualAddress>(&RODATA_END);
-	InitialPageTables.MapLower(&TTBR1, BaseAddrRodata, BaseAddrPhysRodata, EndAddrRodata - BaseAddrRodata, NoExecute);
-
-	pantheon::vmm::PhysicalAddress BaseAddrPhysData = reinterpret_cast<pantheon::vmm::PhysicalAddress>(&DATA_PHY_AREA);
-	pantheon::vmm::VirtualAddress BaseAddrData = reinterpret_cast<pantheon::vmm::VirtualAddress>(&DATA_AREA);
-	pantheon::vmm::VirtualAddress EndAddrData = reinterpret_cast<pantheon::vmm::VirtualAddress>(&DATA_END);
-	InitialPageTables.MapLower(&TTBR1, BaseAddrData, BaseAddrPhysData, EndAddrData - BaseAddrData, NoExecute);
-
-	pantheon::vmm::PhysicalAddress BaseAddrPhysBSS = reinterpret_cast<pantheon::vmm::PhysicalAddress>(&BSS_PHY_AREA);
-	pantheon::vmm::VirtualAddress BaseAddrBSS = reinterpret_cast<pantheon::vmm::VirtualAddress>(&BSS_AREA);
-	pantheon::vmm::VirtualAddress EndAddrBSS = reinterpret_cast<pantheon::vmm::VirtualAddress>(&BSS_END);
-	InitialPageTables.MapLower(&TTBR1, BaseAddrBSS, BaseAddrPhysBSS, EndAddrBSS - BaseAddrBSS, NoExecute);
-
-
-
-	/* Run kernel constructors here */
-
-	/* TODO: make rodata actually read only */
-
+	InitialPageTables.MapLower(&TTBR1, KVRodata, KPRodataArea, KPRodataEnd - KPRodataArea, NoExecute);
+	InitialPageTables.MapLower(&TTBR1, KVData, KPDataArea, KPDataEnd - KPDataArea, NoExecute);
+	InitialPageTables.MapLower(&TTBR1, KVBss, KPBssArea, KPBssEnd - KPBssArea, NoExecute);
 	PageTablesCreated.Store(TRUE);
 }
 
@@ -472,11 +461,8 @@ pantheon::vmm::PageAllocator *BaseAllocator()
 
 extern "C" void BoardInit(pantheon::vmm::PageTable *TTBR1, pantheon::vmm::PageAllocator &PageAllocator);
 
-extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, void *virt_load_addr)
+extern "C" InitialBootInfo *BootInit(fdt_header *dtb)
 {
-	PANTHEON_UNUSED(initial_load_addr);
-	PANTHEON_UNUSED(virt_load_addr);
-
 	UINT64 ProcNo = 0;
 	asm volatile ("mrs %0, mpidr_el1\n" : "=r"(ProcNo) ::);
 	ProcNo &= 0xFF;
@@ -492,6 +478,24 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 
 	if (ProcNo == 0)
 	{
+		KernelHeader Hdr;
+		memcpy(&Hdr, (void*)&kernel_location, sizeof(KernelHeader));
+
+		DynInfo *KDynInfo = (DynInfo *)(((char*)&kernel_location) + Hdr.Dynamic);
+
+		/* Run kernel constructors and perform relocation here */
+		ApplyRelocations(VirtualAddress, KDynInfo);
+
+		pantheon::vmm::VirtualAddress KVInitArea = VirtualAddress + Hdr.InitArrayBegin;
+		pantheon::vmm::VirtualAddress KVInitEnd = VirtualAddress + Hdr.InitArrayEnd;
+		for (pantheon::vmm::VirtualAddress Cur = KVInitArea; Cur < KVInitEnd; Cur += sizeof(pantheon::vmm::VirtualAddress))
+		{
+			void (**Func)() = reinterpret_cast<void (**)()>(Cur);
+			(*Func)();
+		}
+
+		/* TODO: make rodata actually read only */
+
 		/* At this point, paging should be set up so the kernel
 		 * gets the page tables expected...
 		 */
@@ -506,6 +510,16 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 		 * the area.
 		 */
 		InitializeMemory(dtb);
+
+		/* Verify that the boot image is valid */
+		const CHAR *Str = "PANTHEON";
+		for (uint8_t Index = 0; Index < 8; Index++)
+		{
+			if (Hdr.Signature[Index] != Str[Index])
+			{
+				for (;;){}
+			}
+		}
 
 		/* For everything in InitBootInfo, map the appropriate physical memory */
 		for (UINT64 Index = 0; Index < InitBootInfo.NumMemoryAreas; ++Index)
@@ -547,4 +561,95 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 		}		
 	}
 	return GetInitBootInfo();
+}
+
+
+/* Necessary for relocation info */
+#define R_AARCH64_RELATIVE (1027)
+
+
+/* This function is defined as part of the kernel, but the actual
+ * implementation isn't linked in. This should be cleaned up at some point,
+ * but allows most of the relocation code to be moved to somewhere
+ * more proper.
+ */
+extern "C" void ApplyRelocations(UINT64 Base, const DynInfo *DynamicInfo)
+{
+	enum DynLocation
+	{
+		REL = 0,
+		RELA,
+		RELCOUNT,
+		RELACOUNT,
+		RELENT,
+		RELAENT,
+		REL_MAX
+	};
+
+	UINT64 Items[REL_MAX] = {0};
+
+	for (const auto *Current = DynamicInfo; Current->Tag() != DT_NULL; Current++)
+	{
+		UINT64 Tag = Current->Tag();
+		switch (Tag)
+		{
+		case DT_REL:
+			Items[REL] = Base + Current->Address();
+			break;
+
+		case DT_RELA:
+			Items[RELA] = Base + Current->Address();
+			break;
+
+		case DT_RELENT:
+			Items[RELENT] = Current->Value();
+			break;
+
+		case DT_RELAENT:
+			Items[RELAENT] = Current->Value();
+			break;
+
+		case DT_RELCOUNT:
+			Items[RELCOUNT] = Current->Value();
+			break;
+
+		case DT_RELACOUNT:
+			Items[RELACOUNT] = Current->Value();
+			break;
+
+		default:
+			break;
+		}
+	}
+
+	for (UINT64 Index = 0; Index < Items[RELCOUNT]; Index++)
+	{
+		UINT64 EntryAddr = Items[REL] + (Items[RELENT] * Index);
+		const RelInfo *Entry = reinterpret_cast<const RelInfo *>(EntryAddr);
+		if (Entry && Entry->Type() == R_AARCH64_RELATIVE)
+		{
+			UINT64 *WriteAddress = reinterpret_cast<UINT64*>(Base + Entry->Address());
+			*WriteAddress += Base;
+		} 
+		else 
+		{
+			for (;;) {}
+		}
+	}
+
+	for (UINT64 Index = 0; Index < Items[RELACOUNT]; Index++)
+	{
+		UINT64 EntryAddr = Items[RELA] + (Items[RELAENT] * Index);
+		const RelaInfo *Entry = reinterpret_cast<const RelaInfo *>(EntryAddr);
+		if (Entry && Entry->Type() == R_AARCH64_RELATIVE)
+		{
+			UINT64 *WriteAddress = reinterpret_cast<UINT64*>(Base + Entry->Address());
+			*WriteAddress = Base + Entry->Addend();
+		}
+		else 
+		{
+			for (;;) {}
+		}
+	}
+
 }

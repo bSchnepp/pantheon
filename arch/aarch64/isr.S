@@ -1,5 +1,5 @@
+.section ".text"
 .globl interrupt_table
-
 .equ TRAP_SZ, (8 * 36)
 
 .macro kern_entry, dpl

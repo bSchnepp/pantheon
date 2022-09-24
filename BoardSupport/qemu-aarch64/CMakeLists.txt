@@ -3,8 +3,7 @@ ADD_SUBDIRECTORY(BoardInit)
 ADD_SUBDIRECTORY(BoardRuntime)
 
 ADD_EXECUTABLE(pantheon cmake_stub.cpp)
-
-SET_TARGET_PROPERTIES(${CMAKE_PROJECT_NAME} PROPERTIES LINK_DEPENDS ${BOOT_LINKER_SCRIPT})
+SET_TARGET_PROPERTIES(pantheon PROPERTIES LINK_DEPENDS ${BOOT_LINKER_SCRIPT})
 
 # We do however need to link the bootloader, and have a dependency set for it.
 TARGET_LINK_LIBRARIES(pantheon Boot)

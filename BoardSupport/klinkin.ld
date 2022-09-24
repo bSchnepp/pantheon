@@ -1,52 +1,92 @@
 ENTRY(kern_init)
 
+PHDRS
+{
+	dyn PT_DYNAMIC;
+}
+
 SECTIONS
 {
 	/* aarch64 load address */
-	VIRT_LOAD_ADDRESS = 0xFFFFFFFF70000000;
-	. += VIRT_LOAD_ADDRESS;
 
-	. = ALIGN(0x1000);
-	. = ALIGN(0x800);
-	TEXT_AREA = .;
-	TEXT_PHY_AREA = . - VIRT_LOAD_ADDRESS;
 	kern_begin = .;	
-	.text : AT(ADDR(.text) - VIRT_LOAD_ADDRESS)
+	.text : ALIGN(4K)
 	{
-		*(.text.exceptions)
+		TEXT_AREA = .;
+		METADATA_BEGIN = .;
+		KEEP(*(.text.metadata))
+		METADATA_END = .;
+		
+		. = ALIGN(0x800);
+		KEEP(*(.text.exceptions))
 		. = ALIGN(0x1000);
 		*(.text)
+		TEXT_END = .;
+		TEXT_SIZE = TEXT_END - TEXT_AREA;
 	}
-	. = ALIGN(0x1000);
-	TEXT_END = .;
 
-	. = ALIGN(0x1000);
-	RODATA_AREA = .;
-	RODATA_PHY_AREA = . - VIRT_LOAD_ADDRESS;
-	.rodata : AT(ADDR(.rodata) - VIRT_LOAD_ADDRESS)
+	.rodata : ALIGN(4K)
 	{
-		*(.rodata*)
+		RODATA_AREA = .;
+		KEEP(*(.rodata*))
 	}
-	. = ALIGN(0x1000);
-	RODATA_END = .;
 
-	. = ALIGN(0x1000);
-	DATA_AREA = .;
-	DATA_PHY_AREA = . - VIRT_LOAD_ADDRESS;
-	.data : AT(ADDR(.data) - VIRT_LOAD_ADDRESS)
+	.preinit_array : ALIGN(4K)
 	{
-		*(.data*)
-		. = ALIGN(0x1000);
+		PREINIT_ARRAY_AREA = .;
+		KEEP(*(.preinit_array))
+		PREINIT_ARRAY_END = .;
+	}	
+
+	.init_array : ALIGN(4K)
+	{
+		INIT_ARRAY_AREA = .;
+		KEEP(*(SORT(.init_array.*)))
+		KEEP(*(.init_array))
+		INIT_ARRAY_END = .;
+		RODATA_END = .;
 	}
+
+	.data : ALIGN(4K)
+	{
+		DATA_AREA = .;
+		KEEP(*(.data*))
+	}
+
+	.plt : ALIGN(4K)
+	{
+		*(.plt)
+		*(.iplt)
+	}
+
+	.got : ALIGN(4K)
+	{
+		*(.got)
+		*(.igot)
+	}
+
+	.got.plt : ALIGN(4K)
+	{
+		*(.got.plt)
+		*(.igot.plt)
+	}	
+
+	.dynamic : { *(.dynamic) } :dyn
+	.dynsym : { *(.dynsym) }
+	.dynstr : { *(.dynstr) }
+	.rela.dyn : { *(.rela.*) }
+
+	/* Associate these other areas under DATA to make sure it's not 
+	 * overwritten */
 	DATA_END = .;
+	DATA_SIZE = TEXT_END - DATA_AREA;
+	. = ALIGN(4K);
 
-	BSS_AREA = .;
-	BSS_PHY_AREA = . - VIRT_LOAD_ADDRESS;
-	.bss : AT(ADDR(.bss) - VIRT_LOAD_ADDRESS)
+	.bss : ALIGN(4K)
 	{
-		. = ALIGN(0x1000);
-		*(.bss.early)
-		*(.bss*)
+		BSS_AREA = .;
+		KEEP(*(.bss.early))
+		KEEP(*(.bss*))
 
 		/* Hack for now to make this work for us. */
 		kern_stack_begin = .;
@@ -56,9 +96,8 @@ SECTIONS
 		. += 0x1000;	/* Add extra space just in case... */
 		. = ALIGN(4 * 1024);
 		kern_end = .;	
+		BSS_END = .;
+		BSS_SIZE = BSS_END - BSS_AREA;
 	}
-	BSS_END = .;
-	BSS_SIZE = BSS_END - BSS_AREA;
-
 	/DISCARD/ : { *(.comment) *(.gnu*) *(.note*) *(.eh_frame*) }	
 }
