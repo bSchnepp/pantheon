@@ -34,6 +34,22 @@ InitialBootInfo *GetInitBootInfo()
 	return &InitBootInfo;
 }
 
+namespace pantheon
+{
+	void StopError(const char *Name, void *Info)
+	{
+		PANTHEON_UNUSED(Name);
+		PANTHEON_UNUSED(Info);
+		for (;;) {}
+	}
+	
+	void StopErrorFmt(const char *Name, ...)
+	{
+		PANTHEON_UNUSED(Name);
+		for (;;) {}
+	}
+}
+
 /* We know memory begins at 0x40000000 and can go for several GB.
  * So, let's just identity map these, and just hope our boot code doesn't
  * need more than 2GB or something (which, if it does, we have very bad problems.)
@@ -379,6 +395,7 @@ static UINT64 VirtualAddress = 0xFFFFFFFF70000000;
 
 static void SetupPageTables()
 {
+	pantheon::CPUReg::W_TTBR1_EL1(0);
 	constexpr UINT64 NumTables = static_cast<UINT64>(NumHigherHalfTables);
 	InitialPageTables = pantheon::vmm::PageAllocator((void*)HigherHalfTables, NumTables);
 
@@ -439,7 +456,7 @@ static void SetupPageTables()
 	pantheon::vmm::PageTableEntry NoWrite(Entry);
 	NoWrite.SetPagePermissions(NoWritePermission);
 
-	InitialPageTables.MapLower(&TTBR1, KVText, KPTextArea, KPTextEnd - KPTextArea, NoWrite);
+	InitialPageTables.Map(&TTBR1, KVText, KPTextArea, KPTextEnd - KPTextArea, NoWrite);
 
 	UINT64 NoExecutePermission = 0;
 	NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_KERN;
@@ -448,9 +465,9 @@ static void SetupPageTables()
 	pantheon::vmm::PageTableEntry NoExecute(Entry);
 	NoExecute.SetPagePermissions(NoExecutePermission);
 
-	InitialPageTables.MapLower(&TTBR1, KVRodata, KPRodataArea, KPRodataEnd - KPRodataArea, NoExecute);
-	InitialPageTables.MapLower(&TTBR1, KVData, KPDataArea, KPDataEnd - KPDataArea, NoExecute);
-	InitialPageTables.MapLower(&TTBR1, KVBss, KPBssArea, KPBssEnd - KPBssArea, NoExecute);
+	InitialPageTables.Map(&TTBR1, KVRodata, KPRodataArea, KPRodataEnd - KPRodataArea, NoExecute);
+	InitialPageTables.Map(&TTBR1, KVData, KPDataArea, KPDataEnd - KPDataArea, NoExecute);
+	InitialPageTables.Map(&TTBR1, KVBss, KPBssArea, KPBssEnd - KPBssArea, NoExecute);
 	PageTablesCreated.Store(TRUE);
 }
 
@@ -557,7 +574,7 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb)
 
 			pantheon::vmm::PhysicalAddress StartArea = InitBootInfo.InitMemoryAreas[Index].BaseAddress;
 			pantheon::vmm::VirtualAddress BeginPhysicalArea = StartArea + PHYSICAL_MAP_AREA_ADDRESS;
-			InitialPageTables.MapLower(&TTBR1, BeginPhysicalArea, StartArea, ByteCount, NoExecute);
+			InitialPageTables.Map(&TTBR1, BeginPhysicalArea, StartArea, ByteCount, NoExecute);
 		}		
 	}
 	return GetInitBootInfo();
