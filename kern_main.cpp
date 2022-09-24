@@ -8,7 +8,6 @@
 #include <Proc/kern_sched.hpp>
 
 #include <Devices/kern_drivers.hpp>
-#include <System/PhyMemory/kern_alloc.hpp>
 #include <System/Exec/kern_initialprograms.hpp>
 
 #include <Boot/Boot.hpp>
@@ -18,9 +17,9 @@
 #include <System/IPC/kern_port.hpp>
 #include <System/IPC/kern_server_port.hpp>
 #include <System/IPC/kern_client_port.hpp>
-
 #include <System/IPC/kern_connection.hpp>
 
+#include <System/Memory/kern_alloc.hpp>
 
 static void kern_basic_init(InitialBootInfo *InitBootInfo)
 {

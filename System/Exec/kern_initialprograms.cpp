@@ -8,7 +8,7 @@
 #include <System/Exec/kern_initialprograms.hpp>
 
 #include <System/Proc/kern_sched.hpp>
-#include <System/PhyMemory/kern_alloc.hpp>
+#include <System/Memory/kern_alloc.hpp>
 
 #ifndef ONLY_TESTS
 extern char *sysm_location;

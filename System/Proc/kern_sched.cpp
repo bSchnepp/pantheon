@@ -13,8 +13,8 @@
 #include <System/Proc/kern_proc.hpp>
 #include <System/Proc/kern_sched.hpp>
 #include <System/Proc/kern_thread.hpp>
+#include <System/Memory/kern_alloc.hpp>
 
-#include <System/PhyMemory/kern_alloc.hpp>
 #include <Common/Structures/kern_linkedlist.hpp>
 
 #ifndef ONLY_TESTING

@@ -1,4 +1,5 @@
 #include <arch.hpp>
+#include <byte_swap.hpp>
 #include <kern_status.hpp>
 #include <kern_runtime.hpp>
 #include <kern_integers.hpp>

@@ -18,8 +18,6 @@
 
 #include <Common/Sync/kern_atomic.hpp>
 
-extern "C" CHAR *kern_begin;
-extern "C" CHAR *kern_end;
 extern "C" CHAR *TEXT_AREA;
 extern "C" CHAR *TEXT_PHY_AREA;
 extern "C" CHAR *TEXT_END;
@@ -35,9 +33,6 @@ extern "C" CHAR *BSS_END;
 
 
 static InitialBootInfo InitBootInfo;
-static UINT64 KernSize = 0x00;
-static UINT64 KernBegin = 0x00;
-static UINT64 KernEnd = 0x00;
 static pantheon::Atomic<BOOL> PageTablesCreated = FALSE;
 
 alignas(0x1000) static pantheon::vmm::PageTable TTBR0;
@@ -502,12 +497,6 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb, void *initial_load_addr, v
 		 */
 		BoardInit(&TTBR1, InitialPageTables);
 		Initialize(dtb, InitialPageTables);
-
-		UINT64 InitAddr = (UINT64)initial_load_addr;
-
-		KernBegin = InitAddr;
-		KernSize = (UINT64)&kern_end - (UINT64)&kern_begin;
-		KernEnd = KernBegin + KernSize;
 
 		/* The DTB is handled in 3 passes:
 		 * The first initializes memory areas, so the physical

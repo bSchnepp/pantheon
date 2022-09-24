@@ -62,7 +62,7 @@ go_kern_main:
 	bl BootInit
 	mov x19, x0 /* save x0 for a little bit */
 
-	bl get_stack_area
+	/* Get the stack pointer */
 	mov sp, x0
 	mov x0, x19	/* Restore x0 */
 
@@ -71,7 +71,7 @@ go_kern_main:
 	ldr x1, [x2]
 
 	ldr x2, =_cpu_start
-	bl kern_init
+	/* Jump to kernel main */
 	b _hang
 
 _hang:
@@ -84,13 +84,13 @@ asm_kern_init_core:
 	bl BootInit
 	mov x19, x0  /* Move this to a saved register for now */
 
-	bl get_stack_area
+	/* Get the stack pointer */
 	mov sp, x0
 
 	/* restore x0 */
 	mov x0, x19
 		
-	bl kern_init_core
+	/* This should branch to main or init core */
 	b _hang
 
 _zero_bss:

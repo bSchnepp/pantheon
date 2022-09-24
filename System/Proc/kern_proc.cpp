@@ -6,11 +6,10 @@
 #include <System/Proc/kern_proc.hpp>
 #include <System/Proc/kern_sched.hpp>
 #include <System/Proc/kern_thread.hpp>
+#include <System/Memory/kern_alloc.hpp>
 
 #include <Common/Sync/kern_lockable.hpp>
 #include <Common/Structures/kern_slab.hpp>
-
-#include <System/PhyMemory/kern_alloc.hpp>
 
 /* This needs to be replaced with a proper slab allocator at some point */
 static constexpr UINT64 InitNumPageTables = 1024;

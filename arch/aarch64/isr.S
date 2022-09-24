@@ -115,7 +115,6 @@ exit_isr_el0:
 .extern fiq_handler_el0_32
 .extern irq_handler_el0_32
 
-.extern write_trap_frame
 .extern syscall_table
 
 .section ".text"

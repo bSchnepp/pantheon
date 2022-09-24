@@ -10,7 +10,7 @@
 #include <vmm/pte.hpp>
 #include <vmm/vmm.hpp>
 
-#include <System/PhyMemory/kern_alloc.hpp>
+#include <System/Memory/kern_alloc.hpp>
 
 /**
  * \~english @brief Prepares a thread ready to have contents moved to it.

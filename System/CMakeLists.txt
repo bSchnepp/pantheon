@@ -25,9 +25,6 @@ LIST(APPEND SYSTEM_SOURCES IPC/kern_connection.cpp)
 LIST(APPEND SYSTEM_HEADERS IPC/kern_packet.hpp)
 LIST(APPEND SYSTEM_SOURCES IPC/kern_packet.cpp)
 
-LIST(APPEND SYSTEM_HEADERS PhyMemory/kern_alloc.hpp)
-LIST(APPEND SYSTEM_SOURCES PhyMemory/kern_alloc.cpp)
-
 LIST(APPEND SYSTEM_HEADERS Handle/kern_handle.hpp)
 LIST(APPEND SYSTEM_SOURCES Handle/kern_handle.cpp)
 
@@ -36,6 +33,9 @@ LIST(APPEND SYSTEM_SOURCES Handle/kern_handletable.cpp)
 
 LIST(APPEND SYSTEM_HEADERS Exec/kern_elf.hpp)
 LIST(APPEND SYSTEM_SOURCES Exec/kern_elf.cpp)
+
+LIST(APPEND SYSTEM_HEADERS Memory/kern_alloc.hpp)
+LIST(APPEND SYSTEM_SOURCES Memory/kern_alloc.cpp)
 
 LIST(APPEND SYSTEM_HEADERS Exec/kern_initialprograms.hpp)
 LIST(APPEND SYSTEM_SOURCES Exec/kern_initialprograms.cpp)

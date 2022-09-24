@@ -1,5 +1,6 @@
 #include "DeviceTree.hpp"
 
+#include <byte_swap.hpp>
 #include <kern_runtime.hpp>
 #include <kern_integers.hpp>
 

@@ -6,11 +6,12 @@
 #include <vmm/vmm.hpp>
 #include <Boot/Boot.hpp>
 #include <kern_datatypes.hpp>
-#include <PhyMemory/kern_alloc.hpp>
 
 #include <Proc/kern_proc.hpp>
 #include <Proc/kern_sched.hpp>
 #include <Proc/kern_thread.hpp>
+
+#include <System/Memory/kern_alloc.hpp>
 
 /* Avoid having too high a number of cores to look through. */
 static pantheon::CPU::CoreInfo PerCoreInfo[MAX_NUM_CPUS];
@@ -75,6 +76,44 @@ void *pantheon::CPU::GetStackArea(UINT64 Core)
 {
 	alignas(4096) static char StackArea[MAX_NUM_CPUS * DEFAULT_STACK_SIZE];
 	return StackArea + static_cast<UINT64>(Core * DEFAULT_STACK_SIZE) + DEFAULT_STACK_SIZE;
+}
+
+VOID pantheon::CPU::PUSHI()
+{
+	BOOL InterruptsOn = pantheon::CPU::IF();
+	pantheon::CPU::CLI();
+
+	pantheon::CPU::CoreInfo *CoreInfo = pantheon::CPU::GetCoreInfo();
+	if (CoreInfo->NOff == 0)
+	{
+		CoreInfo->IntStatus = InterruptsOn;
+	}
+	CoreInfo->NOff++;
+	pantheon::Sync::ISB();
+}
+
+VOID pantheon::CPU::POPI()
+{
+	pantheon::CPU::CoreInfo *CoreInfo = pantheon::CPU::GetCoreInfo();
+	if (pantheon::CPU::IF() == FALSE || CoreInfo->NOff == 0)
+	{
+		/* This is probably an error... */
+		StopError("Mismatched PUSHI/POPI (trying to pop)");
+		return;
+	}
+	CoreInfo->NOff--;
+	UINT64 NewOff = CoreInfo->NOff;
+	if (CoreInfo->IntStatus && NewOff == 0)
+	{
+		pantheon::CPU::STI();
+	}
+	pantheon::Sync::ISB();
+}
+
+UINT64 pantheon::CPU::ICOUNT()
+{
+	pantheon::CPU::CoreInfo *CoreInfo = pantheon::CPU::GetCoreInfo();
+	return CoreInfo->NOff;
 }
 
 extern "C" void *get_stack_area()

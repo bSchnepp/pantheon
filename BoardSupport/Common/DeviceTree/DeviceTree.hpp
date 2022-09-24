@@ -1,3 +1,4 @@
+#include <byte_swap.hpp>
 #include <kern_integers.hpp>
 #include <kern_datatypes.hpp>
 

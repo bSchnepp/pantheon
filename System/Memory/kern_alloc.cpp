@@ -2,7 +2,7 @@
 #include <vmm/pte.hpp>
 #include <Boot/Boot.hpp>
 #include <Sync/kern_spinlock.hpp>
-#include <System/PhyMemory/kern_alloc.hpp>
+#include <System/Memory/kern_alloc.hpp>
 
 static pantheon::Spinlock AllocLock;
 
@@ -115,20 +115,6 @@ void pantheon::PageAllocator::InitPageAllocator(InitialBootInfo *BootInfo)
 		Regions[Index].Map = pantheon::RawBitmap(Area + Offset, BootInfo->InitMemoryAreas->Size);
 		NumMemArea++;
 		Offset += BootInfo->InitMemoryAreas->Size;
-	}
-
-	for (pantheon::vmm::PhysicalAddress Addr = (pantheon::vmm::PhysicalAddress)&PRE_KERN_AREA; 
-		Addr <= (pantheon::vmm::PhysicalAddress)&PRE_KERN_END; 
-		Addr += pantheon::vmm::SmallestPageSize)
-	{
-		AllocatePage(Addr);
-	}
-
-	for (pantheon::vmm::PhysicalAddress Addr = (pantheon::vmm::PhysicalAddress)&USER_BEGIN; 
-		Addr <= (pantheon::vmm::PhysicalAddress)&USER_END; 
-		Addr += pantheon::vmm::SmallestPageSize)
-	{
-		AllocatePage(Addr);
 	}
 
 	pantheon::vmm::PhysicalAddress TextBegin = (pantheon::vmm::PhysicalAddress)&TEXT_PHY_AREA;

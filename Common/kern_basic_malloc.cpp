@@ -241,3 +241,15 @@ void BasicFree(void *Addr)
 	LinkFreeList(ActualAddr);
 	AllocLock.Release();
 }
+
+
+void *operator new(UINT64 Sz)
+{
+	PANTHEON_UNUSED(Sz);
+	return BasicMalloc(Sz)();
+}
+
+void operator delete(void *Ptr)
+{
+	PANTHEON_UNUSED(Ptr);
+}
