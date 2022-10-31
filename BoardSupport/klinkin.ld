@@ -21,6 +21,7 @@ SECTIONS
 		KEEP(*(.text.exceptions))
 		. = ALIGN(0x1000);
 		*(.text)
+		*(.text.*)
 		TEXT_END = .;
 		TEXT_SIZE = TEXT_END - TEXT_AREA;
 	}

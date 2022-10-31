@@ -29,6 +29,11 @@ static pantheon::Atomic<BOOL> PageTablesCreated = FALSE;
 alignas(0x1000) static pantheon::vmm::PageTable TTBR0;
 alignas(0x1000) static pantheon::vmm::PageTable TTBR1;
 
+static constexpr UINT64 NumHigherHalfTables = 128;
+alignas(0x1000) static pantheon::vmm::PageTable LowerHalfTables[2];
+alignas(0x1000) static pantheon::vmm::PageTable HigherHalfTables[NumHigherHalfTables];
+alignas(0x1000) static char BootStackArea[MAX_NUM_CPUS * DEFAULT_STACK_SIZE];
+
 InitialBootInfo *GetInitBootInfo()
 {
 	return &InitBootInfo;
@@ -50,17 +55,6 @@ namespace pantheon
 	}
 }
 
-/* We know memory begins at 0x40000000 and can go for several GB.
- * So, let's just identity map these, and just hope our boot code doesn't
- * need more than 2GB or something (which, if it does, we have very bad problems.)
- */
-alignas(0x1000) static pantheon::vmm::PageTable LowerHalfTables[2];
-
-static constexpr UINT64 NumHigherHalfTables = 128;
-alignas(0x1000) static pantheon::vmm::PageTable HigherHalfTables[NumHigherHalfTables];
-
-
-alignas(4096) static char BootStackArea[MAX_NUM_CPUS * DEFAULT_STACK_SIZE];
 void *GetBootStackArea(UINT64 Core)
 {
 	return BootStackArea + static_cast<UINT64>(Core * DEFAULT_STACK_SIZE);
@@ -110,12 +104,12 @@ static constexpr void CreateInitialTables(pantheon::vmm::PageTable *RootTable)
 	}
 }
 
-extern "C" void IdentityMapping()
+void IdentityMapping()
 {
 	CreateInitialTables(&TTBR0);
 }
 
-extern "C" void EnableIdentityMapping()
+void EnableIdentityMapping()
 {
 	while (PageTablesCreated.Load() == FALSE)
 	{
@@ -177,9 +171,6 @@ extern "C" void EnableIdentityMapping()
 		"dsb sy"
 		:: "r"(SCTLRVal): "memory");
 }
-
-
-void AllocateMemoryArea(UINT64 StartAddr, UINT64 Size);
 
 void AllocateMemoryArea(UINT64 StartAddr, UINT64 Size)
 {
@@ -255,13 +246,6 @@ void ProcessMemory(DeviceTreeBlob *CurState)
 
 void InitializeMemory(fdt_header *dtb)
 {
-	volatile bool CheckMe = CheckHeader(dtb);
-	if (!CheckMe)
-	{
-		/* Loop forever: can't really do anything. */
-		for (;;) {}
-	}
-
 	DeviceTreeBlob DTBState(dtb);
 	CHAR CurDevNode[512];
 	ClearBuffer(CurDevNode, 512);
@@ -318,17 +302,8 @@ void InitializeMemory(fdt_header *dtb)
 	}
 }
 
-void Initialize(fdt_header *dtb, pantheon::vmm::PageAllocator &Allocator)
+void Initialize(fdt_header *dtb)
 {
-	/* We'll need this when properly creating device drivers. */
-	PANTHEON_UNUSED(Allocator);
-	volatile bool CheckMe = CheckHeader(dtb);
-	if (!CheckMe)
-	{
-		/* Loop forever: can't really do anything. */
-		for (;;) {}
-	}
-
 	DeviceTreeBlob DTBState(dtb);
 	CHAR CurDevNode[512];
 	ClearBuffer(CurDevNode, 512);
@@ -471,12 +446,86 @@ static void SetupPageTables()
 	PageTablesCreated.Store(TRUE);
 }
 
-pantheon::vmm::PageAllocator *BaseAllocator()
+extern "C" void BoardInit(pantheon::vmm::PageTable *TTBR1, pantheon::vmm::PageAllocator &PageAllocator);
+
+static KernelHeader ExtractKernelHeader()
 {
-	return &InitialPageTables;
+	KernelHeader Hdr;
+	memcpy(&Hdr, (void*)&kernel_location, sizeof(KernelHeader));
+
+	/* Verify that the boot image is valid */
+	const CHAR *Str = "PANTHEON";
+	for (uint8_t Index = 0; Index < 8; Index++)
+	{
+		if (Hdr.Signature[Index] != Str[Index])
+		{
+			for (;;){}
+		}
+	}
+
+	return Hdr;
 }
 
-extern "C" void BoardInit(pantheon::vmm::PageTable *TTBR1, pantheon::vmm::PageAllocator &PageAllocator);
+static void PrepareKernelConstructors(const KernelHeader &Header)
+{
+	DynInfo *KDynInfo = (DynInfo *)(((char*)&kernel_location) + Header.Dynamic);
+
+	/* Run kernel constructors and perform relocation here */
+	ApplyRelocations(VirtualAddress, KDynInfo);
+
+	pantheon::vmm::VirtualAddress KVInitArea = VirtualAddress + Header.InitArrayBegin;
+	pantheon::vmm::VirtualAddress KVInitEnd = VirtualAddress + Header.InitArrayEnd;
+	for (pantheon::vmm::VirtualAddress Cur = KVInitArea; Cur < KVInitEnd; Cur += sizeof(pantheon::vmm::VirtualAddress))
+	{
+		void (**Func)() = reinterpret_cast<void (**)()>(Cur);
+		(*Func)();
+	}
+
+	/* TODO: make rodata actually read only */
+
+}
+
+static void PrepareKernelVirtualMemory()
+{
+	/* For everything in InitBootInfo, map the appropriate physical memory */
+	for (UINT64 Index = 0; Index < InitBootInfo.NumMemoryAreas; ++Index)
+	{
+		pantheon::vmm::PageTableEntry Entry;
+		Entry.SetBlock(TRUE);
+		Entry.SetMapped(TRUE);
+		Entry.SetUserNoExecute(TRUE);
+		Entry.SetKernelNoExecute(FALSE);
+
+		/* For now, allow anything since we don't have a real userland yet.
+		* We'll need to create page allocators for userland at some point,
+		* but for now let everything share the same address space.
+		*/
+		UINT64 PagePermission = 0;
+		PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_KERN;
+		PagePermission |= pantheon::vmm::PAGE_PERMISSION_EXECUTE_KERN; 
+		PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_USER;
+		PagePermission |= pantheon::vmm::PAGE_PERMISSION_EXECUTE_USER;
+		Entry.SetPagePermissions(PagePermission);
+
+		Entry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
+		Entry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
+		Entry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
+
+		UINT64 NoExecutePermission = 0;
+		NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_KERN;
+		NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_KERN; 
+		NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_USER;
+		pantheon::vmm::PageTableEntry NoExecute(Entry);
+		NoExecute.SetPagePermissions(NoExecutePermission);
+
+		UINT64 ByteCount = InitBootInfo.InitMemoryAreas[Index].Size - 1;
+		ByteCount *= (8 * pantheon::vmm::SmallestPageSize);
+
+		pantheon::vmm::PhysicalAddress StartArea = InitBootInfo.InitMemoryAreas[Index].BaseAddress;
+		pantheon::vmm::VirtualAddress BeginPhysicalArea = StartArea + PHYSICAL_MAP_AREA_ADDRESS;
+		InitialPageTables.Map(&TTBR1, BeginPhysicalArea, StartArea, ByteCount, NoExecute);
+	}
+}
 
 extern "C" InitialBootInfo *BootInit(fdt_header *dtb)
 {
@@ -495,88 +544,34 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb)
 
 	if (ProcNo == 0)
 	{
-		KernelHeader Hdr;
-		memcpy(&Hdr, (void*)&kernel_location, sizeof(KernelHeader));
-
-		DynInfo *KDynInfo = (DynInfo *)(((char*)&kernel_location) + Hdr.Dynamic);
-
-		/* Run kernel constructors and perform relocation here */
-		ApplyRelocations(VirtualAddress, KDynInfo);
-
-		pantheon::vmm::VirtualAddress KVInitArea = VirtualAddress + Hdr.InitArrayBegin;
-		pantheon::vmm::VirtualAddress KVInitEnd = VirtualAddress + Hdr.InitArrayEnd;
-		for (pantheon::vmm::VirtualAddress Cur = KVInitArea; Cur < KVInitEnd; Cur += sizeof(pantheon::vmm::VirtualAddress))
-		{
-			void (**Func)() = reinterpret_cast<void (**)()>(Cur);
-			(*Func)();
-		}
-
-		/* TODO: make rodata actually read only */
+		KernelHeader Hdr = ExtractKernelHeader();
+		PrepareKernelConstructors(Hdr);
 
 		/* At this point, paging should be set up so the kernel
-		 * gets the page tables expected...
-		 */
+			* gets the page tables expected...
+			*/
 		BoardInit(&TTBR1, InitialPageTables);
-		Initialize(dtb, InitialPageTables);
 
-		/* The DTB is handled in 3 passes:
-		 * The first initializes memory areas, so the physical
-		 * memory manager can be started. The second is to prepare
-		 * a driver init graph, so the kernel can load drivers as needed.
-		 * Lastly, another pass is done to simply print the contents of
-		 * the area.
-		 */
-		InitializeMemory(dtb);
-
-		/* Verify that the boot image is valid */
-		const CHAR *Str = "PANTHEON";
-		for (uint8_t Index = 0; Index < 8; Index++)
+		volatile bool CheckMe = CheckHeader(dtb);
+		if (!CheckMe)
 		{
-			if (Hdr.Signature[Index] != Str[Index])
-			{
-				for (;;){}
-			}
+			pantheon::StopError("DTB header invalid", dtb);
 		}
 
-		/* For everything in InitBootInfo, map the appropriate physical memory */
-		for (UINT64 Index = 0; Index < InitBootInfo.NumMemoryAreas; ++Index)
-		{
-			pantheon::vmm::PageTableEntry Entry;
-			Entry.SetBlock(TRUE);
-			Entry.SetMapped(TRUE);
-			Entry.SetUserNoExecute(TRUE);
-			Entry.SetKernelNoExecute(FALSE);
 
-			/* For now, allow anything since we don't have a real userland yet.
-			* We'll need to create page allocators for userland at some point,
-			* but for now let everything share the same address space.
+		/* The DTB is handled in 3 passes:
+			* The first initializes memory areas, so the physical
+			* memory manager can be started. The second is to prepare
+			* a driver init graph, so the kernel can load drivers as needed.
+			* Lastly, another pass is done to simply print the contents of
+			* the area.
 			*/
-			UINT64 PagePermission = 0;
-			PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_KERN;
-			PagePermission |= pantheon::vmm::PAGE_PERMISSION_EXECUTE_KERN; 
-			PagePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_USER;
-			PagePermission |= pantheon::vmm::PAGE_PERMISSION_EXECUTE_USER;
-			Entry.SetPagePermissions(PagePermission);
-
-			Entry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
-			Entry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
-			Entry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
-
-			UINT64 NoExecutePermission = 0;
-			NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_KERN;
-			NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_KERN; 
-			NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_NO_EXECUTE_USER;
-			pantheon::vmm::PageTableEntry NoExecute(Entry);
-			NoExecute.SetPagePermissions(NoExecutePermission);
-
-			UINT64 ByteCount = InitBootInfo.InitMemoryAreas[Index].Size - 1;
-			ByteCount *= (8 * pantheon::vmm::SmallestPageSize);
-
-			pantheon::vmm::PhysicalAddress StartArea = InitBootInfo.InitMemoryAreas[Index].BaseAddress;
-			pantheon::vmm::VirtualAddress BeginPhysicalArea = StartArea + PHYSICAL_MAP_AREA_ADDRESS;
-			InitialPageTables.Map(&TTBR1, BeginPhysicalArea, StartArea, ByteCount, NoExecute);
-		}		
+		Initialize(dtb);
+		InitializeMemory(dtb);
+		PrepareKernelVirtualMemory();
 	}
+
+
 	return GetInitBootInfo();
 }
 

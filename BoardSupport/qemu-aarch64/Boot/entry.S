@@ -1,7 +1,7 @@
 .section ".bss.early"
 .align 16
 stack_bottom:
-	.skip 16 * 1024
+	.skip 1024 * 1024
 stack_top:
 
 
@@ -24,10 +24,12 @@ _cpu_start:
 	/* Make 100% sure interrupts are disabled first. */
 	msr daifset, #2
 
+	/* Store the device tree blob pointer */
 	adrp x1, dtb_ptr
 	add x1, x1, :lo12:dtb_ptr
 	str x0, [x1]
 
+	/* We also need the address we started at */
 	adrp x1, initial_addr
 	add x1, x1, :lo12:initial_addr
 	str x20, [x1]
@@ -42,14 +44,21 @@ _cpu_start:
 	add x0, x0, :lo12:stack_top
 	mov sp, x0
 	
-	/* x0 and x1 are unused. */
+	/* x0 and x1 are free to use now.
+	 * Let's use them to compare where we are when clearing the BSS.
+	 * There's more efficient ways to write this, but just slamming
+	 * one byte at a time is probably efficient enough for now.
+	 */
 	adrp x0, BSS_AREA
 	add x0, x0, :lo12:BSS_AREA
 	adrp x1, BSS_END
 	add x1, x1, :lo12:BSS_END
 	bl _zero_bss
 
-	/* Relocations need to be resolved! */
+	/* Relocations need to be resolved! 
+	 * In theory, the prekernel can now be put pretty much
+	 * anywhere in memory: we need to deal with that now.
+	 */
 	adr x0, _cpu_start
 	adr x1, reloc_info	/* .dynamic section */
 	ldr x1, [x1, #0x00]
@@ -61,11 +70,12 @@ go_kern_main:
 	add x1, x1, :lo12:dtb_ptr
 	ldr x0, [x1]
 
+	/* BootInit returns an argument in x0 we'll immediately
+	 * pass to the kernel. The kernel's entrypoint is always
+	 * this given address in x19, which will need to be changed
+	 * later to support KALSR.
+	 */
 	bl BootInit
-	mov x19, x0 /* save x0 for a little bit */
-
-	/* Jump to the kernel proper */
-	mov x0, x19
 	ldr x19, =0xFFFFFFFF70000000
 	br x19
 

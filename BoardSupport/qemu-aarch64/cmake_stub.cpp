@@ -100,88 +100,108 @@ const char *TypeCheckKinds[] =
 extern "C"
 {
 
+[[noreturn]] 
+static VOID _inf_loop(void)
+{
+	for (;;) {}
+}
+
 void __ubsan_handle_add_overflow(struct OverflowData *Data, uintptr_t, uintptr_t)
 {
 	(void)Data;
+	_inf_loop();
 }
 
 void __ubsan_handle_sub_overflow(struct OverflowData *Data, uintptr_t, uintptr_t)
 {
 	(void)Data;
+	_inf_loop();
 }
 
 
 void __ubsan_handle_mul_overflow(struct OverflowData *Data, uintptr_t, uintptr_t) 
 {
 	(void)Data;
+	_inf_loop();
 }
 
 void __ubsan_handle_divrem_overflow(struct OverflowData *Data, uintptr_t, uintptr_t) 
 {
 	(void)Data;
+	_inf_loop();
 }
 
 void __ubsan_handle_negate_overflow(struct OverflowData *Data, uintptr_t) 
 {
 	(void)Data;
+	_inf_loop();
 }
 
 void __ubsan_handle_pointer_overflow(struct OverflowData *Data, uintptr_t, uintptr_t) 
 {
 	(void)Data;
+	_inf_loop();
 }
 
 void __ubsan_handle_shift_out_of_bounds(struct ShiftOutOfBoundsData *Data, uintptr_t, uintptr_t) 
 {
 	(void)Data;
+	_inf_loop();
 }
 
 void __ubsan_handle_out_of_bounds(struct OutOfBoundsData *Data, uintptr_t) 
 {
 	(void)Data;
+	_inf_loop();
 }
 
 void __ubsan_handle_load_invalid_value(struct InvalidValueData *Data, uintptr_t)
 {
 	(void)Data;
+	_inf_loop();
 }
 
 void __ubsan_handle_vla_bound_not_positive(struct VlaBoundData *Data, uintptr_t)
 {
 	(void)Data;
+	_inf_loop();
 }
 
 void __ubsan_handle_nonnull_arg(struct NonnullArgData *Data) 
 {
 	(void)Data;
+	_inf_loop();
 }
 
 void __ubsan_handle_builtin_unreachable(struct UnreachableData *Data) 
 {
 	(void)Data;
+	_inf_loop();
 }
 
 void __ubsan_handle_invalid_builtin(struct InvalidBuiltinData *Data) 
 {
 	(void)Data;
+	_inf_loop();
 }
 
 void __ubsan_handle_type_mismatch_v1(struct TypeMismatchDataV1 *Data, uintptr_t) 
 {
 	(void)Data;
+	_inf_loop();
 }
 
 void __ubsan_handle_nonnull_return_v1(struct NonnullReturnData *Data, struct SourceLocation *)
 {
 	(void)Data;
+	_inf_loop();
 }
 
 uintptr_t __stack_chk_guard = 0xDEADC0DEDEADBEEF;
 
 [[noreturn]] VOID __stack_chk_fail(void)
 {
-	for (;;) {}
+	_inf_loop();
 }
-
 
 }

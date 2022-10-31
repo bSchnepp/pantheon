@@ -113,20 +113,22 @@ VOID PrintPageTablesNoZeroes(pantheon::vmm::PageTable *Table);
 class PageAllocator
 {
 public:
-	FORCE_INLINE PageAllocator() : PageAllocator(nullptr, 0) {}
+	PageAllocator() : PageAllocator(nullptr, 0) {}
 
-	FORCE_INLINE PageAllocator(VOID *Area, UINT64 Pages)
+	PageAllocator(VOID *Area, UINT64 Pages)
 	{
+		OBJECT_SELF_ASSERT();
 		this->Allocator = pantheon::mm::SlabCache<pantheon::vmm::PageTable>(Area, Pages);
 	}
 	
-	FORCE_INLINE ~PageAllocator()
+	~PageAllocator()
 	{
 
 	}
 
-	FORCE_INLINE pantheon::vmm::PageTable *Allocate()
+	pantheon::vmm::PageTable *Allocate()
 	{
+		OBJECT_SELF_ASSERT();
 		pantheon::vmm::PageTable *NewTable = this->Allocator.AllocateNoCtor();
 		ClearBuffer((char*)NewTable, sizeof(pantheon::vmm::PageTable));
 		return NewTable;
@@ -144,6 +146,7 @@ public:
 
 	BOOL Map(pantheon::vmm::PageTable *TTBR, pantheon::vmm::VirtualAddress VirtAddr, pantheon::vmm::PhysicalAddress PhysAddr, UINT64 Size, const pantheon::vmm::PageTableEntry &Permissions)
 	{
+		OBJECT_SELF_ASSERT();
 		if (Size == 0)
 		{
 			return TRUE;
@@ -253,6 +256,7 @@ public:
 
 	BOOL Reprotect(pantheon::vmm::PageTable *TTBR, pantheon::vmm::VirtualAddress VirtAddr, UINT64 Size, const pantheon::vmm::PageTableEntry &Permissions)
 	{
+		OBJECT_SELF_ASSERT();
 		if (Size == 0)
 		{
 			return TRUE;
@@ -415,7 +419,7 @@ public:
 	}
 
 private:
-	static FORCE_INLINE void PanicOnNullPageTable(pantheon::vmm::PageTable *Table)
+	static void PanicOnNullPageTable(pantheon::vmm::PageTable *Table)
 	{
 		if (Table == nullptr)
 		{
@@ -423,13 +427,13 @@ private:
 		}
 	}
 
-	static FORCE_INLINE void VMMSync()
+	static void VMMSync()
 	{
 		pantheon::Sync::DSBISH();
 		pantheon::Sync::ISB();		
 	}
 
-	static FORCE_INLINE UINT16 VirtAddrToPageTableIndex(pantheon::vmm::VirtualAddress VAddr, UINT8 Level)
+	static UINT16 VirtAddrToPageTableIndex(pantheon::vmm::VirtualAddress VAddr, UINT8 Level)
 	{
 		/* Only valid for 0, 1, 2, or 3. */
 		Level = (Level > 3) ? 3 : Level;
@@ -437,8 +441,9 @@ private:
 		return (VAddr >> Shift) & 0x1FF;
 	}
 
-	FORCE_INLINE void CreateBlock(pantheon::vmm::PageTableEntry *Entry, const pantheon::vmm::PageTableEntry &Permissions, pantheon::vmm::PhysicalAddress Address)
+	void CreateBlock(pantheon::vmm::PageTableEntry *Entry, const pantheon::vmm::PageTableEntry &Permissions, pantheon::vmm::PhysicalAddress Address)
 	{
+		OBJECT_SELF_ASSERT();
 		Entry->SetRawAttributes(Permissions.GetRawAttributes());
 		Entry->SetPhysicalAddressArea(Address);
 		Entry->SetBlock(TRUE);
@@ -446,8 +451,9 @@ private:
 		pantheon::Sync::DSBISH();
 	}
 
-	FORCE_INLINE void CreateTable(pantheon::vmm::PageTableEntry *Entry)
+	void CreateTable(pantheon::vmm::PageTableEntry *Entry)
 	{
+		OBJECT_SELF_ASSERT();
 		pantheon::vmm::PageTable *Table = this->Allocate();
 		pantheon::vmm::PhysicalAddress PTable = VirtualToPhysicalAddress((pantheon::vmm::PageTable*)pantheon::CPUReg::R_TTBR1_EL1(), (UINT64)Table);
 		Entry->SetPhysicalAddressArea(PTable);
@@ -460,8 +466,9 @@ private:
 		pantheon::Sync::DSBISH();
 	}
 
-	FORCE_INLINE BOOL CreateGreedyBlock(UINT64 &Size, pantheon::vmm::VirtualAddress &VirtAddr, pantheon::vmm::PhysicalAddress &PhysAddr, pantheon::vmm::PageTableEntry *Entry, const pantheon::vmm::PageTableEntry &Permissions, UINT64 BlockSize)
+	BOOL CreateGreedyBlock(UINT64 &Size, pantheon::vmm::VirtualAddress &VirtAddr, pantheon::vmm::PhysicalAddress &PhysAddr, pantheon::vmm::PageTableEntry *Entry, const pantheon::vmm::PageTableEntry &Permissions, UINT64 BlockSize)
 	{
+		OBJECT_SELF_ASSERT();
 		if (Size >= BlockSize
 			&& IsAligned<UINT64>(VirtAddr, BlockSize)
 			&& IsAligned<UINT64>(PhysAddr, BlockSize))

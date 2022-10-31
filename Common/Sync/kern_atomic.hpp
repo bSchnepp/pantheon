@@ -12,18 +12,20 @@ class Atomic
 {
 
 public:
-	FORCE_INLINE Atomic()
+	Atomic()
 	{
 		this->Content = T();
 	}
 
-	FORCE_INLINE Atomic(T Item)
+	Atomic(T Item)
 	{
 		this->Store(Item);
 	}
 
+	~Atomic() = default;
+
 	[[nodiscard]]
-	FORCE_INLINE T Load() const
+	T Load() const
 	{
 		T RetVal;
 		#ifndef ONLY_TESTS
@@ -34,7 +36,7 @@ public:
 		return RetVal;
 	}
 
-	FORCE_INLINE void Store(T Item)
+	void Store(T Item)
 	{
 		#ifndef ONLY_TESTS
 		__atomic_store(&(this->Content), &Item, __ATOMIC_SEQ_CST);
