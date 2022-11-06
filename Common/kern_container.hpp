@@ -43,7 +43,7 @@ template<typename T>
 class ArrayList
 {
 public:
-	ArrayList() : ArrayList(10){};
+	ArrayList() : ArrayList(0){};
 
 	ArrayList(UINT64 InitCount) : ArrayList(InitCount, BasicMalloc, BasicFree){};
 
@@ -58,15 +58,18 @@ public:
 		this->EntryCount = 0;
 		this->Content = nullptr;
 
-		auto MaybeMem = this->Malloc(sizeof(T) * InitCount);
-		if (MaybeMem.GetOkay() != FALSE)
+		if (InitCount > 0)
 		{
-			this->Content = (T*)MaybeMem.GetValue();
-			#if POISON_MEMORY
-				SetBufferBytes((UINT8*)this->Content, 0xDF, InitCount * sizeof(T));
-			#endif
-			this->SpaceCount = InitCount;
-			this->EntryCount = 0;
+			auto MaybeMem = this->Malloc(sizeof(T) * InitCount);
+			if (MaybeMem.GetOkay() != FALSE)
+			{
+				this->Content = (T*)MaybeMem.GetValue();
+				#if POISON_MEMORY
+					SetBufferBytes((UINT8*)this->Content, 0xDF, InitCount * sizeof(T));
+				#endif
+				this->SpaceCount = InitCount;
+				this->EntryCount = 0;
+			}
 		}
 	}
 

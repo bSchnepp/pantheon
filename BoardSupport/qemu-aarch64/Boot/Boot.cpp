@@ -55,13 +55,19 @@ namespace pantheon
 	}
 }
 
+void SERIAL_LOG(const char *c, ...)
+{
+	PANTHEON_UNUSED(c);
+	/* Silence linking problems, FIXME! */
+}
+
 void *GetBootStackArea(UINT64 Core)
 {
 	return BootStackArea + static_cast<UINT64>(Core * DEFAULT_STACK_SIZE);
 }
 
 
-static constexpr void CreateInitialTables(pantheon::vmm::PageTable *RootTable)
+static void CreateInitialTables(pantheon::vmm::PageTable *RootTable)
 {
 	pantheon::vmm::PageTableEntry Entry;
 	Entry.SetTable(TRUE);
@@ -523,7 +529,7 @@ static void PrepareKernelVirtualMemory()
 
 		pantheon::vmm::PhysicalAddress StartArea = InitBootInfo.InitMemoryAreas[Index].BaseAddress;
 		pantheon::vmm::VirtualAddress BeginPhysicalArea = StartArea + PHYSICAL_MAP_AREA_ADDRESS;
-		InitialPageTables.Map(&TTBR1, BeginPhysicalArea, StartArea, ByteCount, NoExecute);
+		InitialPageTables.Map(&TTBR1, BeginPhysicalArea, StartArea, ByteCount, NoExecute, FALSE);
 	}
 }
 

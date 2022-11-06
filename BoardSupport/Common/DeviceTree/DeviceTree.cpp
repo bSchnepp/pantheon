@@ -428,7 +428,7 @@ void DeviceTreeBlob::SetSizeCells(UINT64 Amt)
 }
 
 
-constexpr const CHAR *StringPropTypes[] =
+const CHAR *StringPropTypes[] =
 {
 	"model",
 	"status",
@@ -442,13 +442,13 @@ constexpr const CHAR *StringPropTypes[] =
 	"phy-connection-type",
 };
 
-constexpr const CHAR *StringListPropTypes[] =
+const CHAR *StringListPropTypes[] =
 {
 	"compatible",
 	"enable-method",
 };
 
-constexpr const CHAR *UInt32PropTypes[] =
+const CHAR *UInt32PropTypes[] =
 {
 	"phandle",
 	"#address-cells",
@@ -457,7 +457,7 @@ constexpr const CHAR *UInt32PropTypes[] =
 	"virtual-reg",
 };
 
-constexpr const CHAR *UInt64PropTypes[] =
+const CHAR *UInt64PropTypes[] =
 {
 	"phandle",
 	"#address-cells",
