@@ -437,7 +437,7 @@ static void SetupPageTables()
 	pantheon::vmm::PageTableEntry NoWrite(Entry);
 	NoWrite.SetPagePermissions(NoWritePermission);
 
-	InitialPageTables.Map(&TTBR1, KVText, KPTextArea, KPTextEnd - KPTextArea, NoWrite);
+	InitialPageTables.Map(&TTBR1, KVText, KPTextArea, KPTextEnd - KPTextArea, NoWrite, FALSE);
 
 	UINT64 NoExecutePermission = 0;
 	NoExecutePermission |= pantheon::vmm::PAGE_PERMISSION_READ_WRITE_KERN;
@@ -446,9 +446,9 @@ static void SetupPageTables()
 	pantheon::vmm::PageTableEntry NoExecute(Entry);
 	NoExecute.SetPagePermissions(NoExecutePermission);
 
-	InitialPageTables.Map(&TTBR1, KVRodata, KPRodataArea, KPRodataEnd - KPRodataArea, NoExecute);
-	InitialPageTables.Map(&TTBR1, KVData, KPDataArea, KPDataEnd - KPDataArea, NoExecute);
-	InitialPageTables.Map(&TTBR1, KVBss, KPBssArea, KPBssEnd - KPBssArea, NoExecute);
+	InitialPageTables.Map(&TTBR1, KVRodata, KPRodataArea, KPRodataEnd - KPRodataArea, NoExecute, FALSE);
+	InitialPageTables.Map(&TTBR1, KVData, KPDataArea, KPDataEnd - KPDataArea, NoExecute, FALSE);
+	InitialPageTables.Map(&TTBR1, KVBss, KPBssArea, KPBssEnd - KPBssArea, NoExecute, FALSE);
 	PageTablesCreated.Store(TRUE);
 }
 

@@ -19,13 +19,8 @@ namespace pantheon::vmm
 
 static constexpr pantheon::vmm::VirtualAddress HigherHalfAddress = (1ULL << 63);
 
-FORCE_INLINE VirtualAddress PhysicalToVirtualAddress(PhysicalAddress PhyAddr)
+static constexpr VirtualAddress PhysicalToVirtualAddress(PhysicalAddress PhyAddr)
 {
-	/* Unlikely: only for before kernel loading */
-	if (pantheon::CPUReg::R_TTBR1_EL1() == 0)
-	{
-		return PhyAddr;
-	}
 	return PhyAddr + PHYSICAL_MAP_AREA_ADDRESS; 
 }
 
@@ -118,10 +113,10 @@ private:
 	{
 		OBJECT_SELF_ASSERT();
 		pantheon::vmm::PageTable *Table = this->Allocate();
-		pantheon::vmm::PhysicalAddress PTable = pantheon::CPUReg::R_TTBR1_EL1();
+		pantheon::vmm::PhysicalAddress PTable = (pantheon::vmm::PhysicalAddress)Table;
 		if (VirtTranslate)
 		{
-			PTable = VirtualToPhysicalAddress((pantheon::vmm::PageTable*)PTable, (UINT64)Table);
+			PTable = VirtualToPhysicalAddress((pantheon::vmm::PageTable*)pantheon::CPUReg::R_TTBR1_EL1(), (UINT64)Table);
 		}
 		Entry->SetPhysicalAddressArea(PTable);
 		Entry->SetTable(TRUE);
