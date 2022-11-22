@@ -42,17 +42,17 @@ typedef enum DynamicType
 class DynInfo
 {
 public:
-	[[nodiscard]] constexpr FORCE_INLINE INT64 Tag() const
+	[[nodiscard]] constexpr INT64 Tag() const
 	{
 		return this->TagVal;
 	}
 
-	[[nodiscard]] constexpr FORCE_INLINE UINT64 Value() const
+	[[nodiscard]] constexpr UINT64 Value() const
 	{
 		return this->ValueVal;
 	}
 
-	[[nodiscard]] constexpr FORCE_INLINE UINT64 Address() const
+	[[nodiscard]] constexpr UINT64 Address() const
 	{
 		return this->AddressVal;
 	}
@@ -70,17 +70,17 @@ private:
 class RelInfo
 {
 public:
-	[[nodiscard]] constexpr FORCE_INLINE UINT64 Type() const
+	[[nodiscard]] constexpr UINT64 Type() const
 	{
 		return (this->InfoVal >> 0) & 0xFFFFFFFF;
 	}
 
-	[[nodiscard]] constexpr FORCE_INLINE UINT64 Sym() const
+	[[nodiscard]] constexpr UINT64 Sym() const
 	{
 		return (this->InfoVal >> 32) & 0xFFFFFFFF;
 	}
 
-	[[nodiscard]] constexpr FORCE_INLINE UINT64 Address() const
+	[[nodiscard]] constexpr UINT64 Address() const
 	{
 		return this->AddressVal;
 	}
@@ -94,22 +94,22 @@ private:
 class RelaInfo
 {
 public:
-	[[nodiscard]] constexpr FORCE_INLINE INT64 Addend() const
+	[[nodiscard]] constexpr INT64 Addend() const
 	{
 		return this->AddedVal;
 	}
 
-	[[nodiscard]] constexpr FORCE_INLINE UINT64 Type() const
+	[[nodiscard]] constexpr UINT64 Type() const
 	{
 		return (this->InfoVal >> 0) & 0xFFFFFFFF;
 	}
 
-	[[nodiscard]] constexpr FORCE_INLINE UINT64 Sym() const
+	[[nodiscard]] constexpr UINT64 Sym() const
 	{
 		return (this->InfoVal >> 32) & 0xFFFFFFFF;
 	}
 
-	[[nodiscard]] constexpr FORCE_INLINE UINT64 Address() const
+	[[nodiscard]] constexpr UINT64 Address() const
 	{
 		return this->AddressVal;
 	}

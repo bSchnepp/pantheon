@@ -94,4 +94,4 @@ TARGET_LINK_LIBRARIES(pkernel PUBLIC Printf)
 TARGET_LINK_LIBRARIES(pkernel PUBLIC System)
 
 ADD_CUSTOM_COMMAND(TARGET pkernel POST_BUILD
-	COMMAND ${CMAKE_OBJCOPY} -O binary ${CMAKE_BINARY_DIR}/pkernel ${CMAKE_BINARY_DIR}/pkernel.img)
+	COMMAND ${CMAKE_OBJCOPY} -O binary --set-section-flags .bss=alloc,load,contents ${CMAKE_BINARY_DIR}/pkernel ${CMAKE_BINARY_DIR}/pkernel.img)

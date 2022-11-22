@@ -67,6 +67,11 @@ void *GetBootStackArea(UINT64 Core)
 }
 
 
+/**
+ * @brief Create the initial page tables, which map the lower half memory tables used during the boot process.
+ * @author Brian Schnepp
+ * @param RootTable The TTBR0 table used during the boot process
+ */
 static void CreateInitialTables(pantheon::vmm::PageTable *RootTable)
 {
 	pantheon::vmm::PageTableEntry Entry;
@@ -115,7 +120,13 @@ void IdentityMapping()
 	CreateInitialTables(&TTBR0);
 }
 
-void EnableIdentityMapping()
+/**
+ * @brief Enables paging for the kernel for this processor.
+ * @details Enables paging for this processor, with a latch to 
+ * ensure that this is not done before the page tables are actually created.
+ * @author Brian Schnepp
+ */
+static void EnablePaging()
 {
 	while (PageTablesCreated.Load() == FALSE)
 	{
@@ -139,6 +150,7 @@ void EnableIdentityMapping()
 	pantheon::CPUReg::W_TCR_EL1(pantheon::arm::DefaultTCRAttributes());
 	pantheon::Sync::ISB();
 
+	/* Make 100% sure the TLB is cleared. */
 	asm volatile(
 		"isb\n"
 		"tlbi vmalle1\n"
@@ -546,7 +558,7 @@ extern "C" InitialBootInfo *BootInit(fdt_header *dtb)
 		SetupPageTables();		
 	}
 
-	EnableIdentityMapping();
+	EnablePaging();
 
 	if (ProcNo == 0)
 	{
@@ -651,7 +663,7 @@ extern "C" void ApplyRelocations(UINT64 Base, const DynInfo *DynamicInfo)
 		} 
 		else 
 		{
-			for (;;) {}
+			pantheon::StopError("Bad RELENT");
 		}
 	}
 
@@ -666,7 +678,7 @@ extern "C" void ApplyRelocations(UINT64 Base, const DynInfo *DynamicInfo)
 		}
 		else 
 		{
-			for (;;) {}
+			pantheon::StopError("Bad RELAENT");
 		}
 	}
 

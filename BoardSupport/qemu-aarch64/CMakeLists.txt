@@ -10,4 +10,4 @@ TARGET_LINK_LIBRARIES(pantheon Boot)
 TARGET_LINK_OPTIONS(pantheon PRIVATE "-T${BOOT_LINKER_SCRIPT}")
 
 ADD_CUSTOM_COMMAND(TARGET pantheon POST_BUILD
-	COMMAND ${CMAKE_OBJCOPY} -O binary ${CMAKE_BINARY_DIR}/pantheon ${CMAKE_BINARY_DIR}/kernel.img)
+	COMMAND ${CMAKE_OBJCOPY} -O binary --set-section-flags .bss=alloc,load,contents ${CMAKE_BINARY_DIR}/pantheon ${CMAKE_BINARY_DIR}/kernel.img)

@@ -72,10 +72,10 @@ SECTIONS
 		*(.igot.plt)
 	}	
 
-	.dynamic : { *(.dynamic) } :dyn
-	.dynsym : { *(.dynsym) }
-	.dynstr : { *(.dynstr) }
-	.rela.dyn : { *(.rela.*) }
+	.dynamic : ALIGN(4K) { *(.dynamic) } :dyn
+	.dynsym : ALIGN(4K) { *(.dynsym) }
+	.dynstr : ALIGN(4K) { *(.dynstr) }
+	.rela.dyn : ALIGN(4K) { *(.rela.*) }
 
 	/* Associate these other areas under DATA to make sure it's not 
 	 * overwritten */
