@@ -349,11 +349,9 @@ void DeviceTreeBlob::NodeNameToAddress(CHAR *Buffer, CHAR *DeviceType, UINT64 De
 		return;
 	}
 
-	UINT64 StrLen = 0;
 	UINT64 AtLocation = 0;
 	for (UINT64 Index = 0; Buffer[Index] != '\0'; ++Index)
 	{
-		StrLen++;
 		if (Buffer[Index] == '@')
 		{
 			AtLocation = Index;
