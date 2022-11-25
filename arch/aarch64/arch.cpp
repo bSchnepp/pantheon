@@ -42,3 +42,11 @@ VOID pantheon::CPU::LIDT(void *Table)
 {
 	pantheon::arm::LoadInterruptTable(Table);
 }
+
+extern "C" void *prepare_kernel_stack()
+{
+	UINT8 CpuNo = pantheon::CPU::GetProcessorNumber();
+	void *Stack = pantheon::CPU::GetStackArea(CpuNo);
+	return Stack;
+
+}

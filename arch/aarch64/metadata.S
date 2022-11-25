@@ -11,7 +11,7 @@
  * first instruction is to jump to the kernel proper.
  */
 metadata_table:
-b kern_init
+b run_kernel
 .ascii 	"PANTHEON"			/* Magic string. */
 .word 	TEXT_AREA - metadata_table	/* Where is the offset of text? */
 .word 	TEXT_END - metadata_table	/* What is the end of text? */
@@ -24,6 +24,13 @@ b kern_init
 .word 	INIT_ARRAY_AREA - metadata_table	/* Where is the offset of init_array? */
 .word 	INIT_ARRAY_END - metadata_table		/* What is the end of init_array? */
 .quad	_DYNAMIC - metadata_table		/* The location of the relocation info */
+
+.extern prepare_kernel_stack
+run_kernel:
+	bl prepare_kernel_stack
+	mov sp, x0 /* The return value needs to be our kernel stack. */
+	b kern_init
+	bl .
 
 .section ".data"
 
