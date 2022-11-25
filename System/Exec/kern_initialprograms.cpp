@@ -5,6 +5,7 @@
 #include <kern_runtime.hpp>
 #include <kern_datatypes.hpp>
 #include <System/Exec/kern_elf.hpp>
+#include <System/Exec/kern_proc_alsr.hpp>
 #include <System/Exec/kern_initialprograms.hpp>
 
 #include <System/Proc/kern_sched.hpp>
@@ -18,7 +19,7 @@ const char sysm_location[128] = {};
 const char prgm_location[128] = {};
 #endif
 
-static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, UINT32 Proc)
+static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, UINT32 Proc, pantheon::vmm::VirtualAddress BaseAddress)
 {
 	ELFProgramHeader64 *PrgHeaderTable = (ELFProgramHeader64*)(ElfLocation + Header.e_phoff);
 	
@@ -26,7 +27,7 @@ static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, UINT32 Proc)
 	for (UINT64 Index = 0; Index < Header.e_phnum; Index++)
 	{
 		/* What address do we need to load this at? */
-		UINT64 BaseVAddr = PrgHeaderTable[Index].p_vaddr;
+		UINT64 BaseVAddr = PrgHeaderTable[Index].p_vaddr + BaseAddress;
 		UINT64 CurSize = PrgHeaderTable[Index].p_filesz;
 
 		/* Is this loadable? */
@@ -82,7 +83,7 @@ static void RunExecutable(void *ElfLocation, const char *Name)
 		pantheon::StopErrorFmt("%s not an executable\n", Name);
 	}
 	UINT32 PID = pantheon::GlobalScheduler::CreateProcess(Name, (void*)Header().e_entry);
-	RunElf(Header(), (const char*)ElfLocation, PID);
+	RunElf(Header(), (const char*)ElfLocation, PID, pantheon::GenerateALSRBase());
 	pantheon::GlobalScheduler::RunProcess(PID);	
 }
 

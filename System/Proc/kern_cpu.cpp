@@ -115,9 +115,3 @@ UINT64 pantheon::CPU::ICOUNT()
 	pantheon::CPU::CoreInfo *CoreInfo = pantheon::CPU::GetCoreInfo();
 	return CoreInfo->NOff;
 }
-
-extern "C" void *get_stack_area()
-{
-	UINT8 CpuNo = pantheon::CPU::GetProcessorNumber();
-	return pantheon::CPU::GetStackArea(CpuNo);
-}

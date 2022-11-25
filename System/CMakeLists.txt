@@ -40,6 +40,9 @@ LIST(APPEND SYSTEM_SOURCES Memory/kern_alloc.cpp)
 LIST(APPEND SYSTEM_HEADERS Exec/kern_initialprograms.hpp)
 LIST(APPEND SYSTEM_SOURCES Exec/kern_initialprograms.cpp)
 
+LIST(APPEND SYSTEM_HEADERS Exec/kern_proc_alsr.hpp)
+LIST(APPEND SYSTEM_SOURCES Exec/kern_proc_alsr.cpp)
+
 INCLUDE_DIRECTORIES(PhyProtocol)
 ADD_SUBDIRECTORY(PhyProtocol)
 
