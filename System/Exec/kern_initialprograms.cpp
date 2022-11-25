@@ -82,8 +82,10 @@ static void RunExecutable(void *ElfLocation, const char *Name)
 	{
 		pantheon::StopErrorFmt("%s not an executable\n", Name);
 	}
-	UINT32 PID = pantheon::GlobalScheduler::CreateProcess(Name, (void*)Header().e_entry);
-	RunElf(Header(), (const char*)ElfLocation, PID, pantheon::GenerateALSRBase());
+
+	pantheon::vmm::VirtualAddress Base = pantheon::GenerateALSRBase();
+	UINT32 PID = pantheon::GlobalScheduler::CreateProcess(Name, (void*)(Base + Header().e_entry));
+	RunElf(Header(), (const char*)ElfLocation, PID, Base);
 	pantheon::GlobalScheduler::RunProcess(PID);	
 }
 

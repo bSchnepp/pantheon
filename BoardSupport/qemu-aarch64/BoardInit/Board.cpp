@@ -30,10 +30,6 @@ extern "C" void BoardInit(pantheon::vmm::PageTable *TTBR1, pantheon::vmm::PageAl
 	PageAllocator.Map(TTBR1, DEVICE_TYPE_UART, 0x09000000, pantheon::vmm::BlockSize::L3BlockSize, DeviceMMIOEntry, FALSE);
 	PageAllocator.Map(TTBR1, DEVICE_TYPE_GIC_DIST, 0x08000000, pantheon::vmm::BlockSize::L3BlockSize, DeviceMMIOEntry, FALSE);
 	PageAllocator.Map(TTBR1, DEVICE_TYPE_GIC_CPU, 0x08010000, pantheon::vmm::BlockSize::L3BlockSize, DeviceMMIOEntry, FALSE);
-
-	pantheon::arm::GICSetMMIOAddr(pantheon::arm::GIC_CLASS_DISTRIBUTOR, DEVICE_TYPE_GIC_DIST);
-	pantheon::arm::GICSetMMIOAddr(pantheon::arm::GIC_CLASS_CPU_INTERFACE, DEVICE_TYPE_GIC_CPU);
-	pantheon::arm::GICInit();
 }
 
 VOID PerCoreBoardInit()

@@ -27,8 +27,17 @@ b run_kernel
 
 .extern prepare_kernel_stack
 run_kernel:
+	/* Save x0 in x19: we don't need any of the general purpose
+	 * regs, but will need to use x0 for setting up the stack.
+	 */
+	mov x19, x0
+
+	/* The return value needs to be our kernel stack. */
 	bl prepare_kernel_stack
-	mov sp, x0 /* The return value needs to be our kernel stack. */
+	mov sp, x0 
+
+	/* Restore x0, since that is the initial boot info. */
+	mov x0, x19
 	b kern_init
 	bl .
 
