@@ -34,6 +34,9 @@ LIST(APPEND SYSTEM_SOURCES Handle/kern_handletable.cpp)
 LIST(APPEND SYSTEM_HEADERS Exec/kern_elf.hpp)
 LIST(APPEND SYSTEM_SOURCES Exec/kern_elf.cpp)
 
+LIST(APPEND SYSTEM_HEADERS Exec/kern_elf_relocations.hpp)
+LIST(APPEND SYSTEM_SOURCES Exec/kern_elf_relocations.cpp)
+
 LIST(APPEND SYSTEM_HEADERS Memory/kern_alloc.hpp)
 LIST(APPEND SYSTEM_SOURCES Memory/kern_alloc.cpp)
 

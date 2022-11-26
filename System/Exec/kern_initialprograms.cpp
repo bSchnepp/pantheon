@@ -6,6 +6,7 @@
 #include <kern_datatypes.hpp>
 #include <System/Exec/kern_elf.hpp>
 #include <System/Exec/kern_proc_alsr.hpp>
+#include <System/Exec/kern_elf_relocations.hpp>
 #include <System/Exec/kern_initialprograms.hpp>
 
 #include <System/Proc/kern_sched.hpp>
@@ -22,7 +23,22 @@ const char prgm_location[128] = {};
 static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, UINT32 Proc, pantheon::vmm::VirtualAddress BaseAddress)
 {
 	ELFProgramHeader64 *PrgHeaderTable = (ELFProgramHeader64*)(ElfLocation + Header.e_phoff);
-	
+
+	DynInfo *DynamicSection = nullptr;
+	for (UINT64 Index = 0; Index < Header.e_phnum; Index++)
+	{
+		if (PrgHeaderTable[Index].p_type == PT_DYNAMIC)
+		{
+			void *Loc = (char*)ElfLocation + PrgHeaderTable[Index].p_offset;
+			DynamicSection = reinterpret_cast<DynInfo*>(Loc);
+		}
+	}
+
+	if (DynamicSection)
+	{
+		ApplyRelocations(BaseAddress, DynamicSection);
+	}
+
 	/* Map in everything and all. */
 	for (UINT64 Index = 0; Index < Header.e_phnum; Index++)
 	{

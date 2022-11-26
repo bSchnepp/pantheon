@@ -152,6 +152,8 @@ private:
 	void *Data;
 };
 
+/* Necessary for relocation info. Other definitions will be needed. */
+constexpr UINT64 R_AARCH64_RELATIVE = 1027;
 
 }
 
