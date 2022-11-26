@@ -6,11 +6,10 @@
 #include <System/Proc/kern_proc.hpp>
 #include <System/Proc/kern_sched.hpp>
 #include <System/Proc/kern_thread.hpp>
+#include <System/Memory/kern_alloc.hpp>
 
-#include <Handle/kern_lockable.hpp>
+#include <Common/Sync/kern_lockable.hpp>
 #include <Common/Structures/kern_slab.hpp>
-
-#include <System/PhyMemory/kern_alloc.hpp>
 
 /* This needs to be replaced with a proper slab allocator at some point */
 static constexpr UINT64 InitNumPageTables = 1024;
@@ -65,6 +64,7 @@ void pantheon::Process::Initialize(const pantheon::ProcessCreateInfo &CreateInfo
 	this->PID = pantheon::AcquireProcessID();
 	this->TTBR0 = pantheon::PageAllocator::Alloc();
 	this->EntryPoint = CreateInfo.EntryPoint;
+	this->HandTable.Clear();
 
 	pantheon::vmm::VirtualAddress NewTableVAddr = pantheon::vmm::PhysicalToVirtualAddress(this->TTBR0);
 	pantheon::vmm::PageTable *PgTable = reinterpret_cast<pantheon::vmm::PageTable*>(NewTableVAddr);

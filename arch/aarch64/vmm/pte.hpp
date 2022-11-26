@@ -164,10 +164,10 @@ typedef UINT64 VirtualAddress;
 class PageTableEntry
 {
 public:
-	constexpr explicit FORCE_INLINE PageTableEntry() noexcept : Raw(0) {}
-	constexpr explicit FORCE_INLINE PageTableEntry(PageTableEntry &&Other) noexcept : Raw(Other.Raw){}
-	constexpr explicit FORCE_INLINE PageTableEntry(const PageTableEntry &Other) noexcept : Raw(Other.Raw){}
-	constexpr explicit FORCE_INLINE PageTableEntry(const PageTableEntry &Other, UINT64 Attr) noexcept : Raw(Other.Raw | Attr){}
+	constexpr explicit PageTableEntry() noexcept : Raw(0) {}
+	constexpr explicit PageTableEntry(PageTableEntry &&Other) noexcept : Raw(Other.Raw){}
+	constexpr explicit PageTableEntry(const PageTableEntry &Other) noexcept : Raw(Other.Raw){}
+	constexpr explicit PageTableEntry(const PageTableEntry &Other, UINT64 Attr) noexcept : Raw(Other.Raw | Attr){}
 	constexpr ~PageTableEntry(){};
 
 	/**
@@ -175,7 +175,7 @@ public:
 	 * \~english @author Brian Schnepp
 	 * \~english @return TRUE if valid, FALSE otherwise.
 	 */
-	[[nodiscard]] constexpr FORCE_INLINE BOOL IsMapped() const { return this->GetBits(0, 1) != 0; }
+	[[nodiscard]] constexpr BOOL IsMapped() const { return this->GetBits(0, 1) != 0; }
 
 	/**
 	 * \~english @brief Determines if this page table entry is a block or not.
@@ -186,7 +186,7 @@ public:
 	 * \~english @author Brian Schnepp
 	 * \~english @return TRUE if a block, FALSE otherwise.
 	 */
-	[[nodiscard]] constexpr FORCE_INLINE BOOL IsBlock() const { return this->GetBits(1, 1) == 0; }
+	[[nodiscard]] constexpr BOOL IsBlock() const { return this->GetBits(1, 1) == 0; }
 
 	/**
 	 * \~english @brief Determines if this page table entry is a table or not.
@@ -197,7 +197,7 @@ public:
 	 * \~english @author Brian Schnepp
 	 * \~english @return TRUE if a table, FALSE otherwise.
 	 */
-	[[nodiscard]] constexpr FORCE_INLINE BOOL IsTable() const { return this->GetBits(1, 1) != 0; }
+	[[nodiscard]] constexpr BOOL IsTable() const { return this->GetBits(1, 1) != 0; }
 
 	/**
 	 * \~english @brief Obtains the index of the MAIR to use for this entry
@@ -209,46 +209,46 @@ public:
 	 * \~english @author Brian Schnepp
 	 * \~english @return The entry in the MAIR register that this entry uses
 	 */
-	[[nodiscard]] constexpr FORCE_INLINE MAIREntry GetMAIREntry() const { return static_cast<MAIREntry>(this->GetMaskedBits(2, 3)); };
-	[[nodiscard]] constexpr FORCE_INLINE BOOL IsNonSecure() const { return this->GetBits(5, 1) != 0; }
+	[[nodiscard]] constexpr MAIREntry GetMAIREntry() const { return static_cast<MAIREntry>(this->GetMaskedBits(2, 3)); };
+	[[nodiscard]] constexpr BOOL IsNonSecure() const { return this->GetBits(5, 1) != 0; }
 
 	/**
 	 * \~english @brief Checks if this entry is accessible to userspace
 	 * \~english @author Brian Schnepp
 	 * \~english @return TRUE if user-accessible, false otherwise.
 	 */
-	[[nodiscard]] constexpr FORCE_INLINE BOOL IsUserAccessible() const { return this->GetBits(6, 1) != 0; }
+	[[nodiscard]] constexpr BOOL IsUserAccessible() const { return this->GetBits(6, 1) != 0; }
 
 	/**
 	 * \~english @brief Checks if this entry is read-only, or read-write to usermode
 	 * \~english @author Brian Schnepp
 	 * \~english @return TRUE if user-accessible, false otherwise.
 	 */
-	[[nodiscard]] constexpr FORCE_INLINE BOOL IsUserReadOnly() const { return this->GetBits(7, 1) != 0; }
-	[[nodiscard]] constexpr FORCE_INLINE PageSharableType GetSharable() const { return static_cast<PageSharableType>(this->GetMaskedBits(8, 2)); };
-	[[nodiscard]] constexpr FORCE_INLINE PageAccessed GetAccessor() const { return static_cast<PageAccessed>(this->GetMaskedBits(10, 1)); };
+	[[nodiscard]] constexpr BOOL IsUserReadOnly() const { return this->GetBits(7, 1) != 0; }
+	[[nodiscard]] constexpr PageSharableType GetSharable() const { return static_cast<PageSharableType>(this->GetMaskedBits(8, 2)); };
+	[[nodiscard]] constexpr PageAccessed GetAccessor() const { return static_cast<PageAccessed>(this->GetMaskedBits(10, 1)); };
 
 	/**
 	 * \~english @brief Obtains the value of the Execute Never bit for the kernel at this level
 	 * \~english @author Brian Schnepp
 	 * \~english @return TRUE if not executable, false otherwise.
 	 */
-	[[nodiscard]] constexpr FORCE_INLINE BOOL IsKernelNoExecute() const { return this->GetBits(53, 1) != 0; };
+	[[nodiscard]] constexpr BOOL IsKernelNoExecute() const { return this->GetBits(53, 1) != 0; };
 
 	/**
 	 * \~english @brief Obtains the value of the Execute Never bit for user code at this level
 	 * \~english @author Brian Schnepp
 	 * \~english @return TRUE if not executable, false otherwise.
 	 */
-	[[nodiscard]] constexpr FORCE_INLINE BOOL IsUserNoExecute() const { return this->GetBits(54, 1) != 0; };
+	[[nodiscard]] constexpr BOOL IsUserNoExecute() const { return this->GetBits(54, 1) != 0; };
 
-	[[nodiscard]] constexpr FORCE_INLINE PhysicalAddress GetPhysicalAddressArea() const { return static_cast<PhysicalAddress>(this->GetMaskedBits(12, 48)); };
-	[[nodiscard]] constexpr FORCE_INLINE UINT64 GetRawAttributes() const { return this->Raw; }
-	[[nodiscard]] constexpr FORCE_INLINE PagePermissionRaw GetReadPermission() { return static_cast<PagePermissionRaw>(this->GetMaskedBits(6, 2)); }
-	[[nodiscard]] constexpr FORCE_INLINE PagePermissionRaw GetWritePermission() { return static_cast<PagePermissionRaw>(this->GetMaskedBits(6, 2)); }
+	[[nodiscard]] constexpr PhysicalAddress GetPhysicalAddressArea() const { return static_cast<PhysicalAddress>(this->GetMaskedBits(12, 48)); };
+	[[nodiscard]] constexpr UINT64 GetRawAttributes() const { return this->Raw; }
+	[[nodiscard]] constexpr PagePermissionRaw GetReadPermission() { return static_cast<PagePermissionRaw>(this->GetMaskedBits(6, 2)); }
+	[[nodiscard]] constexpr PagePermissionRaw GetWritePermission() { return static_cast<PagePermissionRaw>(this->GetMaskedBits(6, 2)); }
 
-	constexpr FORCE_INLINE VOID SetRawAttributes(UINT64 Value) { this->Raw = Value; };
-	constexpr FORCE_INLINE PageTableEntry &operator=(const PageTableEntry &Other) 
+	constexpr VOID SetRawAttributes(UINT64 Value) { this->Raw = Value; };
+	constexpr PageTableEntry &operator=(const PageTableEntry &Other) 
 	{ 
 		if (&Other != this) 
 		{ 
@@ -262,7 +262,7 @@ public:
 	 * \~english @param Value The value to set: TRUE for mapped, FALSE for not.
 	 * \~english @author Brian Schnepp
 	 */
-	constexpr FORCE_INLINE VOID SetMapped(BOOL Value) { this->SetBits(0, 1, Value == 1); }
+	constexpr VOID SetMapped(BOOL Value) { this->SetBits(0, 1, Value == 1); }
 
 	/**
 	 * \~english @brief Marks this page table entry as being a block or not
@@ -271,7 +271,7 @@ public:
 	 * @see IsBlock
 	 * @see IsTable
 	 */
-	constexpr FORCE_INLINE VOID SetBlock(BOOL Value) { this->SetBits(1, 1, Value == 0); }
+	constexpr VOID SetBlock(BOOL Value) { this->SetBits(1, 1, Value == 0); }
 
 	/**
 	 * \~english @brief Marks this page table entry as being a table or not
@@ -280,7 +280,7 @@ public:
 	 * @see IsBlock
 	 * @see IsTable
 	 */
-	constexpr FORCE_INLINE VOID SetTable(BOOL Value) { this->SetBits(1, 1, Value == 1); }
+	constexpr VOID SetTable(BOOL Value) { this->SetBits(1, 1, Value == 1); }
 
 	/**
 	 * \~english @brief Sets the MAIR index for this block entry. Must be a block entry.
@@ -288,40 +288,40 @@ public:
 	 * \~english @author Brian Schnepp
 	 * @see GetMAIREntry
 	 */
-	constexpr FORCE_INLINE VOID SetMAIREntry(MAIREntry Value) { this->SetBitsRaw(2, 3, Value); }
-	constexpr FORCE_INLINE VOID SetNonSecure(BOOL Value) { this->SetBits(5, 1, Value != 0); }
+	constexpr VOID SetMAIREntry(MAIREntry Value) { this->SetBitsRaw(2, 3, Value); }
+	constexpr VOID SetNonSecure(BOOL Value) { this->SetBits(5, 1, Value != 0); }
 
 	/**
 	 * \~english @brief Sets this block as being accessible to userspace or not
 	 * \~english @param Value TRUE for being accessible to userspace, false otherwise
 	 * \~english @author Brian Schnepp
 	 */
-	constexpr FORCE_INLINE VOID SetUserAccessible(BOOL Value) { this->SetBits(6, 1, Value != 0); }
+	constexpr VOID SetUserAccessible(BOOL Value) { this->SetBits(6, 1, Value != 0); }
 
 	/**
 	 * \~english @brief Sets this block as being read-only or read-write in userspace
 	 * \~english @param Value TRUE for being read-only in userspace, false otherwise
 	 * \~english @author Brian Schnepp
 	 */
-	constexpr FORCE_INLINE VOID SetUserReadOnly(BOOL Value) { this->SetBits(7, 1, Value != 0); }
-	constexpr FORCE_INLINE VOID SetSharable(PageSharableType Value) { this->SetBitsRaw(8, 2, Value); }
-	constexpr FORCE_INLINE VOID SetAccessor(PageAccessed Value) { this->SetBitsRaw(10, 1, Value); };
+	constexpr VOID SetUserReadOnly(BOOL Value) { this->SetBits(7, 1, Value != 0); }
+	constexpr VOID SetSharable(PageSharableType Value) { this->SetBitsRaw(8, 2, Value); }
+	constexpr VOID SetAccessor(PageAccessed Value) { this->SetBitsRaw(10, 1, Value); };
 
 	/**
 	 * \~english @brief Sets this block as not being executable in kernel space
 	 * \~english @param Value TRUE for not-executable in kernel space, FALSE otherwise
 	 * \~english @author Brian Schnepp
 	 */
-	constexpr FORCE_INLINE VOID SetKernelNoExecute(BOOL Value) { this->SetBits(53, 1, Value != 0); };
+	constexpr VOID SetKernelNoExecute(BOOL Value) { this->SetBits(53, 1, Value != 0); };
 
 	/**
 	 * \~english @brief Sets this block as not being executable in userspace
 	 * \~english @param Value TRUE for not-executable in userspace, FALSE otherwise
 	 * \~english @author Brian Schnepp
 	 */
-	constexpr FORCE_INLINE VOID SetUserNoExecute(BOOL Value) { this->SetBits(54, 1, Value != 0); };
+	constexpr VOID SetUserNoExecute(BOOL Value) { this->SetBits(54, 1, Value != 0); };
 	
-	constexpr FORCE_INLINE VOID SetPagePermissions(UINT64 Val) 
+	constexpr VOID SetPagePermissions(UINT64 Val) 
 	{ 
 		this->SetKernelNoExecute(FALSE);
 		this->SetUserNoExecute(FALSE);
@@ -329,11 +329,11 @@ public:
 		this->Raw |= Val;
 	}
 	
-	constexpr FORCE_INLINE VOID SetPhysicalAddressArea(PhysicalAddress Addr) { this->SetBitsRaw(12, 48-12, 0); this->Raw |= Addr & 0xFFFFFFFFFFFF000; }
+	constexpr VOID SetPhysicalAddressArea(PhysicalAddress Addr) { this->SetBitsRaw(12, 48-12, 0); this->Raw |= Addr & 0xFFFFFFFFFFFF000; }
 
 protected:
 	[[nodiscard]] 
-	constexpr FORCE_INLINE UINT64 GetBits(UINT64 Offset, UINT64 Count) const
+	constexpr UINT64 GetBits(UINT64 Offset, UINT64 Count) const
 	{
 		/* Enforce offset and count can not be any more than 64 bits. */
 		Offset = ((Offset <= 64) * (Offset)) + static_cast<UINT64>((Offset > 64) * (64));
@@ -344,7 +344,7 @@ protected:
 	}
 
 	[[nodiscard]] 
-	constexpr FORCE_INLINE UINT64 GetMaskedBits(UINT64 Offset, UINT64 Count) const
+	constexpr UINT64 GetMaskedBits(UINT64 Offset, UINT64 Count) const
 	{
 		/* Enforce offset and count can not be any more than 64 bits. */
 		Offset = ((Offset <= 64) * (Offset)) + static_cast<UINT64>((Offset > 64) * (64));
@@ -353,7 +353,7 @@ protected:
 		return (this->Raw) & ((Mask << Offset) & Mask);
 	}
 
-	constexpr FORCE_INLINE VOID SetBits(UINT64 Offset, UINT64 Count, UINT64 Value)
+	constexpr VOID SetBits(UINT64 Offset, UINT64 Count, UINT64 Value)
 	{
 		/* Enforce offset and count can not be any more than 64 bits. */
 		Offset = ((Offset <= 64) * (Offset)) + static_cast<UINT64>((Offset > 64) * (64));
@@ -364,7 +364,7 @@ protected:
 		this->Raw |= Value << Offset;
 	}
 
-	constexpr FORCE_INLINE VOID SetBitsRaw(UINT64 Offset, UINT64 Count, UINT64 Value)
+	constexpr VOID SetBitsRaw(UINT64 Offset, UINT64 Count, UINT64 Value)
 	{
 		/* Enforce offset and count can not be any more than 64 bits. */
 		Offset = ((Offset <= 64) * (Offset)) + static_cast<UINT64>((Offset > 64) * (64));

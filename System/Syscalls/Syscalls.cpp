@@ -8,6 +8,15 @@
 #include <Proc/kern_sched.hpp>
 #include <Proc/kern_thread.hpp>
 
+#include <IPC/kern_port.hpp>
+#include <IPC/kern_event.hpp>
+
+#include <IPC/kern_server_port.hpp>
+#include <IPC/kern_server_connection.hpp>
+
+#include <IPC/kern_client_port.hpp>
+#include <IPC/kern_client_connection.hpp>
+
 template<typename T>
 static T ReadArgument(UINT64 Val)
 {
@@ -46,6 +55,39 @@ static const CHAR *ReadArgumentAsCharPointer(UINT64 Val)
 	return Result;
 }
 
+template<typename T>
+static T *ReadArgumentAsPointer(UINT64 Val)
+{
+	/* Don't allow reading of kernel memory */
+	if (Val > pantheon::vmm::HigherHalfAddress)
+	{
+		return nullptr;
+	}
+
+	/* Make sure we translate this to something in kernel memory, 
+	 * just to be safe. */
+	pantheon::vmm::VirtualAddress RawPtr = Val;
+	T *Result = nullptr;
+
+	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+	CurThread->Lock();
+
+	pantheon::Process *CurProc = CurThread->MyProc();
+	CurProc->Lock();
+
+	pantheon::vmm::PhysicalAddress PAddr = pantheon::vmm::VirtualToPhysicalAddress(CurProc->GetPageTable(), RawPtr);
+	pantheon::vmm::VirtualAddress VAddr = pantheon::vmm::PhysicalToVirtualAddress(PAddr);
+
+	Result = reinterpret_cast<T*>(VAddr);
+
+	CurProc->Unlock();
+	CurThread->Unlock();
+
+	return Result;	
+
+
+}
+
 static UINT64 ReadArgumentAsInteger(UINT64 Val)
 {
 	/* This is a hack: this should be validated later!!! */
@@ -73,7 +115,7 @@ pantheon::Result pantheon::SVCForkProcess(pantheon::TrapFrame *CurFrame)
 {
 	/* nyi */
 	PANTHEON_UNUSED(CurFrame);
-	return 0;
+	return pantheon::Result::SYS_OK;
 }
 
 pantheon::Result pantheon::SVCLogText(pantheon::TrapFrame *CurFrame)
@@ -83,13 +125,13 @@ pantheon::Result pantheon::SVCLogText(pantheon::TrapFrame *CurFrame)
 	Data = ReadArgumentAsCharPointer(CurFrame->GetIntArgument(0));
 	if (Data == nullptr)
 	{
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 
 	pantheon::CPU::GetCurThread()->Lock();
 	SERIAL_LOG("%s\n", Data);
 	pantheon::CPU::GetCurThread()->Unlock();
-	return 0;
+	return pantheon::Result::SYS_OK;
 }
 
 pantheon::Result pantheon::SVCAllocateBuffer(pantheon::TrapFrame *CurFrame)
@@ -101,7 +143,7 @@ pantheon::Result pantheon::SVCAllocateBuffer(pantheon::TrapFrame *CurFrame)
 	PANTHEON_UNUSED(Sz);
 
 	/* NYI */
-	return 0;
+	return pantheon::Result::SYS_OK;
 }
 
 typedef void (*ThreadStartPtr)(void*);
@@ -117,7 +159,7 @@ pantheon::Result pantheon::SVCCreateThread(pantheon::TrapFrame *CurFrame)
 {
 	/* Not yet implemented! */
 	PANTHEON_UNUSED(CurFrame);
-	return 0;
+	return pantheon::Result::SYS_OK;
 }
 
 
@@ -144,24 +186,14 @@ pantheon::Result pantheon::SVCCreateNamedEvent(pantheon::TrapFrame *CurFrame)
 
 	if (Name == nullptr || ReadHandle == nullptr || WriteHandle == nullptr)
 	{
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 
 
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-	if (!CurThread)
-	{
-		StopError("System call with no thread");
-		return -1;
-	}
 	pantheon::ScopedLock ScopeLockThread(CurThread);
 
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
-	if (Proc == nullptr)
-	{
-		StopError("System call with no process");
-		return -1;
-	}
 	pantheon::ScopedLock ScopeLockProc(Proc);
 	pantheon::String EvtName(Name);
 
@@ -173,7 +205,7 @@ pantheon::Result pantheon::SVCCreateNamedEvent(pantheon::TrapFrame *CurFrame)
 
 		*WriteHandle = Write;
 		*ReadHandle = Read;
-		return 0;
+		return pantheon::Result::SYS_OK;
 	}
 
 	Evt = pantheon::ipc::CreateNamedEvent(EvtName, Proc);
@@ -186,9 +218,9 @@ pantheon::Result pantheon::SVCCreateNamedEvent(pantheon::TrapFrame *CurFrame)
 
 		*WriteHandle = Write;
 		*ReadHandle = Read;
-		return 0;
+		return pantheon::Result::SYS_OK;
 	}
-	return -1;
+	return pantheon::Result::SYS_FAIL;
 }
 
 pantheon::Result pantheon::SVCSignalEvent(pantheon::TrapFrame *CurFrame)
@@ -197,30 +229,19 @@ pantheon::Result pantheon::SVCSignalEvent(pantheon::TrapFrame *CurFrame)
 
 
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-	if (!CurThread)
-	{
-		StopError("System call with no thread");
-		return -1;
-	}
 	pantheon::ScopedLock ScopeLockThread(CurThread);
-
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
-	if (Proc == nullptr)
-	{
-		StopError("System call with no process");
-		return -1;
-	}
 	pantheon::ScopedLock ScopeLockProc(Proc);
 
 	pantheon::Handle *Hand = Proc->GetHandle(WriteHandle);
 	if (Hand == nullptr)
 	{
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 
 	if (Hand->GetType() != pantheon::HANDLE_TYPE_WRITE_SIGNAL)
 	{
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 
 	pantheon::ipc::WritableEvent *Evt = Hand->GetContent().WriteEvent;
@@ -232,7 +253,7 @@ pantheon::Result pantheon::SVCSignalEvent(pantheon::TrapFrame *CurFrame)
 	}
 
 	/* TODO: wakeup every process waiting on it */
-	return 0;
+	return pantheon::Result::SYS_OK;
 }
 
 pantheon::Result pantheon::SVCClearEvent(pantheon::TrapFrame *CurFrame)
@@ -240,30 +261,19 @@ pantheon::Result pantheon::SVCClearEvent(pantheon::TrapFrame *CurFrame)
 	INT32 WriteHandle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-	if (!CurThread)
-	{
-		StopError("System call with no thread");
-		return -1;
-	}
 	pantheon::ScopedLock ScopeLockThread(CurThread);
-
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
-	if (Proc == nullptr)
-	{
-		StopError("System call with no process");
-		return -1;
-	}
 	pantheon::ScopedLock ScopeLockProc(Proc);
 
 	pantheon::Handle *Hand = Proc->GetHandle(WriteHandle);
 	if (Hand == nullptr)
 	{
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 	
 	if (Hand->GetType() != pantheon::HANDLE_TYPE_WRITE_SIGNAL)
 	{
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 
 	pantheon::ipc::WritableEvent *Evt = Hand->GetContent().WriteEvent;
@@ -273,7 +283,7 @@ pantheon::Result pantheon::SVCClearEvent(pantheon::TrapFrame *CurFrame)
 		Evt->Parent->Readable->Clearer = Proc;
 		Evt->Parent->Status = pantheon::ipc::EVENT_TYPE_UNSIGNALED;
 	}
-	return 0;
+	return pantheon::Result::SYS_OK;
 }
 
 pantheon::Result pantheon::SVCResetEvent(pantheon::TrapFrame *CurFrame)
@@ -281,30 +291,19 @@ pantheon::Result pantheon::SVCResetEvent(pantheon::TrapFrame *CurFrame)
 	INT32 ReadHandle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-	if (!CurThread)
-	{
-		StopError("System call with no thread");
-		return -1;
-	}
 	pantheon::ScopedLock ScopeLockThread(CurThread);
-
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
-	if (Proc == nullptr)
-	{
-		StopError("System call with no process");
-		return -1;
-	}
 	pantheon::ScopedLock ScopeLockProc(Proc);
 
 	pantheon::Handle *Hand = Proc->GetHandle(ReadHandle);
 	if (Hand == nullptr)
 	{
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 	
 	if (Hand->GetType() != pantheon::HANDLE_TYPE_READ_SIGNAL)
 	{
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 
 	pantheon::ipc::ReadableEvent *Evt = Hand->GetContent().ReadEvent;
@@ -312,9 +311,9 @@ pantheon::Result pantheon::SVCResetEvent(pantheon::TrapFrame *CurFrame)
 	{
 		Evt->Clearer = Proc;
 		Evt->Parent->Status = pantheon::ipc::EVENT_TYPE_UNSIGNALED;
-		return 0;
+		return pantheon::Result::SYS_OK;
 	}
-	return -1;
+	return pantheon::Result::SYS_FAIL;
 }
 
 pantheon::Result pantheon::SVCPollEvent(pantheon::TrapFrame *CurFrame)
@@ -322,39 +321,33 @@ pantheon::Result pantheon::SVCPollEvent(pantheon::TrapFrame *CurFrame)
 	INT32 Handle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-	if (!CurThread)
-	{
-		StopError("System call with no thread");
-		return -1;
-	}
-	pantheon::ScopedLock ScopeLockThread(CurThread);
-
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
-	if (Proc == nullptr)
-	{
-		StopError("System call with no process");
-		return -1;
-	}
+	pantheon::ScopedLock ScopeLockThread(CurThread);
 	pantheon::ScopedLock ScopeLockProc(Proc);
 
 	pantheon::Handle *Hand = Proc->GetHandle(Handle);
 	if (Hand == nullptr)
 	{
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 	
 	if (Hand->GetType() != pantheon::HANDLE_TYPE_READ_SIGNAL)
 	{
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 
 	pantheon::ipc::ReadableEvent *Evt = Hand->GetContent().ReadEvent;
 	if (Evt)
 	{
+		/* FIXME: Express this in a better way! */
 		BOOL Result = Evt->Parent->Status == pantheon::ipc::EVENT_TYPE_SIGNALED;
-		return Result;
+		if (Result)
+		{
+			return (pantheon::Result)1;
+		}
+		return (pantheon::Result)0;
 	}
-	return -1;
+	return pantheon::Result::SYS_FAIL;
 }
 
 pantheon::Result pantheon::SVCYield(pantheon::TrapFrame *CurFrame)
@@ -367,7 +360,7 @@ pantheon::Result pantheon::SVCYield(pantheon::TrapFrame *CurFrame)
 		CurThread->SetTicks(0);
 	}
 	CurSched->Reschedule();
-	return 0;
+	return pantheon::Result::SYS_OK;
 }
 
 pantheon::Result pantheon::SVCExitThread(pantheon::TrapFrame *CurFrame)
@@ -387,24 +380,14 @@ pantheon::Result pantheon::SVCExitThread(pantheon::TrapFrame *CurFrame)
 	}
 	CurProc->Unlock();
 	CurSched->Reschedule();
-	return 0;
+	return pantheon::Result::SYS_OK;
 }
 
 pantheon::Result pantheon::SVCExecute(pantheon::TrapFrame *CurFrame)
 {
 	INT32 Handle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-	if (!CurThread)
-	{
-		StopError("System call with no thread");
-		return -1;
-	}	
-	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
-	if (Proc == nullptr)
-	{
-		StopError("System call with no process");
-		return -1;
-	}
+	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();	
 	CurThread->Lock();
 	Proc->Lock();
 
@@ -413,7 +396,7 @@ pantheon::Result pantheon::SVCExecute(pantheon::TrapFrame *CurFrame)
 	{
 		Proc->Unlock();
 		CurThread->Unlock();
-		return -1;
+		return pantheon::Result::SYS_FAIL;
 	}
 	
 	/* Is this a handle to a process, or to a thread? */
@@ -426,7 +409,7 @@ pantheon::Result pantheon::SVCExecute(pantheon::TrapFrame *CurFrame)
 
 		Proc->Unlock();
 		CurThread->Unlock();
-		return 0;
+		return pantheon::Result::SYS_OK;
 	}
 	else if (Hand->GetType() == pantheon::HANDLE_TYPE_THREAD)
 	{
@@ -437,12 +420,134 @@ pantheon::Result pantheon::SVCExecute(pantheon::TrapFrame *CurFrame)
 
 		Proc->Unlock();
 		CurThread->Unlock();
-		return 0;
+		return pantheon::Result::SYS_OK;
 	}
 
 	Proc->Unlock();
 	CurThread->Unlock();
-	return -1;	
+	return pantheon::Result::SYS_FAIL;	
+}
+
+pantheon::Result pantheon::SVCCreatePort(pantheon::TrapFrame *CurFrame)
+{
+	/* svc_CreatePort(PortName Name, INT64 SessionMax, INT32 *SrvHandle, INT32 *CliHandle) */
+	CHAR Buffer[pantheon::ipc::PortNameLength] = {0};
+	const CHAR *Location = ReadArgumentAsCharPointer(CurFrame->GetIntArgument(0));
+	CopyString(Buffer, Location, pantheon::ipc::PortNameLength);
+
+	pantheon::ipc::PortName Name;
+	CopyMemory((VOID*)&Name.AsNumber, (VOID*)Buffer, sizeof(pantheon::ipc::PortNameLength));
+
+	INT64 SessionMax = (INT64)CurFrame->GetIntArgument(1);
+
+	INT32 *SrvPtr = ReadArgumentAsPointer<INT32>(CurFrame->GetIntArgument(2));
+	INT32 *CliPtr = ReadArgumentAsPointer<INT32>(CurFrame->GetIntArgument(3));
+
+	pantheon::ipc::Port *NewPort = pantheon::ipc::Port::Create();
+	if (NewPort == nullptr)
+	{
+		/* No such port is possible to create: out of resources. */
+		return pantheon::Result::SYS_OOM;
+	}
+
+	NewPort->Initialize(Name, SessionMax);
+
+	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
+	pantheon::ScopedLock _PL(CurProc);
+
+	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+	pantheon::ScopedLock _TL(CurThread);
+
+	pantheon::Handle ServHandle = pantheon::Handle(NewPort->GetServerPort());
+	INT32 IndexS = CurProc->EncodeHandle(ServHandle);
+
+	pantheon::Handle ClientHandle = pantheon::Handle(NewPort->GetClientPort());
+	INT32 IndexC = CurProc->EncodeHandle(ClientHandle);
+
+	*SrvPtr = IndexS;
+	*CliPtr = IndexC;
+
+	return pantheon::Result::SYS_OK;	
+}
+
+pantheon::Result pantheon::SVCConnectToPort(pantheon::TrapFrame *CurFrame)
+{
+	/* NYI */
+	PANTHEON_UNUSED(CurFrame);
+	return pantheon::Result::SYS_FAIL;
+}
+
+/**
+ * @brief Establish a Connection to a named Port
+ * @details A connection is created with a named Port, which is globally available and does not enforce any permission checks.
+ * Ordinary processes generally cannot create named Ports, so this system call is typically used for connecting to Ports
+ * which provide essential runtime services, such as sysm.
+ */
+pantheon::Result pantheon::SVCConnectToNamedPort(pantheon::TrapFrame *CurFrame)
+{
+	/* svc_ConnectToNamedPort(const char *Name, INT32 *OutConn) */
+	const char *Name = ReadArgumentAsCharPointer(CurFrame->GetIntArgument(0));
+	if (Name == nullptr)
+	{
+		return pantheon::Result::SYS_FAIL;	
+	}
+
+	pantheon::ipc::PortName PName;
+	CopyString(PName.AsChars, Name, pantheon::ipc::PortNameLength);
+
+	pantheon::ipc::Port *NamedPort = pantheon::ipc::Port::GetRegistered(PName);
+	if (NamedPort == nullptr)
+	{
+		return pantheon::Result::SYS_FAIL;
+	}
+
+	INT32 *HandleLocation = ReadArgumentAsPointer<INT32>(CurFrame->GetIntArgument(1));
+	if (HandleLocation == nullptr)
+	{
+		return pantheon::Result::SYS_FAIL;
+	}
+
+	pantheon::ipc::ClientPort *CliPort = NamedPort->GetClientPort();
+
+	/* If, for *whatever* reason this is null (ie, client port is closed), return an error.
+	 * These results should probably be more descriptive in the future, but for now this is OK. 
+	 */
+	if (CliPort == nullptr)
+	{
+		return pantheon::Result::SYS_FAIL;
+	}
+
+	/* TODO: Enforce resource limits, or some kind of reference counting.
+	 * This will OOM very fast!!!
+	 */
+	pantheon::ipc::ClientConnection *NewConn = NamedPort->CreateConnection();
+	if (NewConn == nullptr)
+	{
+		/* We might have run out of connections... */
+		return pantheon::Result::SYS_OOM;	
+	}
+
+	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
+	pantheon::ScopedLock _L(CurProc);
+
+	/* TODO: Create a ClientConnection and write it to NewConn. */
+	*HandleLocation = -1;
+
+	return pantheon::Result::SYS_OK;
+}
+
+pantheon::Result pantheon::SVCAcceptConnection(pantheon::TrapFrame *CurFrame)
+{
+	/* NYI */
+	PANTHEON_UNUSED(CurFrame);
+	return pantheon::Result::SYS_FAIL;
+}
+
+pantheon::Result pantheon::SVCReplyAndRecieve(pantheon::TrapFrame *CurFrame)
+{
+	/* NYI */
+	PANTHEON_UNUSED(CurFrame);
+	return pantheon::Result::SYS_FAIL;
 }
 
 typedef pantheon::Result (*SyscallFn)(pantheon::TrapFrame *);
@@ -462,6 +567,11 @@ SyscallFn syscall_table[] =
 	(SyscallFn)pantheon::SVCYield,
 	(SyscallFn)pantheon::SVCExitThread,
 	(SyscallFn)pantheon::SVCExecute,
+	(SyscallFn)pantheon::SVCCreatePort,
+	(SyscallFn)pantheon::SVCConnectToPort,
+	(SyscallFn)pantheon::SVCConnectToNamedPort,
+	(SyscallFn)pantheon::SVCAcceptConnection,
+	(SyscallFn)pantheon::SVCReplyAndRecieve,
 };
 
 UINT64 pantheon::SyscallCount()
@@ -472,11 +582,24 @@ UINT64 pantheon::SyscallCount()
 
 BOOL pantheon::CallSyscall(UINT32 Index, pantheon::TrapFrame *Frame)
 {
+	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+	if (!CurThread)
+	{
+		StopError("System call with no thread");
+		return FALSE;
+	}	
+	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+	if (Proc == nullptr)
+	{
+		StopError("System call with no process");
+		return FALSE;
+	}
+
 	if (Index < SyscallCount() && Frame != nullptr)
 	{
 		pantheon::CPU::STI();
 		pantheon::Result Result = (*syscall_table[Index])(Frame);
-		Frame->Regs[0] = Result;
+		Frame->Regs[0] = (UINT64)Result;
 		pantheon::CPU::CLI();
 		return TRUE;
 	}

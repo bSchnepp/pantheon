@@ -23,7 +23,7 @@ class SlabCache
 public:
 	/* Implicitly assume that sizeof(T) >= sizeof(SlabCache<T>) */
 
-	FORCE_INLINE SlabCache()
+	constexpr SlabCache()
 	{
 		this->Size = 0;
 		this->Used = 0;
@@ -31,7 +31,7 @@ public:
 		this->Area = nullptr;
 	}
 
-	FORCE_INLINE SlabCache(VOID *Area, UINT16 Count = 64)
+	constexpr SlabCache(VOID *Area, UINT16 Count = 64)
 	{
 		this->Area = reinterpret_cast<T*>(Area);
 		#if POISON_MEMORY
@@ -59,12 +59,12 @@ public:
 		this->FreeList = reinterpret_cast<SlabNext<T>*>(this->Area);
 	}
 
-	FORCE_INLINE ~SlabCache()
+	constexpr ~SlabCache()
 	{
 
 	}
 
-	FORCE_INLINE BOOL InRange(T *Ptr)
+	BOOL InRange(T *Ptr)
 	{
 		/* Check if this is in range */
 		UINT64 PtrRaw = reinterpret_cast<UINT64>(Ptr);
@@ -77,7 +77,7 @@ public:
 		return TRUE;
 	}
 
-	FORCE_INLINE T *Allocate()
+	T *Allocate()
 	{
 		if (this->FreeList != nullptr)
 		{
@@ -99,7 +99,7 @@ public:
 		return nullptr;
 	}
 
-	FORCE_INLINE T *AllocateNoCtor()
+	T *AllocateNoCtor()
 	{
 		if (this->FreeList != nullptr)
 		{
@@ -120,7 +120,7 @@ public:
 		return nullptr;
 	}
 
-	FORCE_INLINE void Deallocate(T *Ptr)
+	void Deallocate(T *Ptr)
 	{
 		if (!InRange(Ptr))
 		{

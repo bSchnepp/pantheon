@@ -1,3 +1,4 @@
+#include <kern_result.hpp>
 #include <kern_datatypes.hpp>
 
 #ifndef _SYSCALLS_HPP_
@@ -6,7 +7,6 @@
 namespace pantheon
 {
 
-typedef UINT64 Result;
 
 /* These will almost certainly get reordered/removed/changed etc.
  * For now, these are necessary since proper resource management doesn't
@@ -25,7 +25,11 @@ Result SVCPollEvent(pantheon::TrapFrame *CurFrame);
 Result SVCYield(pantheon::TrapFrame *CurFrame);
 Result SVCExitThread(pantheon::TrapFrame *CurFrame);
 Result SVCExecute(pantheon::TrapFrame *CurFrame);
-
+Result SVCCreatePort(pantheon::TrapFrame *CurFrame);
+Result SVCConnectToPort(pantheon::TrapFrame *CurFrame);
+Result SVCConnectToNamedPort(pantheon::TrapFrame *CurFrame);
+Result SVCAcceptConnection(pantheon::TrapFrame *CurFrame);
+Result SVCReplyAndRecieve(pantheon::TrapFrame *CurFrame);
 
 UINT64 SyscallCount();
 BOOL CallSyscall(UINT32 Index, pantheon::TrapFrame *Frame);

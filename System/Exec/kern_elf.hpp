@@ -1,3 +1,5 @@
+#include <vmm/vmm.hpp>
+
 #include <kern_datatypes.hpp>
 #include <Common/Structures/kern_optional.hpp>
 
@@ -108,10 +110,50 @@ struct ELFSectionHeader64
 	UINT64 sh_entsize;
 }__attribute__((__packed__));
 
+enum ELFSectType : UINT32
+{
+	SHT_NULL = 0,
+	SHT_PROGBITS = 1,
+	SHT_SYMTAB = 2,
+	SHT_STRTAB = 3,
+	SHT_RELA = 4,
+	SHT_NOBITS = 8,
+	SHT_REL = 9,
+};
+
+/* Note that these are bit flags */
+enum ELFSectAttributes
+{
+	SHF_WRITE = 0x01,
+	SHF_ALLOC = 0x02,
+};
+
 namespace pantheon::exec
 {
 
 Optional<ELFFileHeader64> ParseElfFileHeader(void *Data);
+
+class ElfParser
+{
+public:
+	ElfParser(void *Data);
+	~ElfParser();
+
+	Optional<ELFFileHeader64> ParseHeader();
+	Optional<ELFSectionHeader64> ParseSectionHeader();
+	Optional<ELFProgramHeader64> ParseProgramHeader();
+
+	void Load(pantheon::vmm::PageTable &RootTable);
+private:
+	Optional<ELFFileHeader64> FileHeader;
+	Optional<ELFSectionHeader64> SectHeader;
+	Optional<ELFProgramHeader64> ProgHeader;
+
+	void *Data;
+};
+
+/* Necessary for relocation info. Other definitions will be needed. */
+constexpr UINT64 R_AARCH64_RELATIVE = 1027;
 
 }
 

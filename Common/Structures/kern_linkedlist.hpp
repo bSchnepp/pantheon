@@ -128,6 +128,26 @@ public:
 		{
 			this->NumElem = 1;
 			Root = NewEntry;
+			Tail = NewEntry;
+			this->OperationSpinlock.Release();
+			return;
+		}
+
+		NewEntry->SetNext(this->Root);
+		this->Root = NewEntry;
+		this->NumElem++;
+		this->OperationSpinlock.Release();
+	}
+
+	void PushBack(T *Item)
+	{
+		this->OperationSpinlock.Acquire();
+		LinkedListItem<T> *NewEntry = LinkedListItem<T>::CreateEntry(Item);
+		if (this->Root == nullptr)
+		{
+			this->NumElem = 1;
+			Root = NewEntry;
+			Tail = NewEntry;
 			this->OperationSpinlock.Release();
 			return;
 		}
@@ -140,6 +160,10 @@ public:
 
 	T *Front()
 	{
+		if (this->Root == nullptr)
+		{
+			return nullptr;
+		}
 		return this->Root->GetValue();
 	}
 
@@ -149,6 +173,11 @@ public:
 		LinkedListItem<T> *OldRoot = this->Root;
 		this->Root = this->Root->GetNext();
 		this->NumElem--;
+
+		if (this->Root == nullptr)
+		{
+			this->Tail = nullptr;
+		}
 
 		T *Item = OldRoot->GetValue();
 		LinkedListItem<T>::DestroyEntry(OldRoot);
@@ -213,6 +242,7 @@ public:
 private:
 	UINT64 NumElem;
 	LinkedListItem<T> *Root;
+	LinkedListItem<T> *Tail;
 
 	/* TODO: See if we can prove some invariants to relax the need for this
 	 * spinlock. We really really really should build some models for the

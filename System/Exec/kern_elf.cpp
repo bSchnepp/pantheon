@@ -42,3 +42,70 @@ Optional<ELFFileHeader64> pantheon::exec::ParseElfFileHeader(void *Data)
 	 */
 	return Optional<ELFFileHeader64>(FinalHeader);
 }
+
+
+pantheon::exec::ElfParser::ElfParser(void *Data) : Data(Data){}
+
+pantheon::exec::ElfParser::~ElfParser() = default;
+
+Optional<ELFFileHeader64> pantheon::exec::ElfParser::ParseHeader()
+{
+	/* 
+	 * TODO: Absorb this function, and remove any uses of it. Force
+	 * use of this class instead! 
+	 */
+	Optional<ELFFileHeader64> Result = pantheon::exec::ParseElfFileHeader(this->Data);
+	if (Result.GetOkay())
+	{
+		return Result;
+	}
+	return Result;
+}
+
+Optional<ELFSectionHeader64> pantheon::exec::ElfParser::ParseSectionHeader()
+{
+	/* Check if we already parsed the header. 
+	 * If not, go ahead and try to do it again.
+	 */
+	if (!this->FileHeader.GetOkay())
+	{
+		this->ParseHeader();
+	}
+
+	/* If it's still bad, go give up. */
+	if (!this->FileHeader.GetOkay())
+	{
+		return Optional<ELFSectionHeader64>();
+	}
+
+	char *AsChar = (char*)this->Data;
+	ELFSectionHeader64 *Header = (ELFSectionHeader64*)(AsChar + this->FileHeader.GetValue().e_shoff);
+
+	ELFSectionHeader64 Result;
+	CopyMemory((VOID*)&Result, (VOID*)Header, sizeof(ELFSectionHeader64));
+	return Optional<ELFSectionHeader64>(Result);
+}
+
+Optional<ELFProgramHeader64> pantheon::exec::ElfParser::ParseProgramHeader()
+{
+	/* Check if we already parsed the header. 
+	 * If not, go ahead and try to do it again.
+	 */
+	if (!this->FileHeader.GetOkay())
+	{
+		this->ParseHeader();
+	}
+
+	/* If it's still bad, go give up. */
+	if (!this->FileHeader.GetOkay())
+	{
+		return Optional<ELFProgramHeader64>();
+	}
+
+	char *AsChar = (char*)this->Data;
+	ELFProgramHeader64 *Header = (ELFProgramHeader64*)(AsChar + this->FileHeader.GetValue().e_phoff);
+
+	ELFProgramHeader64 Result;
+	CopyMemory((VOID*)&Result, (VOID*)Header, sizeof(ELFProgramHeader64));
+	return Optional<ELFProgramHeader64>(Result);	
+}

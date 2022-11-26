@@ -31,3 +31,11 @@ pantheon::Handle *pantheon::HandleTable::Get(INT32 GIndex)
 	}
 	return nullptr;
 }
+
+VOID pantheon::HandleTable::Clear()
+{
+	for (pantheon::Handle &Hand : this->ProcHandleTable)
+	{
+		Hand = pantheon::Handle();
+	}
+}

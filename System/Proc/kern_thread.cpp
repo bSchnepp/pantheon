@@ -7,7 +7,10 @@
 #include "kern_sched.hpp"
 #include "kern_thread.hpp"
 
-#include <System/PhyMemory/kern_alloc.hpp>
+#include <vmm/pte.hpp>
+#include <vmm/vmm.hpp>
+
+#include <System/Memory/kern_alloc.hpp>
 
 /**
  * \~english @brief Prepares a thread ready to have contents moved to it.
@@ -80,6 +83,7 @@ pantheon::Thread::Thread(const pantheon::Thread &Other) : pantheon::Lockable("Th
 	this->TID = Other.TID;
 	this->KernelStackSpace = Other.KernelStackSpace;
 	this->UserStackSpace = Other.UserStackSpace;
+	this->ThreadLocalArea = Other.ThreadLocalArea;
 	this->Unlock();
 }
 
@@ -95,6 +99,7 @@ pantheon::Thread::Thread(pantheon::Thread &&Other) noexcept : pantheon::Lockable
 	this->TID = Other.TID;
 	this->KernelStackSpace = Other.KernelStackSpace;
 	this->UserStackSpace = Other.UserStackSpace;
+	this->ThreadLocalArea = Other.ThreadLocalArea;
 	this->Unlock();
 }
 
@@ -422,6 +427,7 @@ void pantheon::Thread::Initialize(pantheon::Process *Proc, void *StartAddr, void
 		this->SetPriority(Priority);
 		this->Unlock();
 	}
+	this->ThreadLocalArea.Flags = Thread::LocalRegionFlag::FREE;
 }
 
 [[nodiscard]] BOOL pantheon::Thread::End() const

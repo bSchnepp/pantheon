@@ -5,28 +5,89 @@
 #define _KERN_RUNTIME_HPP_
 
 #define FORCE_INLINE inline __attribute__((always_inline))
-
-VOID WriteMMIOU64(UINT64 Addr, UINT64 Value);
-VOID WriteMMIOU32(UINT64 Addr, UINT32 Value);
-VOID WriteMMIOU16(UINT64 Addr, UINT16 Value);
-VOID WriteMMIOU8(UINT64 Addr, UINT8 Value);
-VOID WriteMMIOS64(UINT64 Addr, INT64 Value);
-VOID WriteMMIOS32(UINT64 Addr, INT32 Value);
-VOID WriteMMIOS16(UINT64 Addr, INT16 Value);
-VOID WriteMMIOS8(UINT64 Addr, INT8 Value);
-UINT64 ReadMMIOU64(UINT64 Addr);
-UINT32 ReadMMIOU32(UINT64 Addr);
-UINT16 ReadMMIOU16(UINT64 Addr);
-UINT8  ReadMMIOU8(UINT64 Addr);
-INT64 ReadMMIOS64(UINT64 Addr);
-INT32 ReadMMIOS32(UINT64 Addr);
-INT16 ReadMMIOS16(UINT64 Addr);
-INT8  ReadMMIOS8(UINT64 Addr);
-
 void BoardInit();
 void WriteSerialChar(CHAR Char);
 void WriteString(const CHAR *String);
 
+FORCE_INLINE VOID WriteMMIOU64(UINT64 Addr, UINT64 Value)
+{
+	*(volatile UINT64*)Addr = Value;
+}
+
+FORCE_INLINE VOID WriteMMIOU32(UINT64 Addr, UINT32 Value)
+{
+	*(volatile UINT32*)Addr = Value;
+}
+
+FORCE_INLINE VOID WriteMMIOU16(UINT64 Addr, UINT16 Value)
+{
+	*(volatile UINT16*)Addr = Value;
+}
+
+FORCE_INLINE VOID WriteMMIOU8(UINT64 Addr, UINT8 Value)
+{
+	*(volatile UINT8*)Addr = Value;
+}
+
+FORCE_INLINE VOID WriteMMIOS64(UINT64 Addr, INT64 Value)
+{
+	*(volatile INT64*)Addr = Value;
+}
+
+FORCE_INLINE VOID WriteMMIOS32(UINT64 Addr, INT32 Value)
+{
+	*(volatile INT32*)Addr = Value;
+}
+
+FORCE_INLINE VOID WriteMMIOS16(UINT64 Addr, INT16 Value)
+{
+	*(volatile INT16*)Addr = Value;
+}
+
+FORCE_INLINE VOID WriteMMIOS8(UINT64 Addr, INT8 Value)
+{
+	*(volatile INT8*)Addr = Value;
+}
+
+FORCE_INLINE UINT64 ReadMMIOU64(UINT64 Addr)
+{
+	return *(volatile UINT64*)Addr;
+}
+
+FORCE_INLINE UINT32 ReadMMIOU32(UINT64 Addr)
+{
+	return *(volatile UINT32*)Addr;
+}
+
+FORCE_INLINE UINT16 ReadMMIOU16(UINT64 Addr)
+{
+	return *(volatile UINT16*)Addr;
+}
+
+FORCE_INLINE UINT8  ReadMMIOU8(UINT64 Addr)
+{
+	return *(volatile UINT8*)Addr;
+}
+
+FORCE_INLINE INT64 ReadMMIOS64(UINT64 Addr)
+{
+	return *(volatile INT64*)Addr;
+}
+
+FORCE_INLINE INT32 ReadMMIOS32(UINT64 Addr)
+{
+	return *(volatile INT32*)Addr;
+}
+
+FORCE_INLINE INT16 ReadMMIOS16(UINT64 Addr)
+{
+	return *(volatile INT16*)Addr;
+}
+
+FORCE_INLINE INT8 ReadMMIOS8(UINT64 Addr)
+{
+	return *(volatile INT8*)Addr;
+}
 
 template <typename T>
 T FORCE_INLINE CharStarNumberAtoi(const CHAR *Input)
@@ -128,8 +189,13 @@ extern "C"
 	void _putchar(char c);
 }
 
-BOOL FORCE_INLINE StringCompare(const CHAR *Arg1, const CHAR *Arg2, UINT64 Amt)
+static inline BOOL StringCompare(const CHAR *Arg1, const CHAR *Arg2, UINT64 Amt)
 {
+	if (Arg1 == nullptr || Arg2 == nullptr)
+	{
+		return FALSE;
+	}
+
 	for (UINT64 Index = 0; Index < Amt; ++Index)
 	{
 		if (Arg1[Index] != Arg2[Index])
@@ -145,14 +211,40 @@ BOOL FORCE_INLINE StringCompare(const CHAR *Arg1, const CHAR *Arg2, UINT64 Amt)
 	return TRUE;
 }
 
-void FORCE_INLINE SetBufferBytes(UINT8 *Location, UINT8 Value, UINT32 Amount)
+static inline void SetBufferBytes(UINT8 *Location, UINT8 Value, UINT32 Amount)
 {
-	UINT32 Index = 0;
-
-	UINT64 *AsUINT64 = (UINT64*)Location;
-	for (Index = 0; Index < Amount; Index += 8)
+	if (Amount == 0)
 	{
-		AsUINT64[Index / 8] = 0;
+		return;
+	}
+
+	UINT64 Index = 0;
+	/* Enforce alignment */
+	UINT64 ILocation = reinterpret_cast<UINT64>(Location);
+	if ((ILocation & 0x07) == 0)
+	{
+		UINT64 *AsUINT64 = (UINT64*)Location;
+		UINT64 NValue = ((UINT64)Value << 8*7) | ((UINT64)Value << 8*6) 
+			| ((UINT64)Value << 8*5) | ((UINT64)Value << 8*4) 
+			| ((UINT64)Value << 8*3) | ((UINT64)Value << 8*2) 
+			| ((UINT64)Value << 8) | (UINT64)Value;
+
+		for (Index = 0; Index < Amount; Index += 64)
+		{
+			AsUINT64[(Index + 0) / 8] = NValue;
+			AsUINT64[(Index + 1) / 8] = NValue;
+			AsUINT64[(Index + 2) / 8] = NValue;
+			AsUINT64[(Index + 3) / 8] = NValue;
+			AsUINT64[(Index + 4) / 8] = NValue;
+			AsUINT64[(Index + 5) / 8] = NValue;
+			AsUINT64[(Index + 6) / 8] = NValue;
+			AsUINT64[(Index + 7) / 8] = NValue;		
+		}
+
+		for (; Index < Amount; Index += 8)
+		{
+			AsUINT64[Index / 8] = NValue;
+		}
 	}
 
 	for (; Index < Amount; ++Index)
@@ -161,12 +253,12 @@ void FORCE_INLINE SetBufferBytes(UINT8 *Location, UINT8 Value, UINT32 Amount)
 	}
 }
 
-void FORCE_INLINE ClearBuffer(const CHAR *Location, UINT32 Amount)
+static inline void ClearBuffer(const CHAR *Location, UINT32 Amount)
 {
 	SetBufferBytes((UINT8*)Location, 0x00, Amount);
 }
 
-void FORCE_INLINE CopyMemory(VOID *Dest, VOID *Src, UINT64 Amt)
+static inline void CopyMemory(VOID *Dest, VOID *Src, UINT64 Amt)
 {
 	UINT64 Index = 0;
 	UINT64 RawDest = (UINT64)Dest;
@@ -192,6 +284,19 @@ void FORCE_INLINE CopyMemory(VOID *Dest, VOID *Src, UINT64 Amt)
 	for (; Index < Amt; ++Index)
 	{
 		DestAsChar[Index] = SrcAsChar[Index];
+	}
+}
+
+static inline void CopyString(CHAR *Dest, const CHAR *Src, UINT64 Amt)
+{
+	for (UINT64 Index = 0; Index < Amt; ++Index)
+	{
+		CHAR Current = Src[Index];
+		Dest[Index] = Current;
+		if (Current == '\0')
+		{
+			break;
+		}
 	}
 }
 

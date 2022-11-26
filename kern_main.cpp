@@ -8,12 +8,18 @@
 #include <Proc/kern_sched.hpp>
 
 #include <Devices/kern_drivers.hpp>
-#include <System/PhyMemory/kern_alloc.hpp>
 #include <System/Exec/kern_initialprograms.hpp>
 
 #include <Boot/Boot.hpp>
 #include <BoardRuntime/BoardRT.hpp>
 
+#include <System/IPC/kern_event.hpp>
+#include <System/IPC/kern_port.hpp>
+#include <System/IPC/kern_server_port.hpp>
+#include <System/IPC/kern_client_port.hpp>
+#include <System/IPC/kern_connection.hpp>
+
+#include <System/Memory/kern_alloc.hpp>
 
 static void kern_basic_init(InitialBootInfo *InitBootInfo)
 {
@@ -21,7 +27,14 @@ static void kern_basic_init(InitialBootInfo *InitBootInfo)
 	pantheon::PageAllocator::InitPageAllocator(InitBootInfo);
 	pantheon::InitBasicMemory();
 	pantheon::InitProcessTables();
+
+	/* TODO: Abstract all of these into a global Init somehow! */
 	pantheon::ipc::InitEventSystem();
+	pantheon::ipc::Port::Init();
+	pantheon::ipc::Port::Setup();
+	pantheon::ipc::ServerPort::Init();
+	pantheon::ipc::ClientPort::Init();
+	pantheon::ipc::Connection::Init();
 	pantheon::GlobalScheduler::Init();
 }
 

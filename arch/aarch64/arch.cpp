@@ -38,45 +38,15 @@ BOOL pantheon::CPU::IF()
 	return (Number & 0x03) != 0;
 }
 
-VOID pantheon::CPU::PUSHI()
-{
-	BOOL InterruptsOn = pantheon::CPU::IF();
-	pantheon::CPU::CLI();
-
-	pantheon::CPU::CoreInfo *CoreInfo = pantheon::CPU::GetCoreInfo();
-	if (CoreInfo->NOff == 0)
-	{
-		CoreInfo->IntStatus = InterruptsOn;
-	}
-	CoreInfo->NOff++;
-	pantheon::Sync::ISB();
-}
-
-VOID pantheon::CPU::POPI()
-{
-	pantheon::CPU::CoreInfo *CoreInfo = pantheon::CPU::GetCoreInfo();
-	if (pantheon::CPU::IF() == FALSE || CoreInfo->NOff == 0)
-	{
-		/* This is probably an error... */
-		StopError("Mismatched PUSHI/POPI (trying to pop)");
-		return;
-	}
-	CoreInfo->NOff--;
-	UINT64 NewOff = CoreInfo->NOff;
-	if (CoreInfo->IntStatus && NewOff == 0)
-	{
-		pantheon::CPU::STI();
-	}
-	pantheon::Sync::ISB();
-}
-
 VOID pantheon::CPU::LIDT(void *Table)
 {
 	pantheon::arm::LoadInterruptTable(Table);
 }
 
-UINT64 pantheon::CPU::ICOUNT()
+extern "C" void *prepare_kernel_stack()
 {
-	pantheon::CPU::CoreInfo *CoreInfo = pantheon::CPU::GetCoreInfo();
-	return CoreInfo->NOff;
+	UINT8 CpuNo = pantheon::CPU::GetProcessorNumber();
+	void *Stack = pantheon::CPU::GetStackArea(CpuNo);
+	return Stack;
+
 }

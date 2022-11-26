@@ -2,7 +2,7 @@
 #include <vmm/pte.hpp>
 #include <Boot/Boot.hpp>
 #include <Sync/kern_spinlock.hpp>
-#include <System/PhyMemory/kern_alloc.hpp>
+#include <System/Memory/kern_alloc.hpp>
 
 static pantheon::Spinlock AllocLock;
 
@@ -117,20 +117,7 @@ void pantheon::PageAllocator::InitPageAllocator(InitialBootInfo *BootInfo)
 		Offset += BootInfo->InitMemoryAreas->Size;
 	}
 
-	for (pantheon::vmm::PhysicalAddress Addr = (pantheon::vmm::PhysicalAddress)&PRE_KERN_AREA; 
-		Addr <= (pantheon::vmm::PhysicalAddress)&PRE_KERN_END; 
-		Addr += pantheon::vmm::SmallestPageSize)
-	{
-		AllocatePage(Addr);
-	}
-
-	for (pantheon::vmm::PhysicalAddress Addr = (pantheon::vmm::PhysicalAddress)&USER_BEGIN; 
-		Addr <= (pantheon::vmm::PhysicalAddress)&USER_END; 
-		Addr += pantheon::vmm::SmallestPageSize)
-	{
-		AllocatePage(Addr);
-	}
-
+#if 0
 	pantheon::vmm::PhysicalAddress TextBegin = (pantheon::vmm::PhysicalAddress)&TEXT_PHY_AREA;
 	pantheon::vmm::PhysicalAddress TextEnd = TextBegin + ((pantheon::vmm::PhysicalAddress)&TEXT_END - (pantheon::vmm::PhysicalAddress)&TEXT_AREA);
 
@@ -154,6 +141,7 @@ void pantheon::PageAllocator::InitPageAllocator(InitialBootInfo *BootInfo)
 	{
 		AllocatePage(Addr);
 	}
+#endif
 }
 
 #ifdef ONLY_TESTS

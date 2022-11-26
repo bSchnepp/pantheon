@@ -1,5 +1,6 @@
 #include "DeviceTree.hpp"
 
+#include <byte_swap.hpp>
 #include <kern_runtime.hpp>
 #include <kern_integers.hpp>
 
@@ -348,11 +349,9 @@ void DeviceTreeBlob::NodeNameToAddress(CHAR *Buffer, CHAR *DeviceType, UINT64 De
 		return;
 	}
 
-	UINT64 StrLen = 0;
 	UINT64 AtLocation = 0;
 	for (UINT64 Index = 0; Buffer[Index] != '\0'; ++Index)
 	{
-		StrLen++;
 		if (Buffer[Index] == '@')
 		{
 			AtLocation = Index;
@@ -424,92 +423,5 @@ void DeviceTreeBlob::SetAddressCells(UINT64 Amt)
 void DeviceTreeBlob::SetSizeCells(UINT64 Amt)
 {
 	this->SizeCellsAmt = Amt;
-}
-
-
-constexpr const CHAR *StringPropTypes[] =
-{
-	"model",
-	"status",
-	"bootargs",
-	"stdout-path",
-	"stdin-path",
-	"device_type",
-	"power-isa-version",
-	"mmu-type",
-	"label",
-	"phy-connection-type",
-};
-
-constexpr const CHAR *StringListPropTypes[] =
-{
-	"compatible",
-	"enable-method",
-};
-
-constexpr const CHAR *UInt32PropTypes[] =
-{
-	"phandle",
-	"#address-cells",
-	"#size-cells",
-	"#interrupt-cells",
-	"virtual-reg",
-};
-
-constexpr const CHAR *UInt64PropTypes[] =
-{
-	"phandle",
-	"#address-cells",
-	"#size-cells",
-	"#interrupt-cells",
-	"virtual-reg",
-};
-
-BOOL IsStringPropType(const CHAR *Prop)
-{
-	for (const CHAR *Item : StringPropTypes)
-	{
-		if (StringCompare(Item, Prop, 32))
-		{
-			return TRUE;
-		}
-	}
-	return FALSE;
-}
-
-BOOL IsStringListPropType(const CHAR *Prop)
-{
-	for (const CHAR *Item : StringListPropTypes)
-	{
-		if (StringCompare(Item, Prop, 32))
-		{
-			return TRUE;
-		}
-	}
-	return FALSE;
-}
-
-BOOL IsU32PropType(const CHAR *Prop)
-{
-	for (const CHAR *Item : UInt32PropTypes)
-	{
-		if (StringCompare(Item, Prop, 32))
-		{
-			return TRUE;
-		}
-	}
-	return FALSE;
-}
-
-BOOL IsU64PropType(const CHAR *Prop)
-{
-	for (const CHAR *Item : UInt64PropTypes)
-	{
-		if (StringCompare(Item, Prop, 32))
-		{
-			return TRUE;
-		}
-	}
-	return FALSE;
 }
 

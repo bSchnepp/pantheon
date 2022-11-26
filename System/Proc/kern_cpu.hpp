@@ -51,6 +51,10 @@ pantheon::Process *GetCurProcess();
 pantheon::Scheduler *GetCurSched();
 pantheon::TrapFrame *GetCurFrame();
 
+VOID PUSHI();
+VOID POPI();
+UINT64 ICOUNT();
+
 void *GetStackArea(UINT64 Core);
 
 }

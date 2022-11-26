@@ -35,7 +35,6 @@ private:
 
 class GlobalScheduler
 {
-
 public:
 	static void Init();
 
@@ -60,17 +59,31 @@ public:
 	static void Unlock();
 
 private:
-	inline static Atomic<BOOL> Okay;
-	inline static Spinlock AccessSpinlock;
+	static Atomic<BOOL> Okay;
+	static Spinlock AccessSpinlock;
 
-	inline static LinkedList<Process> ProcessList;
-	inline static LinkedList<Thread> ThreadList;
+	static LinkedList<Process> ProcessList;
+	static LinkedList<Thread> ThreadList;
 
-	inline static Thread *ReadyHead;
-	inline static Thread *ReadyTail;	
+	static Thread *ReadyHead;
+	static Thread *ReadyTail;	
 
 private:
 	static Thread *CreateUserThreadCommon(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority);
+};
+
+class ScopedGlobalSchedulerLock
+{
+public:
+	FORCE_INLINE ScopedGlobalSchedulerLock() { pantheon::GlobalScheduler::Lock(); }
+	FORCE_INLINE ~ScopedGlobalSchedulerLock() { pantheon::GlobalScheduler::Unlock(); }	
+};
+
+class ScopedLocalSchedulerLock
+{
+public:
+	FORCE_INLINE ScopedLocalSchedulerLock() { pantheon::CPU::GetCurThread()->BlockScheduling(); }
+	FORCE_INLINE ~ScopedLocalSchedulerLock() { pantheon::CPU::GetCurThread()->EnableScheduling(); }	
 };
 
 UINT32 AcquireProcessID();

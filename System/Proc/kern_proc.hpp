@@ -12,9 +12,9 @@
 #include <Proc/kern_cpu.hpp>
 #include <Proc/kern_thread.hpp>
 #include <Handle/kern_handle.hpp>
-#include <Handle/kern_lockable.hpp>
 #include <Handle/kern_handletable.hpp>
 
+#include <Common/Sync/kern_lockable.hpp>
 #include <Common/Structures/kern_allocatable.hpp>
 
 /**

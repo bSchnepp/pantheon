@@ -5,7 +5,7 @@
 #include <kern_container.hpp>
 
 #include <Sync/kern_atomic.hpp>
-#include <Handle/kern_lockable.hpp>
+#include <Common/Sync/kern_lockable.hpp>
 #include <Common/Structures/kern_allocatable.hpp>
 
 #ifndef _KERN_THREAD_HPP_
@@ -18,6 +18,21 @@ class Process;
 
 class Thread  : public pantheon::Allocatable<Thread, 512>, public pantheon::Lockable
 {
+public:
+	enum LocalRegionFlag
+	{
+		FREE = (0 << 0),
+		INTERRUPTED = (1 << 0),
+	};
+
+	struct LocalRegion
+	{
+		public:
+			/* 4096 bytes each for communication */
+			UINT32 BufferArea[0x1000 / sizeof(UINT32)];
+			LocalRegionFlag Flags;
+	};
+
 public:
 	typedef enum State
 	{
@@ -84,6 +99,10 @@ public:
 	Thread *Next();
 	void SetNext(pantheon::Thread *Item);
 
+	void SignalThreadLocalArea() { this->ThreadLocalArea.Flags = Thread::LocalRegionFlag::INTERRUPTED; }
+	UINT32 *GetThreadLocalArea() { return this->ThreadLocalArea.BufferArea; }
+	void DesignalThreadLocalArea() { this->ThreadLocalArea.Flags = Thread::LocalRegionFlag::FREE; }
+
 private:
 	UINT64 TID;
 
@@ -98,6 +117,7 @@ private:
 
 	void *KernelStackSpace;
 	void *UserStackSpace;
+	LocalRegion ThreadLocalArea;
 
 	static constexpr UINT64 InitialNumStackPages = 4;
 

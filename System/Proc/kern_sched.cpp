@@ -13,8 +13,8 @@
 #include <System/Proc/kern_proc.hpp>
 #include <System/Proc/kern_sched.hpp>
 #include <System/Proc/kern_thread.hpp>
+#include <System/Memory/kern_alloc.hpp>
 
-#include <System/PhyMemory/kern_alloc.hpp>
 #include <Common/Structures/kern_linkedlist.hpp>
 
 #ifndef ONLY_TESTING
@@ -40,7 +40,7 @@ static UINT64 USER_END = 0;
 pantheon::Scheduler::Scheduler()
 {
 	this->IdleThread = pantheon::GlobalScheduler::CreateProcessorIdleThread();
-	this->CurThread = this->IdleThread;
+	this->CurThread = this->IdleThread;	
 }
 
 pantheon::Scheduler::~Scheduler()
@@ -98,7 +98,7 @@ void pantheon::Scheduler::Reschedule()
 		return;
 	}
 
-	Old->BlockScheduling();
+	pantheon::ScopedLocalSchedulerLock _L;
 	Old->SetState(pantheon::Thread::STATE_WAITING);
 	Old->RefreshTicks();
 
@@ -121,8 +121,6 @@ void pantheon::Scheduler::Reschedule()
 	pantheon::Sync::DSBISH();
 	pantheon::Sync::ISB();
 	cpu_switch(OldContext, NewContext, CpuIRegOffset);
-
-	this->CurThread->EnableScheduling();
 }
 
 pantheon::Process *pantheon::Scheduler::MyProc()
@@ -248,6 +246,15 @@ void pantheon::GlobalScheduler::Unlock()
 {
 	AccessSpinlock.Release();
 }
+
+pantheon::Atomic<BOOL> pantheon::GlobalScheduler::Okay;
+pantheon::Spinlock pantheon::GlobalScheduler::AccessSpinlock;
+
+pantheon::LinkedList<pantheon::Process> pantheon::GlobalScheduler::ProcessList;
+pantheon::LinkedList<pantheon::Thread> pantheon::GlobalScheduler::ThreadList;
+
+pantheon::Thread *pantheon::GlobalScheduler::ReadyHead;
+pantheon::Thread *pantheon::GlobalScheduler::ReadyTail;
 
 static pantheon::Process IdleProc;
 VOID pantheon::GlobalScheduler::Init()

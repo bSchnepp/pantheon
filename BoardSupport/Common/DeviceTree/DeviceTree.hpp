@@ -1,3 +1,5 @@
+#include <byte_swap.hpp>
+#include <kern_runtime.hpp>
 #include <kern_integers.hpp>
 #include <kern_datatypes.hpp>
 
@@ -39,11 +41,6 @@ typedef struct fdt_prop
 	BEIntegerU32 len;
 	BEIntegerU32 nameoff;
 }fdt_prop;
-
-BOOL IsStringPropType(const CHAR *Prop);
-BOOL IsStringListPropType(const CHAR *Prop);
-BOOL IsU32PropType(const CHAR *Prop);
-BOOL IsU64PropType(const CHAR *Prop);
 
 class DeviceTreeBlob
 {
@@ -88,6 +85,92 @@ private:
 	BEIntegerU32 *struct_ptr;
 };
 
+
+constexpr static const CHAR * const StringPropTypes[] =
+{
+	"model",
+	"status",
+	"bootargs",
+	"stdout-path",
+	"stdin-path",
+	"device_type",
+	"power-isa-version",
+	"mmu-type",
+	"label",
+	"phy-connection-type",
+};
+
+constexpr static const CHAR * const StringListPropTypes[] =
+{
+	"compatible",
+	"enable-method",
+};
+
+constexpr static const CHAR * const UInt32PropTypes[] =
+{
+	"phandle",
+	"#address-cells",
+	"#size-cells",
+	"#interrupt-cells",
+	"virtual-reg",
+};
+
+constexpr static const CHAR * const UInt64PropTypes[] =
+{
+	"phandle",
+	"#address-cells",
+	"#size-cells",
+	"#interrupt-cells",
+	"virtual-reg",
+};
+
+inline static constexpr BOOL IsStringPropType(const CHAR *Prop)
+{
+	for (const CHAR *Item : StringPropTypes)
+	{
+		if (StringCompare(Item, Prop, 32))
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+inline static constexpr BOOL IsStringListPropType(const CHAR *Prop)
+{
+	for (const CHAR *Item : StringListPropTypes)
+	{
+		if (StringCompare(Item, Prop, 32))
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+inline static constexpr BOOL IsU32PropType(const CHAR *Prop)
+{
+	for (const CHAR *Item : UInt32PropTypes)
+	{
+		if (StringCompare(Item, Prop, 32))
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+inline static constexpr BOOL IsU64PropType(const CHAR *Prop)
+{
+	for (const CHAR *Item : UInt64PropTypes)
+	{
+		if (StringCompare(Item, Prop, 32))
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
 
 
 bool CheckHeader(fdt_header *Header);

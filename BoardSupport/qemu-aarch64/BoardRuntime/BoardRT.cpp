@@ -36,4 +36,7 @@ void WriteString(const CHAR *String)
 void BoardRuntimeInit()
 {
 	pantheon::pl011::PL011Init(DEVICE_TYPE_UART, 0);
+	pantheon::arm::GICSetMMIOAddr(pantheon::arm::GIC_CLASS_DISTRIBUTOR, DEVICE_TYPE_GIC_DIST);
+	pantheon::arm::GICSetMMIOAddr(pantheon::arm::GIC_CLASS_CPU_INTERFACE, DEVICE_TYPE_GIC_CPU);
+	pantheon::arm::GICInit();
 }

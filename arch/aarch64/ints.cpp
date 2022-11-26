@@ -16,36 +16,31 @@ static UINT64 TimerClock = 1000;
 
 extern "C" void sync_handler_el1_sp0(pantheon::TrapFrame *Frame)
 {
-	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
+	PANTHEON_UNUSED(Frame);
 	pantheon::StopError("ERR: SYNC HANDLER EL1 SP0");
-	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void err_handler_el1_sp0(pantheon::TrapFrame *Frame)
 {
-	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
+	PANTHEON_UNUSED(Frame);
 	pantheon::StopError("ERR: ERR HANDLER EL1 SP0");
-	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void fiq_handler_el1_sp0(pantheon::TrapFrame *Frame)
 {
-	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: FIQ HANDLER EL1 SP0");
-	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void irq_handler_el1_sp0(pantheon::TrapFrame *Frame)
 {
-	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: IRQ HANDLER EL1 SP0");
-	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void sync_handler_el1(pantheon::TrapFrame *Frame)
 {
-	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
-
+	PANTHEON_UNUSED(Frame);
 	UINT64 ESR, FAR, ELR, SPSR, SP;
 	asm volatile(
 		"mrs %0, esr_el1\n"
@@ -61,21 +56,18 @@ extern "C" void sync_handler_el1(pantheon::TrapFrame *Frame)
 	pantheon::StopErrorFmt(
 		"ERR: SYNC HANDLER EL1: esr: %lx far: %lx elr: %lx spsr: %lx, sp: %lx\n", 
 		ESR, FAR, ELR, SPSR, SP);
-	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void err_handler_el1(pantheon::TrapFrame *Frame)
 {
-	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
+	PANTHEON_UNUSED(Frame);
 	pantheon::StopError("ERR: ERR HANDLER EL1");
-	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void fiq_handler_el1(pantheon::TrapFrame *Frame)
 {
-	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: FIQ HANDLER EL1");
-	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void irq_handler_el1(pantheon::TrapFrame *Frame)
@@ -125,16 +117,14 @@ extern "C" void sync_handler_el0(pantheon::TrapFrame *Frame)
 
 extern "C" void err_handler_el0(pantheon::TrapFrame *Frame)
 {
-	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: ERR HANDLER EL0");
-	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void fiq_handler_el0(pantheon::TrapFrame *Frame)
 {
-	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: FIQ HANDLER EL0");
-	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void irq_handler_el0(pantheon::TrapFrame *Frame)
@@ -145,52 +135,26 @@ extern "C" void irq_handler_el0(pantheon::TrapFrame *Frame)
 
 extern "C" void sync_handler_el0_32(pantheon::TrapFrame *Frame)
 {
-	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
-
-	UINT64 ESR, FAR, ELR, SPSR;
-	asm volatile(
-		"mrs %0, esr_el1\n"
-		"mrs %1, far_el1\n"
-		"mrs %2, elr_el1\n"
-		"mrs %3, spsr_el1\n"
-		: "=r"(ESR), "=r"(FAR), "=r"(ELR), "=r"(SPSR));
-
-	PANTHEON_UNUSED(FAR);
-	PANTHEON_UNUSED(ELR);
-	PANTHEON_UNUSED(SPSR);
-	if (ESR == 0x2000000)
-	{
-		pantheon::StopError("ERR: SYNC HANDLER EL1 SP0");
-	}
-
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: SYNC HANDLER EL0_32");
-	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void err_handler_el0_32(pantheon::TrapFrame *Frame)
 {
-	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: ERR HANDLER EL0_32");
-	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void fiq_handler_el0_32(pantheon::TrapFrame *Frame)
 {
-	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: FIQ HANDLER EL0_32");
-	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void irq_handler_el0_32(pantheon::TrapFrame *Frame)
 {
-	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
+	PANTHEON_UNUSED(Frame);
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: IRQ HANDLER EL0_32");
-	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
-}
-
-extern "C" void write_trap_frame(pantheon::TrapFrame *Frame)
-{
-	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
 }
 
 VOID pantheon::arm::LoadInterruptTable(VOID *Table)
