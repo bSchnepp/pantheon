@@ -16,6 +16,8 @@ public:
 	INT32 Create(const Handle &Item);
 	pantheon::Handle *Get(INT32 Index);
 
+	VOID Clear();
+
 private:
 	static constexpr INT32 HandleTableSize = 64;
 	pantheon::Handle ProcHandleTable[HandleTableSize];	
