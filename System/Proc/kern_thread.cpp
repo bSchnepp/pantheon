@@ -71,7 +71,7 @@ pantheon::Thread::Thread(Process *OwningProcess, Priority Pri) : pantheon::Locka
 	this->Unlock();
 }
 
-pantheon::Thread::Thread(const pantheon::Thread &Other) : pantheon::Lockable("Thread")
+pantheon::Thread::Thread(const pantheon::Thread &Other) : pantheon::Thread()
 {
 	this->Lock();
 	this->ParentProcess = Other.ParentProcess;
@@ -443,4 +443,9 @@ pantheon::Thread *pantheon::Thread::Next()
 void pantheon::Thread::SetNext(pantheon::Thread *Item)
 {
 	this->NextThread = Item;
+}
+
+void pantheon::Thread::DestroyObject()
+{
+	pantheon::Thread::Destroy(this);
 }

@@ -15,6 +15,7 @@ public:
 
 	INT32 Create(const Handle &Item);
 	pantheon::Handle *Get(INT32 Index);
+	BOOL Release(INT32 Index);
 
 	VOID Clear();
 

@@ -1,3 +1,4 @@
+#include <kern_object.hpp>
 #include <kern_datatypes.hpp>
 
 #include <Common/Sync/kern_atomic.hpp>
@@ -11,7 +12,7 @@ namespace pantheon::ipc
 
 class Connection;
 
-class ClientConnection
+class ClientConnection : public pantheon::Object
 {
 public:
 	explicit ClientConnection() = default;
@@ -24,6 +25,8 @@ public:
 	void Recieve(UINT32 *Content, UINT64 Size);
 
 	void ServerClosedHandler();
+
+	void DestroyObject() override;
 
 private:
 	Connection *Owner;

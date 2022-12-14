@@ -1,3 +1,4 @@
+#include <kern_object.hpp>
 #include <kern_datatypes.hpp>
 
 #include <System/Proc/kern_proc.hpp>
@@ -21,7 +22,7 @@ class Port;
 class ServerConnection;
 class ClientConnection;
 
-class Connection : public Allocatable<Connection, 1024>
+class Connection : public Allocatable<Connection, 1024>, public pantheon::Object
 {
 public:
 	explicit Connection() = default;
@@ -50,6 +51,8 @@ public:
 
 	void CloseServerHandler();
 	void CloseClientHandler();
+
+	void DestroyObject() override;
 
 
 

@@ -1,5 +1,6 @@
 #include <kern_string.hpp>
 #include <kern_datatypes.hpp>
+#include <Common/kern_object.hpp>
 
 #ifndef _KERN_EVENT_HPP_
 #define _KERN_EVENT_HPP_
@@ -34,16 +35,28 @@ struct NamedEvent : public Event
 	pantheon::String Name;
 };
 
-typedef struct WritableEvent
+typedef struct WritableEvent : public pantheon::Object
 {
 	Event *Parent;
 	pantheon::Process *Signaler;
+
+	void DestroyObject() override 
+	{
+		this->Parent = nullptr;
+		this->Signaler = nullptr;
+	}
 }WritableEvent;
 
-typedef struct ReadableEvent
+typedef struct ReadableEvent : public pantheon::Object
 {
 	Event *Parent;
 	pantheon::Process *Clearer;
+
+	void DestroyObject() override 
+	{
+		this->Parent = nullptr;
+		this->Clearer = nullptr;
+	}
 }ReadableEvent;
 
 

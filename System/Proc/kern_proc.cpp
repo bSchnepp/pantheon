@@ -255,4 +255,8 @@ pantheon::vmm::PageTable *pantheon::Process::GetPageTable() const
 	OBJECT_SELF_ASSERT();
 	return this->MemoryMap;
 }
-	
+
+void pantheon::Process::DestroyObject()
+{
+	pantheon::Process::Destroy(this);
+}

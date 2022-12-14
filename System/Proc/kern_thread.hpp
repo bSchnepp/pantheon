@@ -8,6 +8,8 @@
 #include <Common/Sync/kern_lockable.hpp>
 #include <Common/Structures/kern_allocatable.hpp>
 
+#include <kern_object.hpp>
+
 #ifndef _KERN_THREAD_HPP_
 #define _KERN_THREAD_HPP_
 
@@ -16,7 +18,7 @@ namespace pantheon
 
 class Process;
 
-class Thread  : public pantheon::Allocatable<Thread, 512>, public pantheon::Lockable
+class Thread  : public pantheon::Allocatable<Thread, 512>, public pantheon::Lockable, public pantheon::Object
 {
 public:
 	enum LocalRegionFlag
@@ -76,6 +78,8 @@ public:
 	VOID CountTick();
 	VOID RefreshTicks();
 	VOID SetTicks(UINT64 TickCount);
+
+	void DestroyObject() override;
 
 	VOID SetState(Thread::State State);
 	VOID SetPriority(Thread::Priority Priority);

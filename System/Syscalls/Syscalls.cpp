@@ -177,6 +177,8 @@ pantheon::Result pantheon::SVCCreateNamedEvent(pantheon::TrapFrame *CurFrame)
 {
 	const CHAR *Name = nullptr;
 	Name = ReadArgumentAsCharPointer(CurFrame->GetIntArgument(0));
+
+	SERIAL_LOG("Creating event %s\n", Name);
 	
 	INT32 *ReadHandle = nullptr;
 	ReadHandle = ReadArgument<INT32*>(CurFrame->GetIntArgument(1));
@@ -553,8 +555,22 @@ pantheon::Result pantheon::SVCReplyAndRecieve(pantheon::TrapFrame *CurFrame)
 pantheon::Result pantheon::SVCCloseHandle(pantheon::TrapFrame *CurFrame)
 {
 	/* NYI */
-	PANTHEON_UNUSED(CurFrame);
-	return pantheon::Result::SYS_FAIL;
+	INT32 Handle = CurFrame->GetRawArgument<INT32>(0);
+	pantheon::Process *Proc = pantheon::CPU::GetCurProcess();
+
+	if (Handle < 0)
+	{
+		return pantheon::Result::SYS_FAIL;
+	}
+
+	pantheon::Handle *Hand = Proc->GetHandle(Handle);
+	if (Hand == nullptr)
+	{
+		return pantheon::Result::SYS_FAIL;
+	}
+
+	Hand->Close();
+	return pantheon::Result::SYS_OK;
 }
 
 typedef pantheon::Result (*SyscallFn)(pantheon::TrapFrame *);

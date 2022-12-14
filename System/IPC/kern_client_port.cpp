@@ -16,3 +16,8 @@ BOOL pantheon::ipc::ClientPort::IsServerClosed() const
 {
 	return this->Owner->IsServerClosed();
 }
+
+void pantheon::ipc::ClientPort::DestroyObject()
+{
+	pantheon::ipc::ClientPort::Destroy(this);
+}

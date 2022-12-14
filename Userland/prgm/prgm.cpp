@@ -4,16 +4,16 @@ void prgm_Main()
 {
 	svc_LogText("program manager started");
 
-	INT32 Read;
-	INT32 Write;
+	//INT32 Read;
+	//INT32 Write;
 
-	svc_CreateNamedEvent("signal", &Read, &Write);
+	//svc_CreateNamedEvent("signal", &Read, &Write);
 	for (;;)
 	{
-		volatile BOOL Recieve = svc_PollEvent(Read);
-		if (Recieve)
+		//volatile BOOL Recieve = svc_PollEvent(Read);
+		//if (Recieve)
 		{
-			svc_ResetEvent(Read);
+			//svc_ResetEvent(Read);
 			svc_LogText("GOT SIGNAL");
 			svc_Yield();
 		}

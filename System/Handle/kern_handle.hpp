@@ -1,3 +1,5 @@
+#include <kern_object.hpp>
+
 #ifndef _KERN_HANDLE_HPP_
 #define _KERN_HANDLE_HPP_
 
@@ -35,6 +37,7 @@ typedef enum HandleType
 
 typedef union HandleContent
 {
+	pantheon::Object *Obj;
 	pantheon::ipc::ReadableEvent *ReadEvent;
 	pantheon::ipc::WritableEvent *WriteEvent;
 	pantheon::Process *Process;
@@ -66,6 +69,8 @@ public:
 	{
 		return this->Type != pantheon::HANDLE_TYPE_INVALID;
 	}
+
+	void Close();
 
 private:
 	HandleType Type;

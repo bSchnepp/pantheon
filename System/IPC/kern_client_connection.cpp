@@ -28,3 +28,7 @@ void pantheon::ipc::ClientConnection::ServerClosedHandler()
 {
 	/* NYI */
 }
+
+void pantheon::ipc::ClientConnection::DestroyObject()
+{
+}
