@@ -4,8 +4,8 @@ void sysm_Main()
 {
 	svc_LogText("system manager started");
 
-	UINT8 Read;
-	UINT8 Write;
+	INT32 Read;
+	INT32 Write;
 
 	INT32 ServerPortRegistration;
 	INT32 ClientPortRegistration;
@@ -49,7 +49,11 @@ void sysm_Main()
 		{
 			svc_LogText("Cannot connect to sysm:reg!");
 		}
-		svc_SignalEvent(Write);
+		else 
+		{
+			svc_SignalEvent(Write);
+			svc_CloseHandle(ClientConn);
+		}
 		svc_LogText("IN USERSPACE [sysm]");
 	}
 }

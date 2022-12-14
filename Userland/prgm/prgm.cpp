@@ -4,8 +4,8 @@ void prgm_Main()
 {
 	svc_LogText("program manager started");
 
-	UINT8 Read;
-	UINT8 Write;
+	INT32 Read;
+	INT32 Write;
 
 	svc_CreateNamedEvent("signal", &Read, &Write);
 	for (;;)
