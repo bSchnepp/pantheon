@@ -84,6 +84,65 @@ pantheon::HandleType pantheon::Handle::GetType()
 void pantheon::Handle::Close()
 {
 	OBJECT_SELF_ASSERT();
-	this->Content.Obj->Close();
+	if (this->Type == HANDLE_TYPE_INVALID)
+	{
+		return;
+	}
+
+	switch (this->Type)
+	{
+		case HANDLE_TYPE_READ_SIGNAL:
+		{
+			this->Content.ReadEvent->Close();
+			break;
+		}
+
+		case HANDLE_TYPE_WRITE_SIGNAL:
+		{
+			this->Content.WriteEvent->Close();
+			break;
+		}
+
+		case HANDLE_TYPE_PROCESS:
+		{
+			this->Content.Process->Close();
+			break;
+		}
+
+		case HANDLE_TYPE_THREAD:
+		{
+			this->Content.Thread->Close();
+			break;
+		}
+
+		case HANDLE_TYPE_SERVER_PORT:
+		{
+			this->Content.ServerPort->Close();
+			break;
+		}
+
+		case HANDLE_TYPE_CLIENT_PORT:
+		{
+			this->Content.ClientPort->Close();
+			break;
+		}
+
+		case HANDLE_TYPE_SERVER_CONNECTION:
+		{
+			this->Content.Connection->Close();
+			break;
+		}
+
+		case HANDLE_TYPE_CLIENT_CONNECTION:
+		{
+			this->Content.ClientConnection->Close();
+			break;
+		}
+
+		default:
+		{
+			return;
+		}
+	}
 	*this = pantheon::Handle();
 }

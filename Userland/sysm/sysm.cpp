@@ -4,8 +4,8 @@ void sysm_Main()
 {
 	svc_LogText("system manager started");
 
-	//INT32 Read;
-	//INT32 Write;
+	INT32 Read;
+	INT32 Write;
 
 	INT32 ServerPortRegistration;
 	INT32 ClientPortRegistration;
@@ -34,12 +34,12 @@ void sysm_Main()
 	}
 	
 
-	//Status = svc_CreateNamedEvent("signal", &Read, &Write);
-	//if (Status != pantheon::Result::SYS_OK)
-	//{
-	//	svc_LogText("signal creation failed. ABORT!");
-	//	for(;;){}
-	//}
+	Status = svc_CreateNamedEvent("signal", &Read, &Write);
+	if (Status != pantheon::Result::SYS_OK)
+	{
+		svc_LogText("signal creation failed. ABORT!");
+		for(;;){}
+	}
 
 	for (;;)
 	{
@@ -51,7 +51,7 @@ void sysm_Main()
 		}
 		else 
 		{
-			//svc_SignalEvent(Write);
+			svc_SignalEvent(Write);
 			svc_CloseHandle(ClientConn);
 		}
 		svc_LogText("IN USERSPACE [sysm]");

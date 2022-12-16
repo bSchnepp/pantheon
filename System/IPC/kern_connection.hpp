@@ -22,7 +22,7 @@ class Port;
 class ServerConnection;
 class ClientConnection;
 
-class Connection : public Allocatable<Connection, 1024>, public pantheon::Object
+class Connection : public Object<Connection, 1024>
 {
 public:
 	explicit Connection() = default;
@@ -51,8 +51,6 @@ public:
 
 	void CloseServerHandler();
 	void CloseClientHandler();
-
-	void DestroyObject() override;
 
 
 

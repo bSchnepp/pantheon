@@ -15,7 +15,7 @@ namespace pantheon::ipc
 class Port;
 class ClientConnection;
 
-class ClientPort : public pantheon::Allocatable<ClientPort, 1024>, public Lockable, public pantheon::Object
+class ClientPort : public pantheon::Object<ClientPort, 1024>, public Lockable
 {
 public:
 	explicit ClientPort() = default;
@@ -28,8 +28,6 @@ public:
 
 	[[nodiscard]] BOOL IsServerClosed() const;
 
-	void DestroyObject() override;
-	
 private:
 	pantheon::ipc::Port *Owner;
 

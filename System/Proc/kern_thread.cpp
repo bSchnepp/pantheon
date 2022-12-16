@@ -444,8 +444,3 @@ void pantheon::Thread::SetNext(pantheon::Thread *Item)
 {
 	this->NextThread = Item;
 }
-
-void pantheon::Thread::DestroyObject()
-{
-	pantheon::Thread::Destroy(this);
-}

@@ -44,8 +44,3 @@ void pantheon::ipc::Connection::Initialize(ClientPort *Client, ServerPort *Serve
 
 	this->CurState = pantheon::ipc::Connection::State::OPEN;
 }
-
-void pantheon::ipc::Connection::DestroyObject()
-{
-	pantheon::ipc::Connection::Destroy(this);
-}

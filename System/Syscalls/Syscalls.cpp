@@ -532,8 +532,7 @@ pantheon::Result pantheon::SVCConnectToNamedPort(pantheon::TrapFrame *CurFrame)
 	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
 	pantheon::ScopedLock _L(CurProc);
 
-	/* TODO: Create a ClientConnection and write it to NewConn. */
-	*HandleLocation = -1;
+	*HandleLocation = CurProc->EncodeHandle(pantheon::Handle(NewConn));
 
 	return pantheon::Result::SYS_OK;
 }
@@ -556,14 +555,15 @@ pantheon::Result pantheon::SVCCloseHandle(pantheon::TrapFrame *CurFrame)
 {
 	/* NYI */
 	INT32 Handle = CurFrame->GetRawArgument<INT32>(0);
-	pantheon::Process *Proc = pantheon::CPU::GetCurProcess();
+	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
+	pantheon::ScopedLock _L(CurProc);
 
 	if (Handle < 0)
 	{
 		return pantheon::Result::SYS_FAIL;
 	}
 
-	pantheon::Handle *Hand = Proc->GetHandle(Handle);
+	pantheon::Handle *Hand = CurProc->GetHandle(Handle);
 	if (Hand == nullptr)
 	{
 		return pantheon::Result::SYS_FAIL;

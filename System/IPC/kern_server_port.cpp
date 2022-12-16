@@ -46,8 +46,3 @@ pantheon::ipc::ServerConnection *pantheon::ipc::ServerPort::Dequeue()
 	/* NYI */
 	return this->ConnectionList.PopFront();
 }
-
-void pantheon::ipc::ServerPort::DestroyObject()
-{
-	pantheon::ipc::ServerPort::Destroy(this);
-}

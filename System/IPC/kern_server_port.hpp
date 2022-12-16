@@ -16,7 +16,7 @@ namespace pantheon::ipc
 class Port;
 class ServerConnection;
 
-class ServerPort : public pantheon::Allocatable<ServerPort, 1024>, public Lockable, public pantheon::Object
+class ServerPort : public pantheon::Object<ServerPort, 1024>, public Lockable
 {
 public:
 	explicit ServerPort() = default;
@@ -28,7 +28,6 @@ public:
 	ServerConnection *Dequeue();
 
 	void Cleanup();
-	void DestroyObject() override;
 	
 private:
 	pantheon::ipc::Port *Owner;

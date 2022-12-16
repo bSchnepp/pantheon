@@ -12,7 +12,7 @@ namespace pantheon::ipc
 
 class Connection;
 
-class ClientConnection : public pantheon::Object
+class ClientConnection : public pantheon::Object<ClientConnection>
 {
 public:
 	explicit ClientConnection() = default;
@@ -25,8 +25,6 @@ public:
 	void Recieve(UINT32 *Content, UINT64 Size);
 
 	void ServerClosedHandler();
-
-	void DestroyObject() override;
 
 private:
 	Connection *Owner;

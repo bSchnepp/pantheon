@@ -37,7 +37,6 @@ typedef enum HandleType
 
 typedef union HandleContent
 {
-	pantheon::Object *Obj;
 	pantheon::ipc::ReadableEvent *ReadEvent;
 	pantheon::ipc::WritableEvent *WriteEvent;
 	pantheon::Process *Process;

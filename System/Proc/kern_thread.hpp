@@ -18,7 +18,7 @@ namespace pantheon
 
 class Process;
 
-class Thread  : public pantheon::Allocatable<Thread, 512>, public pantheon::Lockable, public pantheon::Object
+class Thread  : public pantheon::Object<Thread, 512>, public pantheon::Lockable
 {
 public:
 	enum LocalRegionFlag
@@ -78,8 +78,6 @@ public:
 	VOID CountTick();
 	VOID RefreshTicks();
 	VOID SetTicks(UINT64 TickCount);
-
-	void DestroyObject() override;
 
 	VOID SetState(Thread::State State);
 	VOID SetPriority(Thread::Priority Priority);

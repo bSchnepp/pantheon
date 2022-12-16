@@ -35,28 +35,16 @@ struct NamedEvent : public Event
 	pantheon::String Name;
 };
 
-typedef struct WritableEvent : public pantheon::Object
+typedef struct WritableEvent : public pantheon::Object<WritableEvent, 64>
 {
 	Event *Parent;
 	pantheon::Process *Signaler;
-
-	void DestroyObject() override 
-	{
-		this->Parent = nullptr;
-		this->Signaler = nullptr;
-	}
 }WritableEvent;
 
-typedef struct ReadableEvent : public pantheon::Object
+typedef struct ReadableEvent : public pantheon::Object<ReadableEvent, 64>
 {
 	Event *Parent;
 	pantheon::Process *Clearer;
-
-	void DestroyObject() override 
-	{
-		this->Parent = nullptr;
-		this->Clearer = nullptr;
-	}
 }ReadableEvent;
 
 

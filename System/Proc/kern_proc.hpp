@@ -49,7 +49,7 @@ typedef struct ProcessCreateInfo
 
 }ProcessCreateInfo;
 
-class Process : public pantheon::Allocatable<Process, 128>, public pantheon::Lockable, public pantheon::Object
+class Process : public pantheon::Object<Process, 128>, public pantheon::Lockable
 {
 public:
 	typedef enum State
@@ -83,7 +83,7 @@ public:
 
 	[[nodiscard]] ProcessState MyState() const;
 
-	void DestroyObject() override;
+	void DestroyObject();
 	void SetState(ProcessState State);
 	void MapAddress(const pantheon::vmm::VirtualAddress &VAddresses, const pantheon::vmm::PhysicalAddress &PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes);
 
