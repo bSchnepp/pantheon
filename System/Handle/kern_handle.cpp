@@ -129,13 +129,22 @@ void pantheon::Handle::Close()
 
 		case HANDLE_TYPE_SERVER_CONNECTION:
 		{
-			this->Content.Connection->Close();
+			pantheon::ipc::Connection *Conn = this->Content.Connection;
+			Conn->CloseServerHandler();
+			Conn->Close();
 			break;
 		}
 
 		case HANDLE_TYPE_CLIENT_CONNECTION:
 		{
-			this->Content.ClientConnection->Close();
+			pantheon::ipc::ClientConnection *CliConn = this->Content.ClientConnection;
+			pantheon::ipc::Connection *Conn = CliConn->GetOwner();
+			Conn->CloseClientHandler();
+			if (Conn->IsClientClosed() && Conn->IsServerClosed())
+			{
+				Conn->Close();
+			}
+			CliConn->Close();
 			break;
 		}
 
