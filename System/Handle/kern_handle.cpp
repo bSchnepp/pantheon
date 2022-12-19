@@ -5,7 +5,7 @@
 #include <System/IPC/kern_port.hpp>
 #include <System/IPC/kern_client_port.hpp>
 #include <System/IPC/kern_client_connection.hpp>
-#include <System/IPC/kern_connection.hpp>
+#include <System/IPC/kern_server_connection.hpp>
 
 pantheon::Handle::Handle()
 {
@@ -55,7 +55,7 @@ pantheon::Handle::Handle(pantheon::ipc::ClientPort *ClientPort)
 	ClientPort->Open();
 }
 
-pantheon::Handle::Handle(pantheon::ipc::Connection *Connection)
+pantheon::Handle::Handle(pantheon::ipc::ServerConnection *Connection)
 {
 	this->Type = pantheon::HANDLE_TYPE_SERVER_CONNECTION;
 	this->Content.Connection = Connection;
@@ -129,9 +129,14 @@ void pantheon::Handle::Close()
 
 		case HANDLE_TYPE_SERVER_CONNECTION:
 		{
-			pantheon::ipc::Connection *Conn = this->Content.Connection;
+			pantheon::ipc::ServerConnection *SrvConn = this->Content.Connection;
+			pantheon::ipc::Connection *Conn = SrvConn->GetOwner();
 			Conn->CloseServerHandler();
-			Conn->Close();
+			if (Conn->IsClientClosed() && Conn->IsServerClosed())
+			{
+				Conn->Close();
+			}
+			SrvConn->Close();
 			break;
 		}
 

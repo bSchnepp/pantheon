@@ -457,9 +457,6 @@ pantheon::Result pantheon::SVCCreatePort(pantheon::TrapFrame *CurFrame)
 	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
 	pantheon::ScopedLock _PL(CurProc);
 
-	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-	pantheon::ScopedLock _TL(CurThread);
-
 	pantheon::Handle ServHandle = pantheon::Handle(NewPort->GetServerPort());
 	INT32 IndexS = CurProc->EncodeHandle(ServHandle);
 
@@ -539,8 +536,40 @@ pantheon::Result pantheon::SVCConnectToNamedPort(pantheon::TrapFrame *CurFrame)
 
 pantheon::Result pantheon::SVCAcceptConnection(pantheon::TrapFrame *CurFrame)
 {
-	/* NYI */
-	PANTHEON_UNUSED(CurFrame);
+	/* svc_AcceptConnection(INT32 InServerPortHandle, INT32 *OutConnection); */
+	INT32 InHandle = CurFrame->GetRawArgument<INT32>(0);
+	INT32 *OutHandle = ReadArgumentAsPointer<INT32>(CurFrame->GetIntArgument(1));
+
+	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
+	pantheon::ScopedLock _L(CurProc);
+
+	pantheon::Handle *Hand = CurProc->GetHandle(InHandle);
+	if (!Hand)
+	{
+		*OutHandle = -1;
+		return pantheon::Result::SYS_FAIL;
+	}
+
+	pantheon::ipc::ServerPort *Port = Hand->GetPtr<pantheon::ipc::ServerPort>();
+	if (!Port)
+	{
+		*OutHandle = -1;
+		return pantheon::Result::SYS_FAIL;
+	}
+
+	pantheon::ipc::ServerConnection *Conn = Port->Dequeue();
+	if (!Conn)
+	{
+		*OutHandle = -1;
+		return pantheon::Result::SYS_FAIL;
+	}
+
+	INT32 Res = CurProc->EncodeHandle(pantheon::Handle(Conn));
+	if (Res >= 0)
+	{
+		*OutHandle = Res;
+		return pantheon::Result::SYS_OK;
+	}
 	return pantheon::Result::SYS_FAIL;
 }
 

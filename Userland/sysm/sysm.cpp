@@ -17,23 +17,6 @@ void sysm_Main()
 		for(;;){}
 	}
 
-	/* TODO: Accept data from it... */
-	INT32 ServerConnection;
-	Status = svc_AcceptConnection(ServerPortRegistration, &ServerConnection);
-	if (Status == pantheon::Result::SYS_FAIL)
-	{
-		svc_LogText("Unable to accept a session");
-	}
-	else
-	{
-		for (;;)
-		{
-			/* Reply with nothing, forever. */
-			svc_ReplyAndRecieve(0, nullptr, &ServerConnection, 1000);
-		}
-	}
-	
-
 	Status = svc_CreateNamedEvent("signal", &Read, &Write);
 	if (Status != pantheon::Result::SYS_OK)
 	{
@@ -41,20 +24,21 @@ void sysm_Main()
 		for(;;){}
 	}
 
+	/* TODO: Accept data from it... */
 	for (;;)
 	{
-		INT32 ClientConn;
-		Status = svc_ConnectToNamedPort("sysm:reg", &ClientConn);
-		if (Status != pantheon::Result::SYS_OK)
+		INT32 ServerConnection;
+		Status = svc_AcceptConnection(ServerPortRegistration, &ServerConnection);
+		if (Status == pantheon::Result::SYS_OK)
 		{
-			svc_LogText("Cannot connect to sysm:reg!");
+			/* Reply with nothing, forever. */
+			svc_ReplyAndRecieve(0, nullptr, &ServerConnection, 1000);
 		}
-		else 
+		else
 		{
-			svc_SignalEvent(Write);
-			svc_CloseHandle(ClientConn);
+			svc_LogText("Unable to accept a session");
+			svc_Yield();
 		}
-		svc_LogText("IN USERSPACE [sysm]");
 	}
 }
 

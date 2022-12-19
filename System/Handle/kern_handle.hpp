@@ -18,7 +18,7 @@ namespace ipc
 	class ServerPort;
 	class ClientPort;
 
-	class Connection;
+	class ServerConnection;
 	class ClientConnection;
 }
 
@@ -37,13 +37,14 @@ typedef enum HandleType
 
 typedef union HandleContent
 {
+	void *RawPtr;
 	pantheon::ipc::ReadableEvent *ReadEvent;
 	pantheon::ipc::WritableEvent *WriteEvent;
 	pantheon::Process *Process;
 	pantheon::Thread *Thread;
 	pantheon::ipc::ServerPort *ServerPort;
 	pantheon::ipc::ClientPort *ClientPort;
-	pantheon::ipc::Connection *Connection;
+	pantheon::ipc::ServerConnection *Connection;
 	pantheon::ipc::ClientConnection *ClientConnection;
 }HandleContent;
 
@@ -57,7 +58,7 @@ public:
 	Handle(pantheon::Thread *Thr);
 	Handle(pantheon::ipc::ServerPort *Port);
 	Handle(pantheon::ipc::ClientPort *ClientPort);
-	Handle(pantheon::ipc::Connection *Connection);
+	Handle(pantheon::ipc::ServerConnection *Connection);
 	Handle(pantheon::ipc::ClientConnection *ClientConnection);
 	~Handle() = default;
 
@@ -67,6 +68,16 @@ public:
 	[[nodiscard]] bool IsValid() const
 	{
 		return this->Type != pantheon::HANDLE_TYPE_INVALID;
+	}
+
+	template<typename T>
+	T *GetPtr()
+	{
+		if (this->Type == HANDLE_TYPE_INVALID)
+		{
+			return nullptr;
+		}
+		return reinterpret_cast<T*>(this->Content.RawPtr);
 	}
 
 	void Close();
