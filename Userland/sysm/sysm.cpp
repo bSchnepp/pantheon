@@ -32,7 +32,7 @@ void sysm_Main()
 		if (Status == pantheon::Result::SYS_OK)
 		{
 			/* Reply with nothing, forever. */
-			svc_ReplyAndRecieve(0, nullptr, &ServerConnection, 1000);
+			svc_ReplyAndRecieve(0, nullptr, &ServerConnection);
 			svc_LogText("[sysm] Replying to session");
 		}
 		else

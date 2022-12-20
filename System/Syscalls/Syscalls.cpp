@@ -581,10 +581,10 @@ pantheon::Result pantheon::SVCReplyAndRecieve(pantheon::TrapFrame *CurFrame)
 
 pantheon::Result pantheon::SVCCloseHandle(pantheon::TrapFrame *CurFrame)
 {
-	/* NYI */
-	INT32 Handle = CurFrame->GetRawArgument<INT32>(0);
 	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
 	pantheon::ScopedLock _L(CurProc);
+
+	INT32 Handle = CurFrame->GetRawArgument<INT32>(0);
 
 	if (Handle < 0)
 	{
@@ -599,6 +599,13 @@ pantheon::Result pantheon::SVCCloseHandle(pantheon::TrapFrame *CurFrame)
 
 	Hand->Close();
 	return pantheon::Result::SYS_OK;
+}
+
+pantheon::Result pantheon::SVCSendRequest(pantheon::TrapFrame *CurFrame)
+{
+	/* NYI */
+	PANTHEON_UNUSED(CurFrame);
+	return pantheon::Result::SYS_FAIL;
 }
 
 typedef pantheon::Result (*SyscallFn)(pantheon::TrapFrame *);
@@ -624,6 +631,7 @@ SyscallFn syscall_table[] =
 	(SyscallFn)pantheon::SVCAcceptConnection,
 	(SyscallFn)pantheon::SVCReplyAndRecieve,
 	(SyscallFn)pantheon::SVCCloseHandle,
+	(SyscallFn)pantheon::SVCSendRequest,
 };
 
 UINT64 pantheon::SyscallCount()
