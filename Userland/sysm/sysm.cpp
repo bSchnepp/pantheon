@@ -33,6 +33,7 @@ void sysm_Main()
 		{
 			/* Reply with nothing, forever. */
 			svc_ReplyAndRecieve(0, nullptr, &ServerConnection, 1000);
+			svc_LogText("[sysm] Replying to session");
 		}
 		else
 		{

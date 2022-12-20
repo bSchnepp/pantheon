@@ -64,6 +64,15 @@ extern "C" void kern_init_core()
 	SERIAL_LOG("Pantheon booted with core %hhu\n", CpuNo);
 	pantheon::RearmSystemTimer(1000);
 	pantheon::CPU::STI();
+
+	for (;;)
+	{
+		if (CpuNo == 0)
+		{
+			/* There's a few more races to deal with before enabling all-core scheduling */
+			pantheon::CPU::GetCurSched()->Reschedule();
+		}
+	}
 }
 
 
@@ -79,9 +88,5 @@ extern "C" void kern_init(InitialBootInfo *InitBootInfo)
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_OK);
 	}
 	kern_init_core();
-	for (;;)
-	{
-		pantheon::CPU::GetCurSched()->Reschedule();
-	}
 	pantheon::StopError("Broke out of reschedule loop\n");
 }

@@ -50,12 +50,11 @@ extern "C" void sync_handler_el1(pantheon::TrapFrame *Frame)
 		"mov %4, sp\n"
 		: "=r"(ESR), "=r"(FAR), "=r"(ELR), "=r"(SPSR), "=r"(SP));
 
-	PANTHEON_UNUSED(FAR);
-	PANTHEON_UNUSED(ELR);
-	PANTHEON_UNUSED(SPSR);
+	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
+
 	pantheon::StopErrorFmt(
-		"ERR: SYNC HANDLER EL1: esr: %lx far: %lx elr: %lx spsr: %lx, sp: %lx\n", 
-		ESR, FAR, ELR, SPSR, SP);
+		"ERR: SYNC HANDLER EL1: esr: %lx far: %lx elr: %lx spsr: %lx, sp: %lx pid: %u\n", 
+		ESR, FAR, ELR, SPSR, SP, CurProc->ProcessID());
 }
 
 extern "C" void err_handler_el1(pantheon::TrapFrame *Frame)

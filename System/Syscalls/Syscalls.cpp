@@ -33,24 +33,21 @@ static const CHAR *ReadArgumentAsCharPointer(UINT64 Val)
 		return nullptr;
 	}
 
+	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
+	if (CurProc->IsLocked() == FALSE)
+	{
+		pantheon::StopErrorFmt("Attempt to read userspace memory without CurProc lock (PID %hhu)\n", CurProc->ProcessID());
+	}
+
 	/* Make sure we translate this to something in kernel memory, 
 	 * just to be safe. */
 	pantheon::vmm::VirtualAddress RawPtr = Val;
 	const CHAR *Result = nullptr;
 
-	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-	CurThread->Lock();
-
-	pantheon::Process *CurProc = CurThread->MyProc();
-	CurProc->Lock();
-
 	pantheon::vmm::PhysicalAddress PAddr = pantheon::vmm::VirtualToPhysicalAddress(CurProc->GetPageTable(), RawPtr);
 	pantheon::vmm::VirtualAddress VAddr = pantheon::vmm::PhysicalToVirtualAddress(PAddr);
 
 	Result = reinterpret_cast<const char *>(VAddr);
-
-	CurProc->Unlock();
-	CurThread->Unlock();
 
 	return Result;
 }
@@ -64,24 +61,21 @@ static T *ReadArgumentAsPointer(UINT64 Val)
 		return nullptr;
 	}
 
+	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
+	if (CurProc->IsLocked() == FALSE)
+	{
+		pantheon::StopErrorFmt("Attempt to read userspace memory without CurProc lock (PID %hhu)\n", CurProc->ProcessID());
+	}
+
 	/* Make sure we translate this to something in kernel memory, 
 	 * just to be safe. */
 	pantheon::vmm::VirtualAddress RawPtr = Val;
 	T *Result = nullptr;
 
-	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-	CurThread->Lock();
-
-	pantheon::Process *CurProc = CurThread->MyProc();
-	CurProc->Lock();
-
 	pantheon::vmm::PhysicalAddress PAddr = pantheon::vmm::VirtualToPhysicalAddress(CurProc->GetPageTable(), RawPtr);
 	pantheon::vmm::VirtualAddress VAddr = pantheon::vmm::PhysicalToVirtualAddress(PAddr);
 
 	Result = reinterpret_cast<T*>(VAddr);
-
-	CurProc->Unlock();
-	CurThread->Unlock();
 
 	return Result;	
 
@@ -96,12 +90,13 @@ static UINT64 ReadArgumentAsInteger(UINT64 Val)
 
 VOID pantheon::SVCExitProcess(pantheon::TrapFrame *CurFrame)
 {
+	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+	pantheon::ScopedLock ScopeLockProc(Proc);
+
 	PANTHEON_UNUSED(CurFrame);
 
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-	CurThread->MyProc()->Lock();
 	CurThread->MyProc()->SetState(pantheon::Process::STATE_ZOMBIE);
-	CurThread->MyProc()->Unlock();
 
 	CurThread->Lock();
 	CurThread->SetState(pantheon::Thread::STATE_TERMINATED);
@@ -114,12 +109,18 @@ VOID pantheon::SVCExitProcess(pantheon::TrapFrame *CurFrame)
 pantheon::Result pantheon::SVCForkProcess(pantheon::TrapFrame *CurFrame)
 {
 	/* nyi */
+	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+	pantheon::ScopedLock ScopeLockProc(Proc);
+
 	PANTHEON_UNUSED(CurFrame);
 	return pantheon::Result::SYS_OK;
 }
 
 pantheon::Result pantheon::SVCLogText(pantheon::TrapFrame *CurFrame)
 {
+	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+	pantheon::ScopedLock _P(Proc);
+
 	const CHAR *Data = nullptr;
 	
 	Data = ReadArgumentAsCharPointer(CurFrame->GetIntArgument(0));
@@ -128,9 +129,7 @@ pantheon::Result pantheon::SVCLogText(pantheon::TrapFrame *CurFrame)
 		return pantheon::Result::SYS_FAIL;
 	}
 
-	pantheon::CPU::GetCurThread()->Lock();
 	SERIAL_LOG("%s\n", Data);
-	pantheon::CPU::GetCurThread()->Unlock();
 	return pantheon::Result::SYS_OK;
 }
 
@@ -175,10 +174,13 @@ pantheon::Result pantheon::SVCCreateThread(pantheon::TrapFrame *CurFrame)
  */
 pantheon::Result pantheon::SVCCreateNamedEvent(pantheon::TrapFrame *CurFrame)
 {
+	pantheon::ScopedGlobalSchedulerLock _SL;
+
+	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
+	pantheon::ScopedLock ScopeLockProc(Proc);
+
 	const CHAR *Name = nullptr;
 	Name = ReadArgumentAsCharPointer(CurFrame->GetIntArgument(0));
-
-	SERIAL_LOG("Creating event %s\n", Name);
 	
 	INT32 *ReadHandle = nullptr;
 	ReadHandle = ReadArgument<INT32*>(CurFrame->GetIntArgument(1));
@@ -195,8 +197,6 @@ pantheon::Result pantheon::SVCCreateNamedEvent(pantheon::TrapFrame *CurFrame)
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	pantheon::ScopedLock ScopeLockThread(CurThread);
 
-	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
-	pantheon::ScopedLock ScopeLockProc(Proc);
 	pantheon::String EvtName(Name);
 
 	pantheon::ipc::NamedEvent *Evt = pantheon::ipc::LookupEvent(EvtName);
@@ -227,13 +227,12 @@ pantheon::Result pantheon::SVCCreateNamedEvent(pantheon::TrapFrame *CurFrame)
 
 pantheon::Result pantheon::SVCSignalEvent(pantheon::TrapFrame *CurFrame)
 {
-	INT32 WriteHandle = static_cast<INT32>(CurFrame->GetIntArgument(0));
+	pantheon::ScopedGlobalSchedulerLock _SL;
 
-
-	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-	pantheon::ScopedLock ScopeLockThread(CurThread);
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
 	pantheon::ScopedLock ScopeLockProc(Proc);
+
+	INT32 WriteHandle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 
 	pantheon::Handle *Hand = Proc->GetHandle(WriteHandle);
 	if (Hand == nullptr)
@@ -260,12 +259,12 @@ pantheon::Result pantheon::SVCSignalEvent(pantheon::TrapFrame *CurFrame)
 
 pantheon::Result pantheon::SVCClearEvent(pantheon::TrapFrame *CurFrame)
 {
-	INT32 WriteHandle = static_cast<INT32>(CurFrame->GetIntArgument(0));
+	pantheon::ScopedGlobalSchedulerLock _SL;
 
-	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-	pantheon::ScopedLock ScopeLockThread(CurThread);
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
 	pantheon::ScopedLock ScopeLockProc(Proc);
+
+	INT32 WriteHandle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 
 	pantheon::Handle *Hand = Proc->GetHandle(WriteHandle);
 	if (Hand == nullptr)
@@ -290,12 +289,12 @@ pantheon::Result pantheon::SVCClearEvent(pantheon::TrapFrame *CurFrame)
 
 pantheon::Result pantheon::SVCResetEvent(pantheon::TrapFrame *CurFrame)
 {
-	INT32 ReadHandle = static_cast<INT32>(CurFrame->GetIntArgument(0));
+	pantheon::ScopedGlobalSchedulerLock _SL;
 
-	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-	pantheon::ScopedLock ScopeLockThread(CurThread);
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
 	pantheon::ScopedLock ScopeLockProc(Proc);
+
+	INT32 ReadHandle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 
 	pantheon::Handle *Hand = Proc->GetHandle(ReadHandle);
 	if (Hand == nullptr)
@@ -320,12 +319,12 @@ pantheon::Result pantheon::SVCResetEvent(pantheon::TrapFrame *CurFrame)
 
 pantheon::Result pantheon::SVCPollEvent(pantheon::TrapFrame *CurFrame)
 {
-	INT32 Handle = static_cast<INT32>(CurFrame->GetIntArgument(0));
+	pantheon::ScopedGlobalSchedulerLock _SL;
 
-	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	pantheon::Process *Proc = pantheon::CPU::GetCurThread()->MyProc();
-	pantheon::ScopedLock ScopeLockThread(CurThread);
 	pantheon::ScopedLock ScopeLockProc(Proc);
+
+	INT32 Handle = static_cast<INT32>(CurFrame->GetIntArgument(0));
 
 	pantheon::Handle *Hand = Proc->GetHandle(Handle);
 	if (Hand == nullptr)
@@ -433,6 +432,9 @@ pantheon::Result pantheon::SVCExecute(pantheon::TrapFrame *CurFrame)
 pantheon::Result pantheon::SVCCreatePort(pantheon::TrapFrame *CurFrame)
 {
 	/* svc_CreatePort(PortName Name, INT64 SessionMax, INT32 *SrvHandle, INT32 *CliHandle) */
+	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
+	pantheon::ScopedLock _PL(CurProc);
+
 	CHAR Buffer[pantheon::ipc::PortNameLength] = {0};
 	const CHAR *Location = ReadArgumentAsCharPointer(CurFrame->GetIntArgument(0));
 	CopyString(Buffer, Location, pantheon::ipc::PortNameLength);
@@ -453,9 +455,6 @@ pantheon::Result pantheon::SVCCreatePort(pantheon::TrapFrame *CurFrame)
 	}
 
 	NewPort->Initialize(Name, SessionMax);
-
-	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
-	pantheon::ScopedLock _PL(CurProc);
 
 	pantheon::Handle ServHandle = pantheon::Handle(NewPort->GetServerPort());
 	INT32 IndexS = CurProc->EncodeHandle(ServHandle);
@@ -485,6 +484,9 @@ pantheon::Result pantheon::SVCConnectToPort(pantheon::TrapFrame *CurFrame)
 pantheon::Result pantheon::SVCConnectToNamedPort(pantheon::TrapFrame *CurFrame)
 {
 	/* svc_ConnectToNamedPort(const char *Name, INT32 *OutConn) */
+	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
+	pantheon::ScopedLock _L(CurProc);
+
 	const char *Name = ReadArgumentAsCharPointer(CurFrame->GetIntArgument(0));
 	if (Name == nullptr)
 	{
@@ -526,9 +528,6 @@ pantheon::Result pantheon::SVCConnectToNamedPort(pantheon::TrapFrame *CurFrame)
 		return pantheon::Result::SYS_OOM;	
 	}
 
-	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
-	pantheon::ScopedLock _L(CurProc);
-
 	*HandleLocation = CurProc->EncodeHandle(pantheon::Handle(NewConn));
 
 	return pantheon::Result::SYS_OK;
@@ -537,11 +536,11 @@ pantheon::Result pantheon::SVCConnectToNamedPort(pantheon::TrapFrame *CurFrame)
 pantheon::Result pantheon::SVCAcceptConnection(pantheon::TrapFrame *CurFrame)
 {
 	/* svc_AcceptConnection(INT32 InServerPortHandle, INT32 *OutConnection); */
-	INT32 InHandle = CurFrame->GetRawArgument<INT32>(0);
-	INT32 *OutHandle = ReadArgumentAsPointer<INT32>(CurFrame->GetIntArgument(1));
-
 	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
 	pantheon::ScopedLock _L(CurProc);
+
+	INT32 InHandle = CurFrame->GetRawArgument<INT32>(0);
+	INT32 *OutHandle = ReadArgumentAsPointer<INT32>(CurFrame->GetIntArgument(1));
 
 	pantheon::Handle *Hand = CurProc->GetHandle(InHandle);
 	if (!Hand)

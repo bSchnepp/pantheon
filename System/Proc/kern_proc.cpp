@@ -15,6 +15,7 @@
 static constexpr UINT64 InitNumPageTables = 1024;
 alignas(4096) static pantheon::vmm::PageTable Tables[InitNumPageTables];
 static pantheon::vmm::PageAllocator PageTableAllocator;
+static pantheon::Spinlock PageTableLock;
 
 /**
  * @file System/Proc/kern_proc.cpp
@@ -29,6 +30,7 @@ void pantheon::InitProcessTables()
 	Thread::Init();
 	Process::Init();
 	PageTableAllocator = pantheon::vmm::PageAllocator(Tables, InitNumPageTables);
+	PageTableLock = pantheon::Spinlock("Map Pages Lock");
 }
 
 /**
@@ -172,7 +174,9 @@ void pantheon::Process::MapAddress(const pantheon::vmm::VirtualAddress &VAddress
 		StopError("Process not locked when mapping addresses\n");
 	}
 
+	PageTableLock.Acquire();
 	PageTableAllocator.Map(this->MemoryMap, VAddress, PAddress, pantheon::vmm::SmallestPageSize, PageAttributes);
+	PageTableLock.Release();
 }
 
 /**

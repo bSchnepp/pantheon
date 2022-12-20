@@ -155,6 +155,8 @@ extern "C" VOID drop_usermode(UINT64 PC, UINT64 PSTATE, UINT64 SP);
  */
 UINT32 pantheon::GlobalScheduler::CreateProcess(const pantheon::String &ProcStr, void *StartAddr)
 {
+	pantheon::ScopedGlobalSchedulerLock _L;
+	
 	pantheon::Process *NewProc = Process::Create();
 	pantheon::ProcessCreateInfo Info = {};
 	Info.Name = ProcStr;
@@ -165,12 +167,12 @@ UINT32 pantheon::GlobalScheduler::CreateProcess(const pantheon::String &ProcStr,
 		return 0;
 	}
 
-	AccessSpinlock.Acquire();
-
-	NewProc->Lock();
-	NewProc->Initialize(Info);
-	UINT32 Result = NewProc->ProcessID();
-	NewProc->Unlock();
+	UINT32 Result = 0;
+	{
+		pantheon::ScopedLock _LL(NewProc);
+		NewProc->Initialize(Info);
+		Result = NewProc->ProcessID();
+	}
 
 	GlobalScheduler::ProcessList.PushFront(NewProc);
 
@@ -179,7 +181,6 @@ UINT32 pantheon::GlobalScheduler::CreateProcess(const pantheon::String &ProcStr,
 		StopError("NewProc was not front.");
 	}
 
-	AccessSpinlock.Release();
 	return Result;
 }
 
@@ -194,7 +195,8 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateUserThreadCommon(pantheon::Pr
 
 pantheon::Thread *pantheon::GlobalScheduler::CreateUserThread(UINT32 PID, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority)
 {
-	GlobalScheduler::AccessSpinlock.Acquire();
+	pantheon::ScopedGlobalSchedulerLock _L;
+
 	pantheon::Process *SelProc = nullptr;
 	for (pantheon::Process &Proc : GlobalScheduler::ProcessList)
 	{
@@ -210,15 +212,13 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateUserThread(UINT32 PID, void *
 	{
 		Result = GlobalScheduler::CreateUserThreadCommon(SelProc, StartAddr, ThreadData, Priority);
 	}
-	GlobalScheduler::AccessSpinlock.Release();
 	return Result;
 }
 
 pantheon::Thread *pantheon::GlobalScheduler::CreateUserThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority)
 {
-	GlobalScheduler::AccessSpinlock.Acquire();
+	pantheon::ScopedGlobalSchedulerLock _L;
 	pantheon::Thread *Result = pantheon::GlobalScheduler::CreateUserThreadCommon(Proc, StartAddr, ThreadData, Priority);
-	GlobalScheduler::AccessSpinlock.Release();
 	return Result;
 }
 
@@ -293,7 +293,7 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateProcessorIdleThread()
 UINT64 pantheon::GlobalScheduler::CountThreads(UINT64 PID)
 {
 	UINT64 Count = 0;
-	AccessSpinlock.Acquire();
+	pantheon::GlobalScheduler::Lock();
 	for (const pantheon::Thread &T : GlobalScheduler::ThreadList)
 	{
 		if (T.MyProc()->ProcessID() == PID)
@@ -301,7 +301,7 @@ UINT64 pantheon::GlobalScheduler::CountThreads(UINT64 PID)
 			Count++;
 		}
 	}
-	AccessSpinlock.Release();
+	pantheon::GlobalScheduler::Unlock();
 	return Count;
 }
 
@@ -368,7 +368,7 @@ extern "C" VOID FinishThread()
 BOOL pantheon::GlobalScheduler::MapPages(UINT32 PID, pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages)
 {
 	BOOL Success = FALSE;
-	AccessSpinlock.Acquire();
+	pantheon::GlobalScheduler::Lock();
 	for (pantheon::Process &Proc : GlobalScheduler::ProcessList)
 	{
 		if (Proc.ProcessID() == PID)
@@ -382,7 +382,7 @@ BOOL pantheon::GlobalScheduler::MapPages(UINT32 PID, pantheon::vmm::VirtualAddre
 			break;
 		}
 	}
-	AccessSpinlock.Release();
+	pantheon::GlobalScheduler::Unlock();
 	return Success;
 }
 
@@ -390,7 +390,7 @@ BOOL pantheon::GlobalScheduler::RunProcess(UINT32 PID)
 {
 	BOOL Success = FALSE;
 	pantheon::vmm::VirtualAddress Entry = 0x00;
-	AccessSpinlock.Acquire();
+	pantheon::GlobalScheduler::Lock();
 	for (pantheon::Process &Proc : GlobalScheduler::ProcessList)
 	{
 		if (Proc.ProcessID() == PID)
@@ -403,7 +403,7 @@ BOOL pantheon::GlobalScheduler::RunProcess(UINT32 PID)
 			break;
 		}
 	}
-	AccessSpinlock.Release();
+	pantheon::GlobalScheduler::Unlock();
 
 	if (Success)
 	{
@@ -415,7 +415,7 @@ BOOL pantheon::GlobalScheduler::RunProcess(UINT32 PID)
 BOOL pantheon::GlobalScheduler::SetState(UINT32 PID, pantheon::Process::State State)
 {
 	BOOL Success = FALSE;
-	AccessSpinlock.Acquire();
+	pantheon::GlobalScheduler::Lock();
 	for (pantheon::Process &Proc : GlobalScheduler::ProcessList)
 	{
 		if (Proc.ProcessID() == PID)
@@ -427,7 +427,7 @@ BOOL pantheon::GlobalScheduler::SetState(UINT32 PID, pantheon::Process::State St
 			break;
 		}
 	}
-	AccessSpinlock.Release();
+	pantheon::GlobalScheduler::Unlock();
 	return Success;	
 }
 
