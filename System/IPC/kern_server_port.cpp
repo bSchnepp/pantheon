@@ -2,6 +2,7 @@
 #include <kern_datatypes.hpp>
 
 #include <System/IPC/kern_port.hpp>
+#include <System/Proc/kern_sched.hpp>
 #include <System/IPC/kern_connection.hpp>
 #include <System/IPC/kern_server_port.hpp>
 #include <System/IPC/kern_server_connection.hpp>
@@ -37,12 +38,13 @@ void pantheon::ipc::ServerPort::Cleanup()
 
 void pantheon::ipc::ServerPort::Enqueue(pantheon::ipc::ServerConnection *Conn)
 {
+	OBJECT_SELF_ASSERT();
 	this->ConnectionList.PushBack(Conn);
 }
 
 pantheon::ipc::ServerConnection *pantheon::ipc::ServerPort::Dequeue()
 {
-	/* NYI */
+	OBJECT_SELF_ASSERT();
 	if (this->ConnectionList.Size())
 	{
 		return this->ConnectionList.PopFront();
