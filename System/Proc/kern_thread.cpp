@@ -340,30 +340,6 @@ pantheon::Thread &pantheon::Thread::operator=(pantheon::Thread &&Other) noexcept
 	return *this;
 }
 
-void pantheon::Thread::SetKernelStackAddr(UINT64 Addr)
-{
-	OBJECT_SELF_ASSERT();
-	if (this->IsLocked() == FALSE)
-	{
-		StopError("SetKernelStackAddr without lock");
-	}
-
-	this->Registers.SetSP(Addr);
-	this->KernelStackSpace = reinterpret_cast<void*>((CHAR*)Addr);
-}
-
-void pantheon::Thread::SetUserStackAddr(UINT64 Addr)
-{
-	OBJECT_SELF_ASSERT();
-	if (this->IsLocked() == FALSE)
-	{
-		StopError("SetUserStackAddr without lock");
-	}
-
-	this->Registers.SetSP(Addr);
-	this->UserStackSpace = reinterpret_cast<void*>((CHAR*)Addr);
-}
-
 void pantheon::Thread::SetProc(pantheon::Process *Proc)
 {
 	OBJECT_SELF_ASSERT();

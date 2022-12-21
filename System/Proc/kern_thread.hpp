@@ -104,11 +104,7 @@ public:
 	VOID SetState(Thread::State State);
 	VOID SetPriority(Thread::Priority Priority);
 
-	VOID SetEntryLocation(UINT64 IP, UINT64 SP, VOID* ThreadData);
-
 	CpuContext *GetRegisters();
-	void SetUserStackAddr(UINT64 Addr);
-	void SetKernelStackAddr(UINT64 Addr);
 	[[nodiscard]] pantheon::vmm::VirtualAddress GetThreadLocalAreaRegister() const { return this->LocalRegion; }
 
 	Thread &operator=(const Thread &Other);
@@ -125,7 +121,9 @@ public:
 	void SetNext(pantheon::Thread *Item);
 
 	ThreadLocalRegion *GetThreadLocalArea();
-	
+
+private:
+	VOID SetEntryLocation(UINT64 IP, UINT64 SP, VOID* ThreadData);
 
 private:
 	UINT64 TID;
