@@ -1,3 +1,4 @@
+#include <kern_object.hpp>
 #include <kern_datatypes.hpp>
 
 #include <Common/Sync/kern_atomic.hpp>
@@ -15,7 +16,7 @@ namespace pantheon::ipc
 class Port;
 class ServerConnection;
 
-class ServerPort : public pantheon::Allocatable<ServerPort, 1024>, public Lockable
+class ServerPort : public pantheon::Object<ServerPort, 1024>, public Lockable
 {
 public:
 	explicit ServerPort() = default;

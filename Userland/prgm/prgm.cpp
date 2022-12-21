@@ -4,8 +4,8 @@ void prgm_Main()
 {
 	svc_LogText("program manager started");
 
-	UINT8 Read;
-	UINT8 Write;
+	INT32 Read;
+	INT32 Write;
 
 	svc_CreateNamedEvent("signal", &Read, &Write);
 	for (;;)
@@ -17,7 +17,20 @@ void prgm_Main()
 			svc_LogText("GOT SIGNAL");
 			svc_Yield();
 		}
-		svc_LogText("IN USERSPACE [prgm]");
+
+		INT32 ClientConn;
+		pantheon::Result Status = svc_ConnectToNamedPort("sysm:reg", &ClientConn);
+		if (Status != pantheon::Result::SYS_OK)
+		{
+			svc_LogText("Cannot connect to sysm:reg!");
+		}
+		else 
+		{
+			svc_SignalEvent(Write);
+			svc_CloseHandle(ClientConn);
+		}
+
+		svc_LogText("IN USERSPACE [prgm]");		
 	}
 }
 

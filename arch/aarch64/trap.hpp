@@ -45,6 +45,12 @@ typedef struct TrapFrame
 		this->PSTATE = PSTATE_MODE_KERN;
 	}
 
+	template<typename T>
+	T &GetRawArgument(UINT8 Index)
+	{
+		return (T&)this->Regs[Index];
+	}
+
 	UINT64 &GetIntArgument(UINT8 Index)
 	{
 		return this->Regs[Index];

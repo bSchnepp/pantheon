@@ -8,6 +8,8 @@
 #include <Common/Sync/kern_lockable.hpp>
 #include <Common/Structures/kern_allocatable.hpp>
 
+#include <kern_object.hpp>
+
 #ifndef _KERN_THREAD_HPP_
 #define _KERN_THREAD_HPP_
 
@@ -16,22 +18,44 @@ namespace pantheon
 
 class Process;
 
-class Thread  : public pantheon::Allocatable<Thread, 512>, public pantheon::Lockable
+class Thread  : public pantheon::Object<Thread, 512>, public pantheon::Lockable
 {
 public:
-	enum LocalRegionFlag
+	typedef struct ThreadLocalHeader
 	{
-		FREE = (0 << 0),
-		INTERRUPTED = (1 << 0),
-	};
+		/* [10 bits Size] [2 Bits ReqType] [4 Bits ReqTypeData]*/
+		UINT16 Meta;
+		UINT16 Cmd;
+		UINT32 ClientPID;
 
-	struct LocalRegion
+		[[nodiscard]] constexpr UINT16 GetSize() const
+		{
+			return (this->Meta >> 6) & 0x3FF;
+		}
+
+		[[nodiscard]] constexpr UINT16 GetReqType() const
+		{
+			return (this->Meta >> 4) & 0x3;
+		}
+
+		[[nodiscard]] constexpr UINT16 GetReqTypeData() const
+		{
+			return (this->Meta >> 0) & 0xF;
+		}
+	}ThreadLocalHeader;
+
+	typedef union ThreadLocalPayload
 	{
-		public:
-			/* 4096 bytes each for communication */
-			UINT32 BufferArea[0x1000 / sizeof(UINT32)];
-			LocalRegionFlag Flags;
-	};
+		UINT32 Data[1022];
+	}ThreadLocalPayload;
+
+	typedef struct ThreadLocalRegion
+	{
+		ThreadLocalHeader Header;
+		ThreadLocalPayload Payload;
+	}ThreadLocalRegion;
+
+	static_assert(sizeof(ThreadLocalRegion) == 4096);
 
 public:
 	typedef enum State
@@ -85,6 +109,7 @@ public:
 	CpuContext *GetRegisters();
 	void SetUserStackAddr(UINT64 Addr);
 	void SetKernelStackAddr(UINT64 Addr);
+	[[nodiscard]] pantheon::vmm::VirtualAddress GetThreadLocalAreaRegister() const { return this->LocalRegion; }
 
 	Thread &operator=(const Thread &Other);
 	Thread &operator=(Thread &&Other) noexcept;
@@ -99,9 +124,8 @@ public:
 	Thread *Next();
 	void SetNext(pantheon::Thread *Item);
 
-	void SignalThreadLocalArea() { this->ThreadLocalArea.Flags = Thread::LocalRegionFlag::INTERRUPTED; }
-	UINT32 *GetThreadLocalArea() { return this->ThreadLocalArea.BufferArea; }
-	void DesignalThreadLocalArea() { this->ThreadLocalArea.Flags = Thread::LocalRegionFlag::FREE; }
+	ThreadLocalRegion *GetThreadLocalArea();
+	
 
 private:
 	UINT64 TID;
@@ -117,7 +141,8 @@ private:
 
 	void *KernelStackSpace;
 	void *UserStackSpace;
-	LocalRegion ThreadLocalArea;
+
+	pantheon::vmm::VirtualAddress LocalRegion;
 
 	static constexpr UINT64 InitialNumStackPages = 4;
 

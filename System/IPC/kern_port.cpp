@@ -149,6 +149,14 @@ pantheon::ipc::ClientConnection *pantheon::ipc::Port::CreateConnection()
 
 	NewConn->Initialize(this->Client, this->Server);
 
-	this->Enqueue(NewConn->GetServerConnection());
+	pantheon::ipc::ServerConnection *Conn = NewConn->GetServerConnection();
+	Conn->Open();
+	pantheon::Result Res = this->Enqueue(Conn);
+	if (Res != pantheon::Result::SYS_OK)
+	{
+		pantheon::ipc::Connection::Destroy(NewConn);
+		return nullptr;
+	}
+
 	return NewConn->GetClientConnection();
 }

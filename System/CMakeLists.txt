@@ -22,9 +22,6 @@ LIST(APPEND SYSTEM_SOURCES IPC/kern_server_connection.cpp)
 LIST(APPEND SYSTEM_HEADERS IPC/kern_connection.hpp)
 LIST(APPEND SYSTEM_SOURCES IPC/kern_connection.cpp)
 
-LIST(APPEND SYSTEM_HEADERS IPC/kern_packet.hpp)
-LIST(APPEND SYSTEM_SOURCES IPC/kern_packet.cpp)
-
 LIST(APPEND SYSTEM_HEADERS Handle/kern_handle.hpp)
 LIST(APPEND SYSTEM_SOURCES Handle/kern_handle.cpp)
 

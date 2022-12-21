@@ -4,6 +4,8 @@
 #include <Common/Sync/kern_lockable.hpp>
 #include <Common/Structures/kern_allocatable.hpp>
 
+#include <kern_object.hpp>
+
 #ifndef _KERN_CLIENT_PORT_HPP_
 #define _KERN_CLIENT_PORT_HPP_
 
@@ -13,7 +15,7 @@ namespace pantheon::ipc
 class Port;
 class ClientConnection;
 
-class ClientPort : public pantheon::Allocatable<ClientPort, 1024>, public Lockable
+class ClientPort : public pantheon::Object<ClientPort, 1024>, public Lockable
 {
 public:
 	explicit ClientPort() = default;
@@ -25,7 +27,7 @@ public:
 	[[nodiscard]] INT64 GetMaxConnectionCount() const { return this->MaxConnectionCount; }
 
 	[[nodiscard]] BOOL IsServerClosed() const;
-	
+
 private:
 	pantheon::ipc::Port *Owner;
 

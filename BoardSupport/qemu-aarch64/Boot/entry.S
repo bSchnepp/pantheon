@@ -89,7 +89,9 @@ asm_kern_init_core:
 	add x2, x2, :lo12:_cpu_start
 	bl BootInit
 	
-	/* This should branch to main or init core */
+	ldr x19, =0xFFFFFFFF70000000
+	br x19
+	
 	b _hang
 
 _zero_bss:

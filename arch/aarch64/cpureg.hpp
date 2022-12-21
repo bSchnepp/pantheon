@@ -64,6 +64,18 @@ FORCE_INLINE UINT64 R_TCR_EL1()
 	return RetVal;
 }
 
+FORCE_INLINE VOID W_TPIDRRO_EL0(UINT64 Value)
+{
+	asm volatile ("msr tpidrro_el0, %0\n" :: "r"(Value) :);
+}
+
+FORCE_INLINE UINT64 R_TPIDRRO_EL0()
+{
+	UINT64 RetVal = 0;
+	asm volatile ("mrs %0, tpidrro_el0\n" : "=r"(RetVal) ::);
+	return RetVal;
+}
+
 
 }
 

@@ -14,7 +14,7 @@ namespace pantheon::ipc
 
 class Connection;
 
-class ServerConnection
+class ServerConnection : public pantheon::Object<ServerConnection>
 {
 public:
 	explicit ServerConnection() = default;

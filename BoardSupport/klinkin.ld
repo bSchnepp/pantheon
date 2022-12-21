@@ -42,8 +42,8 @@ SECTIONS
 	.init_array : ALIGN(4K)
 	{
 		INIT_ARRAY_AREA = .;
-		KEEP(*(SORT(.init_array.*)))
-		KEEP(*(.init_array))
+		KEEP(*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
+		KEEP(*(.init_array .ctors))
 		INIT_ARRAY_END = .;
 		RODATA_END = .;
 	}

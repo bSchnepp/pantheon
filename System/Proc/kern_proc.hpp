@@ -17,6 +17,8 @@
 #include <Common/Sync/kern_lockable.hpp>
 #include <Common/Structures/kern_allocatable.hpp>
 
+#include <kern_object.hpp>
+
 /**
  * @file System/Proc/kern_proc.hpp
  * @brief Definitions for the Process class, and associated data
@@ -47,7 +49,7 @@ typedef struct ProcessCreateInfo
 
 }ProcessCreateInfo;
 
-class Process : public pantheon::Allocatable<Process, 128>, public pantheon::Lockable
+class Process : public pantheon::Object<Process, 128>, public pantheon::Lockable
 {
 public:
 	typedef enum State
@@ -80,6 +82,8 @@ public:
 	Process &operator=(Process &&Other) noexcept;
 
 	[[nodiscard]] ProcessState MyState() const;
+
+	void DestroyObject();
 	void SetState(ProcessState State);
 	void MapAddress(const pantheon::vmm::VirtualAddress &VAddresses, const pantheon::vmm::PhysicalAddress &PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes);
 

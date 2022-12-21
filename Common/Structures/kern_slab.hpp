@@ -138,6 +138,7 @@ public:
 				Next->Next = FreeList;
 				this->FreeList = Next;
 				this->Used--;
+				Ptr->~T();
 				return;
 			}
 		}

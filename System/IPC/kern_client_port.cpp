@@ -7,6 +7,7 @@
 
 void pantheon::ipc::ClientPort::Initialize(pantheon::ipc::Port *Owner, INT64 MaxConnections)
 {
+	OBJECT_SELF_ASSERT();
 	this->Owner = Owner;
 	this->MaxConnectionCount = MaxConnections;
 }
@@ -14,5 +15,6 @@ void pantheon::ipc::ClientPort::Initialize(pantheon::ipc::Port *Owner, INT64 Max
 [[nodiscard]]
 BOOL pantheon::ipc::ClientPort::IsServerClosed() const
 {
+	OBJECT_SELF_ASSERT();
 	return this->Owner->IsServerClosed();
 }

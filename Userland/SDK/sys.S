@@ -121,3 +121,14 @@ SVC_DEF svc_ReplyAndRecieve
 	ret
 SVC_END
 
+SVC_DEF svc_CloseHandle
+	mov w8, #18
+	svc #0
+	ret
+SVC_END
+
+SVC_DEF svc_SendRequest
+	mov w8, #19
+	svc #0
+	ret
+SVC_END

@@ -1,3 +1,4 @@
+#include <kern_object.hpp>
 #include <kern_datatypes.hpp>
 
 #include <Common/Sync/kern_atomic.hpp>
@@ -11,7 +12,7 @@ namespace pantheon::ipc
 
 class Connection;
 
-class ClientConnection
+class ClientConnection : public pantheon::Object<ClientConnection>
 {
 public:
 	explicit ClientConnection() = default;

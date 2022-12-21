@@ -32,6 +32,24 @@ pantheon::Handle *pantheon::HandleTable::Get(INT32 GIndex)
 	return nullptr;
 }
 
+BOOL pantheon::HandleTable::Release(INT32 TIndex)
+{
+	if (TIndex < 0)
+	{
+		return FALSE;
+	}
+
+	for (INT32 Index = 0; Index < HandleTable::HandleTableSize; Index++)
+	{
+		if (this->ProcHandleTable[Index].IsValid() == TRUE && TIndex == Index)
+		{
+			this->ProcHandleTable[Index].Close();
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
 VOID pantheon::HandleTable::Clear()
 {
 	for (pantheon::Handle &Hand : this->ProcHandleTable)
