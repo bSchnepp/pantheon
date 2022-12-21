@@ -191,6 +191,7 @@ pantheon::Thread *pantheon::GlobalScheduler::CreateUserThreadCommon(pantheon::Pr
 {
 	pantheon::Thread *T = pantheon::Thread::Create();
 	T->Initialize(Proc, StartAddr, ThreadData, Priority, TRUE);
+	T->SetupThreadLocalArea();
 	GlobalScheduler::ThreadList.PushFront(T);
 	GlobalScheduler::AppendIntoReadyList(T);
 	return GlobalScheduler::ThreadList.Front();

@@ -104,13 +104,16 @@ extern "C" void sync_handler_el0(pantheon::TrapFrame *Frame)
 		pantheon::CallSyscall(SyscallNo, Frame);
 		pantheon::CPU::CLI();
 	} 
-	else if (ESR == 0x2000000)
+	else
 	{
 		SERIAL_LOG_UNSAFE("Bad sync handler el0: esr: 0x%lx far: 0x%lx elr: 0x%lx spsr: 0x%lx\n", ESR, FAR, ELR, SPSR);
-		SERIAL_LOG_UNSAFE("Process ID was %ld\n", pantheon::CPU::GetCurThread()->MyProc()->ProcessID());
-		pantheon::vmm::PageTable *PT = pantheon::CPU::GetCurThread()->MyProc()->GetPageTable();
-		pantheon::vmm::PrintPageTablesNoZeroes(PT);
-	}
+		SERIAL_LOG_UNSAFE("Process ID was %ld\n", pantheon::CPU::GetCurThread()->MyProc()->ProcessID());		
+		if (ESR == 0x2000000)
+		{
+			pantheon::vmm::PageTable *PT = pantheon::CPU::GetCurThread()->MyProc()->GetPageTable();
+			pantheon::vmm::PrintPageTablesNoZeroes(PT);
+		}
+	} 
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 

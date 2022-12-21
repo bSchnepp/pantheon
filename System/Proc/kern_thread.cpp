@@ -428,3 +428,26 @@ pantheon::Thread::ThreadLocalRegion *pantheon::Thread::GetThreadLocalArea()
 	pantheon::vmm::VirtualAddress VirtAddr = pantheon::vmm::PhysicalToVirtualAddress(PhyAddr);
 	return reinterpret_cast<ThreadLocalRegion*>(VirtAddr);
 }
+
+VOID pantheon::Thread::SetupThreadLocalArea()
+{
+	this->LocalRegion = pantheon::Process::ThreadLocalBase + (this->ThreadID() * 0x1000);
+
+	/* Map in the TLR. */
+	pantheon::vmm::PageTableEntry Entry;
+	Entry.SetBlock(TRUE);
+	Entry.SetMapped(TRUE);
+	Entry.SetUserNoExecute(TRUE);
+	Entry.SetKernelNoExecute(TRUE);
+
+	/* Yuck. But we need to make page permissions less bad...*/
+	UINT64 PagePermission = 0x1 << 6;
+	Entry.SetPagePermissions(PagePermission);
+
+	Entry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
+	Entry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
+	Entry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
+
+	pantheon::ScopedLock _L(this->MyProc());
+	this->MyProc()->MapAddress(this->LocalRegion, pantheon::PageAllocator::Alloc(), Entry);
+}

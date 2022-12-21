@@ -95,6 +95,7 @@ public:
 
 	static const constexpr UINT64 StackPages = 16;
 	static const constexpr pantheon::vmm::VirtualAddress StackAddr = 0xFFFFFFFFF000;
+	static const constexpr pantheon::vmm::VirtualAddress ThreadLocalBase = 0xFFFFFF000000;
 
 	/**
 	 * @brief Obtains the process ID for this process

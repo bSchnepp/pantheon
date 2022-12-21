@@ -89,7 +89,6 @@ public:
 	void Initialize(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority, BOOL UserMode);
 
 	[[nodiscard]] Process *MyProc() const;
-
 	[[nodiscard]] Thread::State MyState() const;
 	[[nodiscard]] Thread::Priority MyPriority() const;
 
@@ -121,6 +120,7 @@ public:
 	void SetNext(pantheon::Thread *Item);
 
 	ThreadLocalRegion *GetThreadLocalArea();
+	VOID SetupThreadLocalArea();
 
 private:
 	VOID SetEntryLocation(UINT64 IP, UINT64 SP, VOID* ThreadData);

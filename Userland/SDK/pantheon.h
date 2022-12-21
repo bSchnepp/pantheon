@@ -24,4 +24,26 @@ extern "C" pantheon::Result svc_ReplyAndRecieve(UINT32 ContentSize, UINT32 *Repl
 extern "C" pantheon::Result svc_CloseHandle(INT32 Handle);
 extern "C" pantheon::Result svc_SendRequest(INT32 Handle);
 
+
+
+typedef struct ThreadLocalHeader
+{
+	UINT16 Meta;
+	UINT16 Cmd;
+	UINT32 ClientPID;
+}ThreadLocalHeader;
+
+typedef union ThreadLocalPayload
+{
+	UINT32 Data[1022];
+}ThreadLocalPayload;
+
+typedef struct ThreadLocalRegion
+{
+	ThreadLocalHeader Header;
+	ThreadLocalPayload Payload;
+}ThreadLocalRegion;
+
+ThreadLocalRegion *GetTLS(void);
+
 #endif
