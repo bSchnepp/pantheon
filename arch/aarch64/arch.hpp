@@ -8,6 +8,21 @@
 #ifndef _ARCH_HPP_
 #define _ARCH_HPP_
 
+namespace pantheon::ipc
+{
+	struct ThreadLocalRegion;
+
+	FORCE_INLINE ThreadLocalRegion *GetThreadLocalRegion()
+	{
+		return reinterpret_cast<ThreadLocalRegion*>(pantheon::CPUReg::R_TPIDRRO_EL0());
+	}
+
+	FORCE_INLINE void SetThreadLocalRegion(UINT64 Value)
+	{
+		pantheon::CPUReg::W_TPIDRRO_EL0(Value);
+	}
+}
+
 namespace pantheon
 {
 

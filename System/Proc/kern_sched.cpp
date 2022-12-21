@@ -111,6 +111,9 @@ void pantheon::Scheduler::Reschedule()
 	pantheon::CpuContext *OldContext = Old->GetRegisters();
 	pantheon::CpuContext *NewContext = New->GetRegisters();
 
+	/* Update the Thread Local Area register */
+	pantheon::ipc::SetThreadLocalRegion(New->GetThreadLocalAreaRegister());
+
 	/* TODO: Make this better */
 	pantheon::GlobalScheduler::AppendIntoReadyList(Old);
 	pantheon::GlobalScheduler::Unlock();

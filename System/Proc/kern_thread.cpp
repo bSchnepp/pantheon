@@ -83,7 +83,7 @@ pantheon::Thread::Thread(const pantheon::Thread &Other) : pantheon::Thread()
 	this->TID = Other.TID;
 	this->KernelStackSpace = Other.KernelStackSpace;
 	this->UserStackSpace = Other.UserStackSpace;
-	this->ThreadLocalArea = Other.ThreadLocalArea;
+	this->LocalRegion = Other.LocalRegion;
 	this->Unlock();
 }
 
@@ -99,7 +99,7 @@ pantheon::Thread::Thread(pantheon::Thread &&Other) noexcept : pantheon::Lockable
 	this->TID = Other.TID;
 	this->KernelStackSpace = Other.KernelStackSpace;
 	this->UserStackSpace = Other.UserStackSpace;
-	this->ThreadLocalArea = Other.ThreadLocalArea;
+	this->LocalRegion = Other.LocalRegion;
 	this->Unlock();
 }
 
@@ -427,7 +427,6 @@ void pantheon::Thread::Initialize(pantheon::Process *Proc, void *StartAddr, void
 		this->SetPriority(Priority);
 		this->Unlock();
 	}
-	this->ThreadLocalArea.Flags = Thread::LocalRegionFlag::FREE;
 }
 
 [[nodiscard]] BOOL pantheon::Thread::End() const
@@ -443,4 +442,13 @@ pantheon::Thread *pantheon::Thread::Next()
 void pantheon::Thread::SetNext(pantheon::Thread *Item)
 {
 	this->NextThread = Item;
+}
+
+pantheon::Thread::ThreadLocalRegion *pantheon::Thread::GetThreadLocalArea() 
+{
+	/* Assume Proc is locked */
+	pantheon::Process *Proc = this->ParentProcess;
+	pantheon::vmm::PhysicalAddress PhyAddr = pantheon::vmm::VirtualToPhysicalAddress(Proc->GetPageTable(), this->LocalRegion);
+	pantheon::vmm::VirtualAddress VirtAddr = pantheon::vmm::PhysicalToVirtualAddress(PhyAddr);
+	return reinterpret_cast<ThreadLocalRegion*>(VirtAddr);
 }
