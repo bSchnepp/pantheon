@@ -42,6 +42,42 @@ public:
 		return Optional<V>();
 	}
 
+	[[nodiscard]] Optional<K> MinKey() const
+	{
+		if (this->Head == nullptr)
+		{
+			return Optional<K>();
+		}
+
+		KVPair *Cur;
+		for (Cur = this->Head; Cur->Down != nullptr; Cur = Cur->Down) { }
+		return Optional<K>(Cur->Key);
+	}
+
+	[[nodiscard]] Optional<K> MaxKey() const
+	{
+		if (this->Head == nullptr)
+		{
+			return Optional<K>();
+		}
+
+		KVPair *Cur = this->Head;
+		while (Cur->Right || Cur->Down)
+		{
+			/* Go right as far as possible */
+			if (Cur->Right)
+			{
+				Cur = Cur->Right;
+			} else {
+				/* Go down if we have to*/
+				Cur = Cur->Down;
+			}
+		}
+
+		/* If neither, we found the max value. */
+		return Optional<K>(Cur->Key);
+	}
+
 	VOID Insert(K Key, V Value)
 	{
 		if (this->Head == nullptr)
