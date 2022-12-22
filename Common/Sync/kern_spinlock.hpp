@@ -15,6 +15,7 @@ public:
 
 	void Acquire();
 	void Release();
+	BOOL TryAcquire();
 
 	[[nodiscard]] UINT8 Holder() const;
 	[[nodiscard]] BOOL IsLocked() const;

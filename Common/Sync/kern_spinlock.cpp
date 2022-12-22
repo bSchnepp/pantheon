@@ -55,6 +55,30 @@ void pantheon::Spinlock::Acquire()
 	__sync_synchronize();
 }
 
+BOOL pantheon::Spinlock::TryAcquire()
+{
+	if (this->DebugName == nullptr)
+	{
+		StopError("bad spinlock", this);
+	}
+	
+	pantheon::CPU::PUSHI();
+	if (this->IsHolding())
+	{
+		StopError(this->DebugName, this);
+	}
+
+	if (__sync_lock_test_and_set(&this->Locked, TRUE) == FALSE)
+	{
+		this->CoreNo = pantheon::CPU::GetProcessorNumber();
+		__sync_synchronize();
+		return TRUE;
+	}
+	__sync_synchronize();
+	pantheon::CPU::POPI();
+	return FALSE;
+}
+
 void pantheon::Spinlock::Release()
 {
 	if (!this->IsHolding())
