@@ -21,40 +21,14 @@ pantheon::CPU::CoreInfo *pantheon::CPU::GetCoreInfo()
 	return &(PerCoreInfo[pantheon::CPU::GetProcessorNumber()]);
 }
 
-/**
- * \~english @brief Initializes a CoreInfo structure.
- * \~english @details Prepares a CoreInfo struct by initializing its
- * basic variables to an idle state, signalling that it is ready to have
- * a scheduler assigned to it to begin processing threads.
- * 
- * \~english @author Brian Schnepp
- */
-void pantheon::CPU::InitCoreInfo(UINT8 CoreNo)
-{
-	static pantheon::Scheduler Scheds[MAX_NUM_CPUS];
-	ClearBuffer((CHAR*)&PerCoreInfo[CoreNo], sizeof(pantheon::CPU::CoreInfo));
-	PerCoreInfo[CoreNo].CurSched = &Scheds[CoreNo];
-	(*PerCoreInfo[CoreNo].CurSched) = pantheon::Scheduler();
-}
-
 pantheon::Thread *pantheon::CPU::GetCurThread()
 {
-	pantheon::Scheduler *Sched = pantheon::CPU::GetCurSched();
-	if (Sched == nullptr)
-	{
-		return nullptr;
-	}
-	return Sched->MyThread();
+	return PerCoreInfo[pantheon::CPU::GetProcessorNumber()].CurThread;
 }
 
 pantheon::Process *pantheon::CPU::GetCurProcess()
 {
-	pantheon::Scheduler *Sched = pantheon::CPU::GetCurSched();
-	if (Sched == nullptr)
-	{
-		return nullptr;
-	}
-	pantheon::Thread *CurThread = Sched->MyThread();
+	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	if (CurThread)
 	{
 		return CurThread->MyProc();
@@ -62,9 +36,9 @@ pantheon::Process *pantheon::CPU::GetCurProcess()
 	return nullptr;
 }
 
-pantheon::Scheduler *pantheon::CPU::GetCurSched()
+UINT64 pantheon::CPU::GetJiffies()
 {
-	return pantheon::CPU::GetCoreInfo()->CurSched;
+	return pantheon::CPU::GetCoreInfo()->LocalJiffies;
 }
 
 pantheon::TrapFrame *pantheon::CPU::GetCurFrame()

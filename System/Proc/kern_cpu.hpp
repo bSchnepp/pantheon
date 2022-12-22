@@ -12,7 +12,7 @@ namespace pantheon
 
 class Thread;
 class Process;
-class Scheduler;
+class LocalScheduler;
 
 namespace CPU
 {
@@ -35,21 +35,23 @@ namespace CPU
  */
 typedef struct CoreInfo
 {
-	pantheon::Scheduler *CurSched;
+	pantheon::Thread *CurThread;
+	pantheon::Process *CurProcess;
 	pantheon::TrapFrame *CurFrame;
+	UINT64 LocalJiffies;
 	UINT64 NOff;
 	BOOL IntStatus;
 }CoreInfo;
 
-void InitCoreInfo(UINT8 CoreNo);
 CoreInfo *GetCoreInfo();
 
 UINT8 GetProcessorNumber();
 
 pantheon::Thread *GetCurThread();
 pantheon::Process *GetCurProcess();
-pantheon::Scheduler *GetCurSched();
 pantheon::TrapFrame *GetCurFrame();
+
+UINT64 GetJiffies();
 
 VOID PUSHI();
 VOID POPI();

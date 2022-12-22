@@ -5,10 +5,13 @@
 #include <kern_container.hpp>
 
 #include <Sync/kern_atomic.hpp>
+#include <Sync/kern_lockable.hpp>
 #include <System/Proc/kern_proc.hpp>
 
 #include <Common/Sync/kern_lockable.hpp>
 #include <Common/Structures/kern_slab.hpp>
+
+#include <Common/Structures/kern_skiplist.hpp>
 #include <Common/Structures/kern_linkedlist.hpp>
 
 #ifndef _KERN_SCHED_HPP_
@@ -17,45 +20,51 @@
 namespace pantheon
 {
 
-class Scheduler
+class LocalScheduler : public pantheon::Lockable
 {
 
 public:
-	Scheduler();
-	~Scheduler();
+	LocalScheduler();
+	~LocalScheduler() override = default;
+	UINT64 CountThreads(UINT64 PID);
 
-	void Reschedule();
-	Process *MyProc();
-	Thread *MyThread();
+	[[nodiscard]] UINT64 BusyRatio() const { return this->Threads.Size() / this->LocalRunQueue.Size(); }
+
+	pantheon::Thread *AcquireThread();
+	void InsertThread(pantheon::Thread *Thr);
 
 private:
 	VOID PerformCpuSwitch(pantheon::CpuContext *Old, pantheon::CpuContext *New);
-	Thread *CurThread;
-	Thread *IdleThread;
+	pantheon::SkipList<UINT64, pantheon::Thread*> LocalRunQueue;
+	pantheon::LinkedList<pantheon::Thread> Threads;
 };
 
-namespace GlobalScheduler
+namespace Scheduler
 {
-	void Init();
+	BOOL RunProcess(UINT32 PID);
+	BOOL SetState(UINT32 PID, pantheon::Process::State State);
+	BOOL MapPages(UINT32 PID, const pantheon::vmm::VirtualAddress *VAddresses, const pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages);
 
 	UINT32 CreateProcess(const pantheon::String &ProcStr, void *StartAddr);
 	pantheon::Thread *CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
 
 	UINT64 CountThreads(UINT64 PID);
 
-	BOOL RunProcess(UINT32 PID);
-	BOOL SetState(UINT32 PID, pantheon::Process::State State);
-	BOOL MapPages(UINT32 PID, pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages);
-
 	void Lock();
 	void Unlock();
+	void Reschedule();
+
+	UINT32 AcquireProcessID();
+	UINT64 AcquireThreadID();
+
+	void AttemptReschedule();
 };
 
 class ScopedGlobalSchedulerLock
 {
 public:
-	FORCE_INLINE ScopedGlobalSchedulerLock() { pantheon::GlobalScheduler::Lock(); }
-	FORCE_INLINE ~ScopedGlobalSchedulerLock() { pantheon::GlobalScheduler::Unlock(); }	
+	FORCE_INLINE ScopedGlobalSchedulerLock() { pantheon::Scheduler::Lock(); }
+	FORCE_INLINE ~ScopedGlobalSchedulerLock() { pantheon::Scheduler::Unlock(); }	
 };
 
 class ScopedLocalSchedulerLock
@@ -64,11 +73,6 @@ public:
 	FORCE_INLINE ScopedLocalSchedulerLock() { pantheon::CPU::GetCurThread()->BlockScheduling(); }
 	FORCE_INLINE ~ScopedLocalSchedulerLock() { pantheon::CPU::GetCurThread()->EnableScheduling(); }	
 };
-
-UINT32 AcquireProcessID();
-UINT64 AcquireThreadID();
-
-void AttemptReschedule();
 
 }
 

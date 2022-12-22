@@ -64,7 +64,7 @@ pantheon::Thread::Thread(Process *OwningProcess, Priority Pri) : pantheon::Locka
 	this->Registers.Wipe();
 	this->CurState = pantheon::Thread::STATE_INIT;
 
-	this->TID = AcquireThreadID();
+	this->TID = pantheon::Scheduler::AcquireThreadID();
 
 	/* 45 for NORMAL, 30 for LOW, 15 for VERYLOW, etc. */
 	this->RefreshTicks();

@@ -35,7 +35,6 @@ static void kern_basic_init(InitialBootInfo *InitBootInfo)
 	pantheon::ipc::ServerPort::Init();
 	pantheon::ipc::ClientPort::Init();
 	pantheon::ipc::Connection::Init();
-	pantheon::GlobalScheduler::Init();
 }
 
 static void kern_stage2_init()
@@ -53,7 +52,6 @@ extern "C" void kern_init_core()
 		/* Loop until core 0 finished essential kernel setup */
 	}
 
-	pantheon::CPU::InitCoreInfo(CpuNo);
 	PerCoreInit();
 
 	while (pantheon::GetKernelStatus() < pantheon::KERNEL_STATUS_OK)
@@ -69,8 +67,7 @@ extern "C" void kern_init_core()
 	{
 		if (CpuNo == 0)
 		{
-			/* There's a few more races to deal with before enabling all-core scheduling */
-			pantheon::CPU::GetCurSched()->Reschedule();
+			pantheon::Scheduler::Reschedule();
 		}
 	}
 }

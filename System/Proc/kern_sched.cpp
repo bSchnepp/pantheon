@@ -15,160 +15,93 @@
 #include <System/Proc/kern_thread.hpp>
 #include <System/Memory/kern_alloc.hpp>
 
+#include <Common/Structures/kern_optional.hpp>
 #include <Common/Structures/kern_skiplist.hpp>
 #include <Common/Structures/kern_linkedlist.hpp>
 
-#ifndef ONLY_TESTING
-extern "C" CHAR *USER_BEGIN;
-extern "C" CHAR *USER_END;
-#else
-static UINT64 USER_BEGIN = 0;
-static UINT64 USER_END = 0;
-#endif
-
 /**
  * @file Common/Proc/kern_sched.cpp
- * \~english @brief Definitions for basic kernel scheduling data structures and
- * algorithms. The pantheon kernel implements a basic round-robin style scheduling
- * algorithm based on tick counts and a list of threads.
+ * \~english @brief Definitions for basic kernel scheduling data structures and algorithms.
  * \~english @author Brian Schnepp
  */
-
-
-
-namespace pantheon::GlobalScheduler
-{
-	pantheon::Atomic<BOOL> Okay;
-	pantheon::Spinlock AccessSpinlock;
-
-	pantheon::LinkedList<pantheon::Process> ProcessList;
-	pantheon::LinkedList<pantheon::Thread> ThreadList;
-
-	pantheon::Thread *ReadyHead;
-	pantheon::Thread *ReadyTail;
-
-	pantheon::Thread *CreateProcessorIdleThread();	
-
-	pantheon::Thread *CreateUserThread(UINT32 PID, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
-	pantheon::Thread *CreateUserThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
-	pantheon::Thread *CreateUserThreadCommon(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority);
-
-	void AppendIntoReadyList(pantheon::Thread *Next);
-	pantheon::Thread *PopFromReadyList();
-}
-
 
 
 /**
  * \~english @brief Initalizes an instance of a per-core scheduler.
  * \~english @author Brian Schnepp
  */
-pantheon::Scheduler::Scheduler()
+pantheon::LocalScheduler::LocalScheduler() : pantheon::Lockable("Scheduler")
 {
-	this->IdleThread = pantheon::GlobalScheduler::CreateProcessorIdleThread();
-	this->CurThread = this->IdleThread;	
 }
 
-pantheon::Scheduler::~Scheduler()
-{
-
-}
-
+/* Provided by the arch/ subdir. These differ between hardware platforms. */
 extern "C" void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New, UINT64 RegOffset);
+extern "C" VOID drop_usermode(UINT64 PC, UINT64 PSTATE, UINT64 SP);
+
+
+UINT64 pantheon::LocalScheduler::CountThreads(UINT64 PID)
+{
+	UINT64 Res = 0;
+	pantheon::ScopedLock _L(this);
+	for (const auto &Item : this->Threads)
+	{
+		Res += 1ULL * (Item.MyProc()->ProcessID() == PID);
+	}
+	return Res;
+}
+
+pantheon::Thread *pantheon::LocalScheduler::AcquireThread()
+{
+	pantheon::ScopedLock _L(this);
+	Optional<UINT64> LowestKey = this->LocalRunQueue.MinKey();
+	if (!LowestKey.GetOkay())
+	{
+		return nullptr;
+	}
+
+	Optional<pantheon::Thread*> Lowest = this->LocalRunQueue.Get(LowestKey.GetValue());
+	if (!Lowest.GetOkay())
+	{
+		return nullptr;
+	}
+
+	this->LocalRunQueue.Delete(LowestKey.GetValue());
+	return Lowest.GetValue();
+
+}
+
+static UINT64 CalculateDeadline(UINT64 Jiffies, UINT64 PrioRatio, UINT64 RRInterval)
+{
+	return Jiffies + (PrioRatio * RRInterval);
+}
 
 /**
- * \~english @brief Changes the current thread of this core.
- * \~english @details Forcefully changes the current thread by iterating to
- * the next thread in the list of threads belonging to this core. The active
- * count for the current thread is set to zero, and the new thread is run until
- * either the core is forcefully rescheduled, or the timer indicates the current
- * thread should quit.
- * 
- * \~english @author Brian Schnepp
+ * \~english @brief Inserts a thread for this local scheduler
+ * \~english @param Thr The thread object to insert. Must be locked before calling.
  */
-void pantheon::Scheduler::Reschedule()
+void pantheon::LocalScheduler::InsertThread(pantheon::Thread *Thr)
 {
-	OBJECT_SELF_ASSERT();
-	/* Interrupts must be enabled before we can do anything. */
-	if (pantheon::CPU::ICOUNT())
+	pantheon::ScopedLock _L(this);
+	this->Threads.PushFront(Thr);
+	if (Thr->MyState() == pantheon::Thread::STATE_WAITING)
 	{
-		return;
+		UINT64 Jiffies = pantheon::CPU::GetJiffies();
+		UINT64 Prio = pantheon::Thread::PRIORITY_MAX - Thr->MyPriority();
+		this->LocalRunQueue.Insert(CalculateDeadline(Jiffies, Prio, 6), Thr);
 	}
-
-	GlobalScheduler::Lock();
-	pantheon::Thread *Old = this->CurThread;
-	pantheon::Thread *New = GlobalScheduler::PopFromReadyList();
-
-	/* If there is no next, just do the idle thread. */
-	if (New == nullptr)
-	{
-		New = this->IdleThread;
-	}
-
-	/* Don't bother trying to switching threads if we don't have to. */
-	New->Lock();
-	if (New == Old)
-	{
-		New->Unlock();
-		pantheon::GlobalScheduler::Unlock();
-		return;
-	}
-
-	Old->Lock();
-	/* If it's not currently waiting, definitely don't. */
-	if (New->MyState() != pantheon::Thread::STATE_WAITING)
-	{
-		New->Unlock();
-		Old->Unlock();
-		pantheon::GlobalScheduler::Unlock();
-		return;
-	}
-
-	pantheon::ScopedLocalSchedulerLock _L;
-	Old->SetState(pantheon::Thread::STATE_WAITING);
-	Old->RefreshTicks();
-
-
-	pantheon::Process *NewProc = New->MyProc();
-	pantheon::Process::Switch(NewProc);
-	this->CurThread = New;
-	this->CurThread->SetState(pantheon::Thread::STATE_RUNNING);
-
-	pantheon::CpuContext *OldContext = Old->GetRegisters();
-	pantheon::CpuContext *NewContext = New->GetRegisters();
-
-	/* Update the Thread Local Area register */
-	pantheon::ipc::SetThreadLocalRegion(New->GetThreadLocalAreaRegister());
-
-	/* TODO: Make this better */
-	pantheon::GlobalScheduler::AppendIntoReadyList(Old);
-	pantheon::GlobalScheduler::Unlock();
-
-	Old->Unlock();
-	New->Unlock();
-
-	pantheon::Sync::DSBISH();
-	pantheon::Sync::ISB();
-	cpu_switch(OldContext, NewContext, CpuIRegOffset);
 }
 
-pantheon::Process *pantheon::Scheduler::MyProc()
+pantheon::Spinlock SchedLock("Global Scheduler Lock");
+
+void pantheon::Scheduler::Lock()
 {
-	OBJECT_SELF_ASSERT();
-	if (this->CurThread)
-	{
-		return this->CurThread->MyProc();
-	}
-	return nullptr;
+	SchedLock.Acquire();
 }
 
-pantheon::Thread *pantheon::Scheduler::MyThread()
+void pantheon::Scheduler::Unlock()
 {
-	OBJECT_SELF_ASSERT();
-	return this->CurThread;
+	SchedLock.Release();
 }
-
-extern "C" VOID drop_usermode(UINT64 PC, UINT64 PSTATE, UINT64 SP);
 
 /**
  * \~english @brief Creates a process, visible globally, from a name and address.
@@ -182,151 +115,31 @@ extern "C" VOID drop_usermode(UINT64 PC, UINT64 PSTATE, UINT64 SP);
  * \~english @return TRUE is the process was sucessfully created, false otherwise.
  * \~english @author Brian Schnepp
  */
-UINT32 pantheon::GlobalScheduler::CreateProcess(const pantheon::String &ProcStr, void *StartAddr)
+UINT32 pantheon::Scheduler::CreateProcess(const pantheon::String &ProcStr, void *StartAddr)
 {
-	pantheon::ScopedGlobalSchedulerLock _L;
-	
-	pantheon::Process *NewProc = Process::Create();
-	pantheon::ProcessCreateInfo Info = {};
-	Info.Name = ProcStr;
-	Info.EntryPoint = (pantheon::vmm::VirtualAddress)StartAddr;
-
-	if (NewProc == nullptr)
-	{
-		return 0;
-	}
-
-	UINT32 Result = 0;
-	{
-		pantheon::ScopedLock _LL(NewProc);
-		NewProc->Initialize(Info);
-		Result = NewProc->ProcessID();
-	}
-
-	GlobalScheduler::ProcessList.PushFront(NewProc);
-
-	if (NewProc != GlobalScheduler::ProcessList.Front())
-	{
-		StopError("NewProc was not front.");
-	}
-
-	return Result;
+	PANTHEON_UNUSED(ProcStr);
+	PANTHEON_UNUSED(StartAddr);
+	return 0;
 }
 
-pantheon::Thread *pantheon::GlobalScheduler::CreateUserThreadCommon(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority)
+pantheon::Thread *pantheon::Scheduler::CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority)
 {
-	pantheon::Thread *T = pantheon::Thread::Create();
-	T->Initialize(Proc, StartAddr, ThreadData, Priority, TRUE);
-	T->SetupThreadLocalArea();
-	GlobalScheduler::ThreadList.PushFront(T);
-	GlobalScheduler::AppendIntoReadyList(T);
-	return GlobalScheduler::ThreadList.Front();
-}
-
-pantheon::Thread *pantheon::GlobalScheduler::CreateUserThread(UINT32 PID, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority)
-{
-	pantheon::ScopedGlobalSchedulerLock _L;
-
-	pantheon::Process *SelProc = nullptr;
-	for (pantheon::Process &Proc : GlobalScheduler::ProcessList)
-	{
-		if (Proc.ProcessID() == PID)
-		{
-			SelProc = &Proc;
-			break;
-		}
-	}
-
-	pantheon::Thread *Result = nullptr;
-	if (SelProc)
-	{
-		Result = GlobalScheduler::CreateUserThreadCommon(SelProc, StartAddr, ThreadData, Priority);
-	}
-	return Result;
-}
-
-pantheon::Thread *pantheon::GlobalScheduler::CreateUserThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority)
-{
-	pantheon::ScopedGlobalSchedulerLock _L;
-	pantheon::Thread *Result = pantheon::GlobalScheduler::CreateUserThreadCommon(Proc, StartAddr, ThreadData, Priority);
-	return Result;
-}
-
-pantheon::Thread *pantheon::GlobalScheduler::CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority)
-{
-	/* Assert that AccessSpinlock is locked. */
-	if (GlobalScheduler::AccessSpinlock.IsLocked() == FALSE)
-	{
-		StopError("CreateThread without AccessSpinlock");
-	}
-
-	pantheon::Thread *T = pantheon::Thread::Create();
-	T->Initialize(Proc, StartAddr, ThreadData, Priority, FALSE);
-	GlobalScheduler::ThreadList.PushFront(T);
-	GlobalScheduler::AppendIntoReadyList(T);
-	return GlobalScheduler::ThreadList.Front();
-}
-
-void pantheon::GlobalScheduler::Lock()
-{
-	AccessSpinlock.Acquire();
-}
-
-void pantheon::GlobalScheduler::Unlock()
-{
-	AccessSpinlock.Release();
-}
-
-static pantheon::Process IdleProc;
-VOID pantheon::GlobalScheduler::Init()
-{
-	IdleProc = pantheon::Process();
-
-	GlobalScheduler::ReadyHead = nullptr;
-	GlobalScheduler::ReadyTail = nullptr;
-
-	GlobalScheduler::ThreadList = LinkedList<Thread>();
-	GlobalScheduler::ProcessList = LinkedList<Process>();
-
-	GlobalScheduler::AccessSpinlock = Spinlock("access_spinlock");
-	GlobalScheduler::ProcessList.PushFront(&IdleProc);
-	GlobalScheduler::Okay.Store(TRUE);
-}
-
-pantheon::Thread *pantheon::GlobalScheduler::CreateProcessorIdleThread()
-{
-	while (!GlobalScheduler::Okay.Load()){}
-
-	for (pantheon::Process &Proc : GlobalScheduler::ProcessList)
-	{
-		if (Proc.ProcessID() == 0)
-		{
-			/* Note the idle thread needs to have no meaningful data: it gets smashed on startup.  */
-			pantheon::Thread *CurThread = Thread::Create();
-			CurThread->Initialize(&Proc, nullptr, nullptr, pantheon::Thread::PRIORITY_VERYLOW, FALSE);
-			return CurThread;
-		}
-	}
-	GlobalScheduler::AccessSpinlock.Release();
+	PANTHEON_UNUSED(Proc);
+	PANTHEON_UNUSED(StartAddr);
+	PANTHEON_UNUSED(ThreadData);
+	PANTHEON_UNUSED(Priority);
 	return nullptr;
 }
 
-UINT64 pantheon::GlobalScheduler::CountThreads(UINT64 PID)
+
+UINT64 pantheon::Scheduler::CountThreads(UINT64 PID)
 {
 	UINT64 Count = 0;
-	pantheon::GlobalScheduler::Lock();
-	for (const pantheon::Thread &T : GlobalScheduler::ThreadList)
-	{
-		if (T.MyProc()->ProcessID() == PID)
-		{
-			Count++;
-		}
-	}
-	pantheon::GlobalScheduler::Unlock();
+	PANTHEON_UNUSED(PID);
 	return Count;
 }
 
-UINT32 pantheon::AcquireProcessID()
+UINT32 pantheon::Scheduler::AcquireProcessID()
 {
 	/* TODO: When we run out of IDs, go back and ensure we don't
 	 * reuse an ID already in use!
@@ -339,7 +152,7 @@ UINT32 pantheon::AcquireProcessID()
 	return RetVal;
 }
 
-UINT64 pantheon::AcquireThreadID()
+UINT64 pantheon::Scheduler::AcquireThreadID()
 {
 	/* TODO: When we run out of IDs, go back and ensure we don't
 	 * reuse an ID already in use!
@@ -351,9 +164,23 @@ UINT64 pantheon::AcquireThreadID()
 	return RetVal;
 }
 
-void pantheon::AttemptReschedule()
+/**
+ * \~english @brief Changes the current thread of this core.
+ * \~english @details Forcefully changes the current thread by iterating to
+ * the next thread in the list of threads belonging to this core. The active
+ * count for the current thread is set to zero, and the new thread is run until
+ * either the core is forcefully rescheduled, or the timer indicates the current
+ * thread should quit.
+ * 
+ * \~english @author Brian Schnepp
+ */
+void pantheon::Scheduler::Reschedule()
 {
-	pantheon::Scheduler *CurSched = pantheon::CPU::GetCurSched();
+
+}
+
+void pantheon::Scheduler::AttemptReschedule()
+{
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 
 	if (CurThread)
@@ -377,7 +204,7 @@ void pantheon::AttemptReschedule()
 			StopError("Interrupts not allowed for reschedule");
 		}
 
-		CurSched->Reschedule();
+		pantheon::Scheduler::Reschedule();
 	}
 }
 
@@ -386,117 +213,28 @@ extern "C" VOID FinishThread()
 	pantheon::CPU::GetCurThread()->EnableScheduling();
 }
 
-BOOL pantheon::GlobalScheduler::MapPages(UINT32 PID, pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages)
+BOOL pantheon::Scheduler::MapPages(UINT32 PID, const pantheon::vmm::VirtualAddress *VAddresses, const pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages)
 {
 	BOOL Success = FALSE;
-	pantheon::GlobalScheduler::Lock();
-	for (pantheon::Process &Proc : GlobalScheduler::ProcessList)
-	{
-		if (Proc.ProcessID() == PID)
-		{
-			pantheon::ScopedLock L(&Proc);
-			for (UINT64 Index = 0; Index < NumPages; ++Index)
-			{
-				Proc.MapAddress(VAddresses[Index], PAddresses[Index], PageAttributes);
-			}
-			Success = TRUE;
-			break;
-		}
-	}
-	pantheon::GlobalScheduler::Unlock();
+	PANTHEON_UNUSED(PID);
+	PANTHEON_UNUSED(VAddresses);
+	PANTHEON_UNUSED(PAddresses);
+	PANTHEON_UNUSED(PageAttributes);
+	PANTHEON_UNUSED(NumPages);
 	return Success;
 }
 
-BOOL pantheon::GlobalScheduler::RunProcess(UINT32 PID)
+BOOL pantheon::Scheduler::RunProcess(UINT32 PID)
 {
 	BOOL Success = FALSE;
-	pantheon::vmm::VirtualAddress Entry = 0x00;
-	pantheon::GlobalScheduler::Lock();
-	for (pantheon::Process &Proc : GlobalScheduler::ProcessList)
-	{
-		if (Proc.ProcessID() == PID)
-		{
-			Proc.Lock();
-			Proc.SetState(pantheon::Process::STATE_RUNNING);
-			Entry = Proc.GetEntryPoint();
-			Success = TRUE;
-			Proc.Unlock();
-			break;
-		}
-	}
-	pantheon::GlobalScheduler::Unlock();
-
-	if (Success)
-	{
-		pantheon::GlobalScheduler::CreateUserThread(PID, (void*)(Entry), nullptr);
-	}
+	PANTHEON_UNUSED(PID);
 	return Success;	
 }
 
-BOOL pantheon::GlobalScheduler::SetState(UINT32 PID, pantheon::Process::State State)
+BOOL pantheon::Scheduler::SetState(UINT32 PID, pantheon::Process::State State)
 {
 	BOOL Success = FALSE;
-	pantheon::GlobalScheduler::Lock();
-	for (pantheon::Process &Proc : GlobalScheduler::ProcessList)
-	{
-		if (Proc.ProcessID() == PID)
-		{
-			Proc.Lock();
-			Proc.SetState(State);
-			Success = TRUE;
-			Proc.Unlock();
-			break;
-		}
-	}
-	pantheon::GlobalScheduler::Unlock();
+	PANTHEON_UNUSED(PID);
+	PANTHEON_UNUSED(State);
 	return Success;	
-}
-
-void pantheon::GlobalScheduler::AppendIntoReadyList(pantheon::Thread *Next)
-{
-	/* Make sure we're locked before doing this... */
-	if (GlobalScheduler::AccessSpinlock.IsLocked() == FALSE)
-	{
-		StopError("Appending into readylist while not locked");
-	}
-
-	/* If this thread is null for whatever reason, don't bother. */
-	if (Next == nullptr)
-	{
-		return;
-	}
-
-	if (GlobalScheduler::ReadyTail)
-	{
-		GlobalScheduler::ReadyTail->SetNext(Next);
-		GlobalScheduler::ReadyTail = Next;
-	}
-	else
-	{
-		/* Only possible if the queue really is empty. */
-		GlobalScheduler::ReadyTail = Next;
-		GlobalScheduler::ReadyHead = Next;
-	}
-	GlobalScheduler::ReadyTail->SetNext(nullptr);
-}
-
-pantheon::Thread *pantheon::GlobalScheduler::PopFromReadyList()
-{
-	/* Make sure we're locked before doing this... */
-	if (GlobalScheduler::AccessSpinlock.IsLocked() == FALSE)
-	{
-		StopError("Poping from readylist while not locked");
-	}
-
-	pantheon::Thread *Head = GlobalScheduler::ReadyHead;
-	if (Head)
-	{
-		GlobalScheduler::ReadyHead = GlobalScheduler::ReadyHead->Next();
-	}
-
-	if (GlobalScheduler::ReadyHead == nullptr)
-	{
-		GlobalScheduler::ReadyTail = nullptr;
-	}
-	return Head;
 }

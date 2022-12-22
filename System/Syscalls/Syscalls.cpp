@@ -103,7 +103,7 @@ VOID pantheon::SVCExitProcess(pantheon::TrapFrame *CurFrame)
 	CurThread->SetState(pantheon::Thread::STATE_DEAD);
 	CurThread->Unlock();
 	
-	pantheon::CPU::GetCoreInfo()->CurSched->Reschedule();
+	pantheon::Scheduler::Reschedule();
 }
 
 pantheon::Result pantheon::SVCForkProcess(pantheon::TrapFrame *CurFrame)
@@ -354,13 +354,12 @@ pantheon::Result pantheon::SVCPollEvent(pantheon::TrapFrame *CurFrame)
 pantheon::Result pantheon::SVCYield(pantheon::TrapFrame *CurFrame)
 {
 	PANTHEON_UNUSED(CurFrame);
-	pantheon::Scheduler *CurSched = pantheon::CPU::GetCurSched();
 	{
 		pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 		pantheon::ScopedLock ScopeLockThread(CurThread);
 		CurThread->SetTicks(0);
 	}
-	CurSched->Reschedule();
+	pantheon::Scheduler::Reschedule();
 	return pantheon::Result::SYS_OK;
 }
 
@@ -369,18 +368,17 @@ pantheon::Result pantheon::SVCExitThread(pantheon::TrapFrame *CurFrame)
 	PANTHEON_UNUSED(CurFrame);
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	pantheon::Process *CurProc = CurThread->MyProc();
-	pantheon::Scheduler *CurSched = pantheon::CPU::GetCurSched();
 	CurProc->Lock();
 	CurThread->Lock();
 	CurThread->SetState(pantheon::Thread::STATE_TERMINATED);
 	CurThread->Unlock();
 
-	if (pantheon::GlobalScheduler::CountThreads(CurThread->MyProc()->ProcessID()) == 0)
+	if (pantheon::Scheduler::CountThreads(CurThread->MyProc()->ProcessID()) == 0)
 	{
 		CurProc->SetState(pantheon::Process::STATE_ZOMBIE);
 	}
 	CurProc->Unlock();
-	CurSched->Reschedule();
+	pantheon::Scheduler::Reschedule();
 	return pantheon::Result::SYS_OK;
 }
 

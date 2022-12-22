@@ -33,7 +33,7 @@ public:
 		while (Cur)
 		{
 			for (; Cur->Next && Cur->Next->Key < Key; Cur = Cur->Next) { }
-			if (Cur->Next && Cur->Cur->Next->Key == Key)
+			if (Cur->Next && Cur->Next->Key == Key)
 			{
 				return Optional<V>(Cur->Value);
 			}
@@ -83,7 +83,10 @@ public:
 		if (this->Head == nullptr)
 		{
 			this->Head = KVPair::Create();
-			*this->Head = {Key, Value, nullptr, nullptr};
+			this->Head->Key = Key;
+			this->Head->Value = Value;
+			this->Head->Next = nullptr;
+			this->Head->Down = nullptr;
 			return;	
 		}
 
@@ -106,7 +109,11 @@ public:
 		for (UINT64 Index = 0; Index < Level; Index++)
 		{
 			KVPair *Node = KVPair::Create();
-			*Node = KVPair(Key, Value, Cur->Next, nullptr);
+			Node->Key = Key;
+			Node->Value = Value;
+			Node->Next = Cur->Next;
+			Node->Down = nullptr;
+
 			Cur->Next = Node;
 
 			if (Index < Level - 1)
@@ -115,7 +122,7 @@ public:
 				Cur = Head;
 			}
 		}
-		this->Size++;
+		this->Sz++;
 	}
 
 	BOOL Delete(K Key)
@@ -137,7 +144,7 @@ public:
 			{
 				Prev->Next = Cur->Next;
 				KVPair::Destroy(Cur);
-				this->Size--;
+				this->Sz--;
 				return TRUE;
 			}
 		}
@@ -159,7 +166,7 @@ private:
 
 	UINT64 RandLevel()
 	{
-		int Level = 1;
+		UINT64 Level = 1;
 
 		/* Rand() generates a 64-bit number.
 		 * The probability of any one bit in particular being 0 or 1

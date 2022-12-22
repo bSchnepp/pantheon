@@ -76,8 +76,11 @@ extern "C" void irq_handler_el1(pantheon::TrapFrame *Frame)
 	pantheon::arm::GICAckInterrupt(IAR);
 	if ((IAR & 0x3FF) == 30)
 	{
+		pantheon::CPU::CoreInfo *CoreInfo = pantheon::CPU::GetCoreInfo();
+		CoreInfo->LocalJiffies++;
+
 		pantheon::arm::RearmSystemTimer();
-		pantheon::AttemptReschedule();
+		pantheon::Scheduler::AttemptReschedule();
 	}
 	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
