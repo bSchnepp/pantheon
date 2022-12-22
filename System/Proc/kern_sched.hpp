@@ -33,43 +33,29 @@ private:
 	Thread *IdleThread;
 };
 
-class GlobalScheduler
+namespace GlobalScheduler
 {
-public:
-	static void Init();
+	void Init();
 
-	static UINT32 CreateProcess(const pantheon::String &ProcStr, void *StartAddr);
-	static pantheon::Thread *CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
+	UINT32 CreateProcess(const pantheon::String &ProcStr, void *StartAddr);
+	pantheon::Thread *CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
 
-	static pantheon::Thread *CreateUserThread(UINT32 PID, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
-	static pantheon::Thread *CreateUserThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
+	pantheon::Thread *CreateUserThread(UINT32 PID, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
+	pantheon::Thread *CreateUserThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
 
-	static UINT64 CountThreads(UINT64 PID);
-	static pantheon::Thread *CreateProcessorIdleThread();
+	UINT64 CountThreads(UINT64 PID);
+	pantheon::Thread *CreateProcessorIdleThread();
 
-	static BOOL RunProcess(UINT32 PID);
-	static BOOL SetState(UINT32 PID, pantheon::Process::State State);
-	static BOOL MapPages(UINT32 PID, pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages);
+	BOOL RunProcess(UINT32 PID);
+	BOOL SetState(UINT32 PID, pantheon::Process::State State);
+	BOOL MapPages(UINT32 PID, pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages);
 
-	static void AppendIntoReadyList(pantheon::Thread *Next);
-	static pantheon::Thread *PopFromReadyList();
+	void AppendIntoReadyList(pantheon::Thread *Next);
+	pantheon::Thread *PopFromReadyList();
 
 	/* TODO: Inherit from Lockable... */
-	static void Lock();
-	static void Unlock();
-
-private:
-	static Atomic<BOOL> Okay;
-	static Spinlock AccessSpinlock;
-
-	static LinkedList<Process> ProcessList;
-	static LinkedList<Thread> ThreadList;
-
-	static Thread *ReadyHead;
-	static Thread *ReadyTail;	
-
-private:
-	static Thread *CreateUserThreadCommon(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority);
+	void Lock();
+	void Unlock();
 };
 
 class ScopedGlobalSchedulerLock

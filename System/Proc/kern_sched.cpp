@@ -145,6 +145,20 @@ pantheon::Thread *pantheon::Scheduler::MyThread()
 
 extern "C" VOID drop_usermode(UINT64 PC, UINT64 PSTATE, UINT64 SP);
 
+namespace pantheon::GlobalScheduler
+{
+	pantheon::Atomic<BOOL> Okay;
+	pantheon::Spinlock AccessSpinlock;
+
+	pantheon::LinkedList<pantheon::Process> ProcessList;
+	pantheon::LinkedList<pantheon::Thread> ThreadList;
+
+	pantheon::Thread *ReadyHead;
+	pantheon::Thread *ReadyTail;	
+
+	pantheon::Thread *CreateUserThreadCommon(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority);
+}
+
 /**
  * \~english @brief Creates a process, visible globally, from a name and address.
  * \~english @details A process is created, such that it can be run on any
@@ -251,15 +265,6 @@ void pantheon::GlobalScheduler::Unlock()
 {
 	AccessSpinlock.Release();
 }
-
-pantheon::Atomic<BOOL> pantheon::GlobalScheduler::Okay;
-pantheon::Spinlock pantheon::GlobalScheduler::AccessSpinlock;
-
-pantheon::LinkedList<pantheon::Process> pantheon::GlobalScheduler::ProcessList;
-pantheon::LinkedList<pantheon::Thread> pantheon::GlobalScheduler::ThreadList;
-
-pantheon::Thread *pantheon::GlobalScheduler::ReadyHead;
-pantheon::Thread *pantheon::GlobalScheduler::ReadyTail;
 
 static pantheon::Process IdleProc;
 VOID pantheon::GlobalScheduler::Init()
