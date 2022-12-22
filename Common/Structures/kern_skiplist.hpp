@@ -1,0 +1,143 @@
+#include <kern_rand.hpp>
+#include <kern_datatypes.hpp>
+
+#include <Common/Structures/kern_optional.hpp>
+#include <Common/Structures/kern_allocatable.hpp>
+
+#ifndef _KERN_SKIPLIST_HPP_
+#define _KERN_SKIPLIST_HPP_
+
+namespace pantheon
+{
+
+template <typename K, typename V>
+class SkipList
+{
+public:
+	SkipList(UINT64 MaxLvl = 8) : Head(nullptr), MaxLevel(MaxLvl), Sz(0) {}
+	~SkipList() = default;
+
+	[[nodiscard]] UINT64 Size() const
+	{
+		return this->Sz;
+	}
+
+	[[nodiscard]] BOOL Contains(K Key) const
+	{
+		return this->Get(Key).GetOkay();
+	}
+
+	[[nodiscard]] Optional<V> Get(K Key) const
+	{
+		KVPair *Cur = this->Head;
+		while (Cur)
+		{
+			for (; Cur->Next && Cur->Next->Key < Key; Cur = Cur->Next) { }
+			if (Cur->Next && Cur->Cur->Next->Key == Key)
+			{
+				return Optional<V>(Cur->Value);
+			}
+			Cur = Cur->Down;
+		}
+		return Optional<V>();
+	}
+
+	VOID Insert(K Key, V Value)
+	{
+		if (this->Head == nullptr)
+		{
+			this->Head = KVPair::Create();
+			*this->Head = {Key, Value, nullptr, nullptr};
+			return;	
+		}
+
+		KVPair *Cur = this->Head;
+		KVPair *Prev = nullptr;
+
+		/* Iterate to the bottom */
+		while (Cur)
+		{
+			for (; Cur->Next && Cur->Next->Key < Key; Cur = Cur->Next) { }
+			Prev = Cur;
+			Cur = Cur->Down;
+		}
+
+		/* Put a new node at the bottom */
+		Cur = Prev;
+		UINT64 Level = this->RandLevel();
+
+		/* At every level, create a new KVPair */
+		for (UINT64 Index = 0; Index < Level; Index++)
+		{
+			KVPair *Node = KVPair::Create();
+			*Node = KVPair(Key, Value, Cur->Next, nullptr);
+			Cur->Next = Node;
+
+			if (Index < Level - 1)
+			{
+				Head = Node;
+				Cur = Head;
+			}
+		}
+		this->Size++;
+	}
+
+	BOOL Delete(K Key)
+	{
+		if (this->Head == nullptr)
+		{
+			return FALSE;
+		}
+
+		KVPair *Cur = this->Head;
+		KVPair *Prev = nullptr;
+
+		while (Cur)
+		{
+			for (; Cur->Next && Cur->Next->Key < Key; Cur = Cur->Next) { }
+			Prev = Cur;
+			Cur = Cur->Down;
+			if (Prev->Next && Prev->Next->Key == Key)
+			{
+				Prev->Next = Cur->Next;
+				KVPair::Destroy(Cur);
+				this->Size--;
+				return TRUE;
+			}
+		}
+		return FALSE;
+	}
+
+private:
+	struct KVPair : public Allocatable<struct KVPair, 4096>
+	{
+		K Key;
+		V Value;
+		KVPair *Next;
+		KVPair *Down;
+	};
+
+	KVPair *Head;
+	UINT64 MaxLevel;
+	UINT64 Sz;
+
+	UINT64 RandLevel()
+	{
+		int Level = 1;
+
+		/* Rand() generates a 64-bit number.
+		 * The probability of any one bit in particular being 0 or 1
+		 * is 50% for either case. We only care about one bit,
+		 * so let's use the top bit for this.
+		 */
+		const UINT64 MAX_INT64 = 0x7FFFFFFFFFFFFFFF;
+		while (pantheon::Rand() < MAX_INT64 && Level < MaxLevel)
+		{
+			Level++;
+		}
+		return Level;
+	}
+};
+
+}
+#endif

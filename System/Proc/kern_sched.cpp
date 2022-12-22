@@ -15,6 +15,7 @@
 #include <System/Proc/kern_thread.hpp>
 #include <System/Memory/kern_alloc.hpp>
 
+#include <Common/Structures/kern_skiplist.hpp>
 #include <Common/Structures/kern_linkedlist.hpp>
 
 #ifndef ONLY_TESTING
