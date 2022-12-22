@@ -7,6 +7,7 @@
 #include <Sync/kern_atomic.hpp>
 #include <System/Proc/kern_proc.hpp>
 
+#include <Common/Sync/kern_lockable.hpp>
 #include <Common/Structures/kern_slab.hpp>
 #include <Common/Structures/kern_linkedlist.hpp>
 
@@ -40,20 +41,12 @@ namespace GlobalScheduler
 	UINT32 CreateProcess(const pantheon::String &ProcStr, void *StartAddr);
 	pantheon::Thread *CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
 
-	pantheon::Thread *CreateUserThread(UINT32 PID, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
-	pantheon::Thread *CreateUserThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
-
 	UINT64 CountThreads(UINT64 PID);
-	pantheon::Thread *CreateProcessorIdleThread();
 
 	BOOL RunProcess(UINT32 PID);
 	BOOL SetState(UINT32 PID, pantheon::Process::State State);
 	BOOL MapPages(UINT32 PID, pantheon::vmm::VirtualAddress *VAddresses, pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages);
 
-	void AppendIntoReadyList(pantheon::Thread *Next);
-	pantheon::Thread *PopFromReadyList();
-
-	/* TODO: Inherit from Lockable... */
 	void Lock();
 	void Unlock();
 };

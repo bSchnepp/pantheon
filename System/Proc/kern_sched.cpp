@@ -34,6 +34,31 @@ static UINT64 USER_END = 0;
  * \~english @author Brian Schnepp
  */
 
+
+
+namespace pantheon::GlobalScheduler
+{
+	pantheon::Atomic<BOOL> Okay;
+	pantheon::Spinlock AccessSpinlock;
+
+	pantheon::LinkedList<pantheon::Process> ProcessList;
+	pantheon::LinkedList<pantheon::Thread> ThreadList;
+
+	pantheon::Thread *ReadyHead;
+	pantheon::Thread *ReadyTail;
+
+	pantheon::Thread *CreateProcessorIdleThread();	
+
+	pantheon::Thread *CreateUserThread(UINT32 PID, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
+	pantheon::Thread *CreateUserThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
+	pantheon::Thread *CreateUserThreadCommon(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority);
+
+	void AppendIntoReadyList(pantheon::Thread *Next);
+	pantheon::Thread *PopFromReadyList();
+}
+
+
+
 /**
  * \~english @brief Initalizes an instance of a per-core scheduler.
  * \~english @author Brian Schnepp
@@ -144,20 +169,6 @@ pantheon::Thread *pantheon::Scheduler::MyThread()
 }
 
 extern "C" VOID drop_usermode(UINT64 PC, UINT64 PSTATE, UINT64 SP);
-
-namespace pantheon::GlobalScheduler
-{
-	pantheon::Atomic<BOOL> Okay;
-	pantheon::Spinlock AccessSpinlock;
-
-	pantheon::LinkedList<pantheon::Process> ProcessList;
-	pantheon::LinkedList<pantheon::Thread> ThreadList;
-
-	pantheon::Thread *ReadyHead;
-	pantheon::Thread *ReadyTail;	
-
-	pantheon::Thread *CreateUserThreadCommon(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority);
-}
 
 /**
  * \~english @brief Creates a process, visible globally, from a name and address.
