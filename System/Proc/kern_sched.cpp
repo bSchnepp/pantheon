@@ -27,11 +27,16 @@
  *  fairness between processes. In contrast to BFS, lock contention is avoided by fairly distributing
  *  work between individual processors: in this case, threads are the fundamental schedulable unit,
  *  which is what is assigned virtual deadlines. Note that "realtime" is in quotes as to my knowledge, no definitive
- *  proof exists to guarantee that any given task will always meet it's virtual deadline, though algorithmic 
- *  bounds assert that the worst case is not too bad anyway.
+ *  proof exists to guarantee that any given task will always meet it's virtual deadline, though all jobs should
+ *  just by induction eventually all run anyway, even if they miss their deadlines.
  * @see http://ck.kolivas.org/patches/muqss/sched-MuQSS.txt
  * \~english @author Brian Schnepp
  */
+
+
+static pantheon::Spinlock SchedLock("Global Scheduler Lock");
+static pantheon::LinkedList<pantheon::Process> ProcessList;
+static pantheon::SkipList<UINT64, pantheon::Thread*> ThreadList;
 
 
 /**
@@ -40,6 +45,7 @@
  */
 pantheon::LocalScheduler::LocalScheduler() : pantheon::Allocatable<LocalScheduler, 256>(), pantheon::Lockable("Scheduler")
 {
+	this->IdleThread = nullptr;
 }
 
 /* Provided by the arch/ subdir. These differ between hardware platforms. */
@@ -87,6 +93,28 @@ pantheon::Thread *pantheon::LocalScheduler::AcquireThread()
 
 }
 
+pantheon::Thread *pantheon::LocalScheduler::Idle()
+{
+	return this->IdleThread;
+}
+
+void pantheon::LocalScheduler::Setup()
+{
+	pantheon::ScopedGlobalSchedulerLock _L;
+
+	pantheon::Thread *Idle = pantheon::Thread::Create();
+	for (pantheon::Process &Proc : ProcessList)
+	{
+		if (Proc.ProcessID() == 0)
+		{
+			Idle->Initialize(&Proc, nullptr, nullptr, pantheon::Thread::PRIORITY_VERYLOW, FALSE);
+		}
+	}
+
+	pantheon::CPU::GetCoreInfo()->CurThread = Idle;
+	this->IdleThread = Idle;	
+}
+
 static UINT64 CalculateDeadline(UINT64 Jiffies, UINT64 PrioRatio, UINT64 RRInterval)
 {
 	/* We don't necessarilly have a high resolution timer, so let's just use jiffies. */
@@ -111,7 +139,11 @@ void pantheon::LocalScheduler::InsertThread(pantheon::Thread *Thr)
 	}
 }
 
-pantheon::Spinlock SchedLock("Global Scheduler Lock");
+void pantheon::Scheduler::Init()
+{
+	static pantheon::Process IdleProc;
+	ProcessList.PushFront(&IdleProc);
+}
 
 void pantheon::Scheduler::Lock()
 {
@@ -122,10 +154,6 @@ void pantheon::Scheduler::Unlock()
 {
 	SchedLock.Release();
 }
-
-
-static pantheon::LinkedList<pantheon::Process> ProcessList;
-static pantheon::SkipList<UINT64, pantheon::Thread*> ThreadList;
 
 /**
  * \~english @brief Creates a process, visible globally, from a name and address.
@@ -231,6 +259,77 @@ UINT64 pantheon::Scheduler::AcquireThreadID()
 	return RetVal;
 }
 
+static pantheon::Thread *GetNextThread()
+{
+	UINT8 MyCPU = pantheon::CPU::GetProcessorNumber();
+	UINT8 NoCPUs = pantheon::CPU::GetNoCPUs();
+	for (UINT8 Index = 0; Index < NoCPUs; Index++)
+	{
+		UINT8 LocalIndex = (MyCPU + Index) % NoCPUs;
+		pantheon::LocalScheduler *Sched = pantheon::CPU::GetLocalSched(LocalIndex);
+		if (Sched && Sched->TryLock())
+		{
+			pantheon::Thread *Thr = Sched->AcquireThread();
+			Sched->Unlock();
+			if (Thr != nullptr)
+			{
+				return Thr;
+			}
+		}
+	}
+	return nullptr;
+}
+
+struct SwapContext
+{
+	pantheon::CpuContext *Old;
+	pantheon::CpuContext *New;
+};
+
+static SwapContext SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *NextThread)
+{
+	pantheon::Process *CurProcess = pantheon::CPU::GetCurProcess();
+
+	/* If this is the same thread, we've got a problem. Put it back and abort. */
+	pantheon::ScopedLock _NL(NextThread);
+	if (NextThread == CurThread)
+	{
+		pantheon::CPU::GetMyLocalSched()->InsertThread(NextThread);
+		return {nullptr, nullptr};
+	}
+
+	/* If the new thread somehow isn't waiting, definitely don't run it. */
+	if (NextThread->MyState() != pantheon::Thread::STATE_WAITING)
+	{
+		return {nullptr, nullptr};
+	}
+
+	pantheon::ScopedLock _OL(CurThread);
+	NextThread->RefreshTicks();
+
+	pantheon::ScopedLocalSchedulerLock _LSL;
+	pantheon::Scheduler::SetThreadState(CurThread->ThreadID(), pantheon::Thread::STATE_WAITING);
+
+	/* Switch the current process */
+	pantheon::Process *NextProc = NextThread->MyProc();
+	if (NextProc != CurProcess)
+	{
+		pantheon::Process::Switch(NextProc);
+	}
+
+	NextThread->SetState(pantheon::Thread::STATE_RUNNING);
+	pantheon::CPU::GetCoreInfo()->CurProcess = NextProc;
+	pantheon::CPU::GetCoreInfo()->CurThread = NextThread;
+
+	pantheon::CpuContext *OldContext = CurThread->GetRegisters();
+	pantheon::CpuContext *NewContext = NextThread->GetRegisters();
+
+	/* Switch the thread local region */
+	pantheon::ipc::SetThreadLocalRegion(NextThread->GetThreadLocalAreaRegister());
+
+	return {OldContext, NewContext};
+}
+
 /**
  * \~english @brief Changes the current thread of this core.
  * \~english @details Forcefully changes the current thread by iterating to
@@ -243,7 +342,29 @@ UINT64 pantheon::Scheduler::AcquireThreadID()
  */
 void pantheon::Scheduler::Reschedule()
 {
-	/* NYI */
+	/* Don't reschedule if interrupts are off */
+	if (pantheon::CPU::ICOUNT())
+	{
+		return;
+	}
+
+	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+	pantheon::Thread *NextThread = GetNextThread();
+
+	/* If we have no next, give up and use the idle thread. */
+	if (NextThread == nullptr)
+	{
+		NextThread = pantheon::CPU::GetMyLocalSched()->Idle();
+	}
+
+	SwapContext Con = SwapThreads(CurThread, NextThread);
+
+	if (Con.New && Con.Old)
+	{
+		pantheon::Sync::DSBISH();
+		pantheon::Sync::ISB();
+		cpu_switch(Con.Old, Con.New, CpuIRegOffset);
+	}
 }
 
 void pantheon::Scheduler::AttemptReschedule()

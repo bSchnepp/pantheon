@@ -82,11 +82,12 @@ public:
 	{
 		if (this->Head == nullptr)
 		{
-			this->Head = KVPair::Create();
-			this->Head->Key = Key;
-			this->Head->Value = Value;
-			this->Head->Next = nullptr;
-			this->Head->Down = nullptr;
+			KVPair *Head = new KVPair;
+			Head->Key = Key;
+			Head->Value = Value;
+			Head->Next = nullptr;
+			Head->Down = nullptr;
+			this->Head = Head;
 			return;	
 		}
 
@@ -108,7 +109,7 @@ public:
 		/* At every level, create a new KVPair */
 		for (UINT64 Index = 0; Index < Level; Index++)
 		{
-			KVPair *Node = KVPair::Create();
+			KVPair *Node = new KVPair;
 			Node->Key = Key;
 			Node->Value = Value;
 			Node->Next = Cur->Next;
@@ -143,7 +144,7 @@ public:
 			if (Prev->Next && Prev->Next->Key == Key)
 			{
 				Prev->Next = Cur->Next;
-				KVPair::Destroy(Cur);
+				delete Cur;
 				this->Sz--;
 				return TRUE;
 			}
@@ -170,13 +171,19 @@ public:
 	}
 
 private:
-	struct KVPair : public Allocatable<struct KVPair, 4096>
+	struct KVPair
 	{
 		K Key;
 		V Value;
 		KVPair *Next;
 		KVPair *Down;
+
+		/* To be implemented: this helps seeking!*/
+		KVPair *Prev;
+		KVPair *Up;
 	};
+
+	static_assert(sizeof(KVPair) > 32);
 
 	KVPair *Head;
 	UINT64 MaxLevel;

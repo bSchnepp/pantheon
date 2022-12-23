@@ -22,6 +22,11 @@ void pantheon::CPU::InitCore(UINT8 CoreNo)
 	PerCoreInfo[CoreNo] = {};
 	PerCoreInfo[CoreNo].LocalSched = pantheon::LocalScheduler::Create();
 	NoCPUs++;
+
+	/* This is needed since kernel constructors happen to be ordered 
+	 * in a way that could cause a problem for our initialization order... 
+	 */
+	PerCoreInfo[CoreNo].LocalSched->Setup();
 }
 
 UINT8 pantheon::CPU::GetNoCPUs()

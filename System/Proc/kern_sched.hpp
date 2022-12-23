@@ -33,14 +33,19 @@ public:
 	pantheon::Thread *AcquireThread();
 	void InsertThread(pantheon::Thread *Thr);
 
+	void Setup();
+	pantheon::Thread *Idle();
+
 private:
-	VOID PerformCpuSwitch(pantheon::CpuContext *Old, pantheon::CpuContext *New);
 	pantheon::SkipList<UINT64, pantheon::Thread*> LocalRunQueue;
 	pantheon::LinkedList<pantheon::Thread> Threads;
+
+	pantheon::Thread *IdleThread;
 };
 
 namespace Scheduler
 {
+	void Init();
 	BOOL SetState(UINT32 PID, pantheon::Process::State State);
 	BOOL SetThreadState(UINT64 TID, pantheon::Thread::State State);
 	BOOL MapPages(UINT32 PID, const pantheon::vmm::VirtualAddress *VAddresses, const pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages);

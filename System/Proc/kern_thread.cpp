@@ -233,7 +233,7 @@ VOID pantheon::Thread::RefreshTicks()
 	{
 		StopError("RefreshTicks without lock");
 	}
-	this->RemainingTicks = static_cast<UINT64>((this->CurPriority + 1)) * 3;
+	this->RemainingTicks = 6;
 }
 
 /**

@@ -35,6 +35,8 @@ static void kern_basic_init(InitialBootInfo *InitBootInfo)
 	pantheon::ipc::ServerPort::Init();
 	pantheon::ipc::ClientPort::Init();
 	pantheon::ipc::Connection::Init();
+	pantheon::Scheduler::Init();
+	pantheon::LocalScheduler::Init();
 }
 
 static void kern_stage2_init()
