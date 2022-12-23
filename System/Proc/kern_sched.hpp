@@ -20,7 +20,7 @@
 namespace pantheon
 {
 
-class LocalScheduler : public pantheon::Allocatable<LocalScheduler, 256>, pantheon::Lockable
+class LocalScheduler : public pantheon::Allocatable<LocalScheduler, 256>, public pantheon::Lockable
 {
 
 public:
@@ -42,6 +42,7 @@ private:
 namespace Scheduler
 {
 	BOOL SetState(UINT32 PID, pantheon::Process::State State);
+	BOOL SetThreadState(UINT64 TID, pantheon::Thread::State State);
 	BOOL MapPages(UINT32 PID, const pantheon::vmm::VirtualAddress *VAddresses, const pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages);
 
 	UINT32 CreateProcess(const pantheon::String &ProcStr, void *StartAddr);

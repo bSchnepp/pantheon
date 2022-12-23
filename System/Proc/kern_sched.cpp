@@ -283,14 +283,20 @@ extern "C" VOID FinishThread()
 BOOL pantheon::Scheduler::MapPages(UINT32 PID, const pantheon::vmm::VirtualAddress *VAddresses, const pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages)
 {
 	/* TODO: Move into a more sensible namespace like pantheon::mm or something */
-
-	BOOL Success = FALSE;
-	PANTHEON_UNUSED(PID);
-	PANTHEON_UNUSED(VAddresses);
-	PANTHEON_UNUSED(PAddresses);
-	PANTHEON_UNUSED(PageAttributes);
-	PANTHEON_UNUSED(NumPages);
-	return Success;
+	pantheon::ScopedGlobalSchedulerLock _L;
+	for (pantheon::Process &Item : ProcessList)
+	{
+		if (Item.ProcessID() == PID)
+		{
+			pantheon::ScopedLock _LL(&Item);
+			for (UINT64 Index = 0; Index < NumPages; ++Index)
+			{
+				Item.MapAddress(VAddresses[Index], PAddresses[Index], PageAttributes);
+			}
+			return TRUE;
+		}
+	}
+	return FALSE;
 }
 
 BOOL pantheon::Scheduler::SetState(UINT32 PID, pantheon::Process::State State)
@@ -301,10 +307,31 @@ BOOL pantheon::Scheduler::SetState(UINT32 PID, pantheon::Process::State State)
 	{
 		if (Item.ProcessID() == PID)
 		{
-			pantheon::ScopedLock _L(&Item);
+			pantheon::ScopedLock _LL(&Item);
 			Item.SetState(State);
 			return TRUE;
 		}
 	}
 	return FALSE;
+}
+
+BOOL pantheon::Scheduler::SetThreadState(UINT64 TID, pantheon::Thread::State State)
+{
+	pantheon::ScopedGlobalSchedulerLock _L;
+
+	if (!ThreadList.Contains(TID))
+	{
+		return FALSE;
+	}
+
+	pantheon::Thread *Thr = ThreadList[TID];
+	pantheon::ScopedLock _LL(Thr);
+
+	Thr->SetState(State);
+
+	if (State == pantheon::Thread::STATE_WAITING)
+	{
+		pantheon::CPU::GetMyLocalSched()->InsertThread(Thr);
+	}
+	return TRUE;
 }

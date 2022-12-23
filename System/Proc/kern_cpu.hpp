@@ -57,6 +57,7 @@ pantheon::Thread *GetCurThread();
 pantheon::Process *GetCurProcess();
 pantheon::TrapFrame *GetCurFrame();
 pantheon::LocalScheduler *GetLocalSched(UINT8 ProcNo);
+pantheon::LocalScheduler *GetMyLocalSched();
 
 UINT64 GetJiffies();
 

@@ -68,6 +68,11 @@ pantheon::LocalScheduler *pantheon::CPU::GetLocalSched(UINT8 ProcNo)
 	return PerCoreInfo[ProcNo].LocalSched;
 }
 
+pantheon::LocalScheduler *pantheon::CPU::GetMyLocalSched()
+{
+	return pantheon::CPU::GetLocalSched(pantheon::CPU::GetProcessorNumber());
+}
+
 void *pantheon::CPU::GetStackArea(UINT64 Core)
 {
 	alignas(4096) static char StackArea[MAX_NUM_CPUS * DEFAULT_STACK_SIZE];
