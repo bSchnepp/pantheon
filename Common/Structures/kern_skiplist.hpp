@@ -10,12 +10,21 @@
 namespace pantheon
 {
 
-template <typename K, typename V>
+template <typename K, typename V, UINT8 MaxLvl = 8>
 class SkipList
 {
 public:
-	SkipList(UINT64 MaxLvl = 8) : Head(nullptr), MaxLevel(MaxLvl), Sz(0) {}
-	~SkipList() = default;
+	SkipList()
+	{
+		this->Head = nullptr;
+		this->Level = 0;
+		this->Sz = 0;
+	}
+
+	~SkipList()
+	{
+		/* NYI */
+	}
 
 	[[nodiscard]] UINT64 Size() const
 	{
@@ -29,17 +38,31 @@ public:
 
 	[[nodiscard]] Optional<V> Get(K Key) const
 	{
-		KVPair *Cur = this->Head;
-		while (Cur)
+		if (this->Head == nullptr)
 		{
-			for (; Cur->Next && Cur->Next->Key < Key; Cur = Cur->Next) { }
-			if (Cur->Next && Cur->Next->Key == Key)
+			return Optional<V>();
+		}
+
+		INT16 Lvl = this->Level;
+		KVPair *Current = this->Head;
+		KVPair *Next = Current;
+		while (Lvl >= 0)
+		{
+			Next = Current->Next[Lvl];
+			while (Next && (Next->Key <= Key))
 			{
-				return Optional<V>(Cur->Value);
+				Current = Next;
+				Next = Current->Next[Lvl];
 			}
-			Cur = Cur->Down;
+			Lvl--;
+		}
+
+		if (Current->Key == Key)
+		{
+			return Optional<V>(Current->Value);
 		}
 		return Optional<V>();
+
 	}
 
 	[[nodiscard]] Optional<K> MinKey() const
@@ -49,9 +72,12 @@ public:
 			return Optional<K>();
 		}
 
-		KVPair *Cur;
-		for (Cur = this->Head; Cur->Down != nullptr; Cur = Cur->Down) { }
-		return Optional<K>(Cur->Key);
+		KVPair *Current = this->Head->Next[0];
+		if (Current && Current->Key != (K() - 1))
+		{
+			return Optional<K>(Current->Key);
+		}
+		return Optional<K>();
 	}
 
 	[[nodiscard]] Optional<K> MaxKey() const
@@ -61,93 +87,127 @@ public:
 			return Optional<K>();
 		}
 
-		KVPair *Cur = this->Head;
-		while (Cur->Right || Cur->Down)
+		KVPair *Current = this->Head->Prev[0];
+		if (Current && Current->Key != (K() - 1))
 		{
-			/* Go right as far as possible */
-			if (Cur->Right)
-			{
-				Cur = Cur->Right;
-			} else {
-				/* Go down if we have to*/
-				Cur = Cur->Down;
-			}
+			return Optional<K>(Current->Key);
 		}
-
-		/* If neither, we found the max value. */
-		return Optional<K>(Cur->Key);
+		return Optional<K>();
 	}
 
 	VOID Insert(K Key, V Value)
 	{
-		if (this->Head == nullptr)
+		this->Setup();
+
+		KVPair *Update[MaxLvl];
+		INT16 Lvl = this->Level;
+
+		KVPair *Current = this->Head;
+		KVPair *Next = Current;
+		while (Lvl >= 0)
 		{
-			KVPair *Head = new KVPair;
-			Head->Key = Key;
-			Head->Value = Value;
-			Head->Next = nullptr;
-			Head->Down = nullptr;
-			this->Head = Head;
-			return;	
-		}
-
-		KVPair *Cur = this->Head;
-		KVPair *Prev = nullptr;
-
-		/* Iterate to the bottom */
-		while (Cur)
-		{
-			for (; Cur->Next && Cur->Next->Key < Key; Cur = Cur->Next) { }
-			Prev = Cur;
-			Cur = Cur->Down;
-		}
-
-		/* Put a new node at the bottom */
-		Cur = Prev;
-		UINT64 Level = this->RandLevel();
-
-		/* At every level, create a new KVPair */
-		for (UINT64 Index = 0; Index < Level; Index++)
-		{
-			KVPair *Node = new KVPair;
-			Node->Key = Key;
-			Node->Value = Value;
-			Node->Next = Cur->Next;
-			Node->Down = nullptr;
-
-			Cur->Next = Node;
-
-			if (Index < Level - 1)
+			Next = Current->Next[Lvl];
+			while (Next && (Next->Key <= Key))
 			{
-				Head = Node;
-				Cur = Head;
+				Current = Next;
+				Next = Current->Next[Lvl];
 			}
+			Update[Lvl] = Current;
+			Lvl--;
 		}
+
+		/* This is where we'll need to be: this needs to match the current key. */
+		if (Current->Key == Key)
+		{
+			Current->Value = Value;
+			return;
+		}
+
+		/* Actually make the new entry */
+		INT16 NewLvl = this->RandLevel();
+		if (NewLvl > this->Level)
+		{
+			NewLvl = ++(this->Level);
+			Update[NewLvl] = this->Head;
+		}
+
+		KVPair *NewNode = new KVPair();
+		NewNode->Key = Key;
+		NewNode->Value = Value;
+		NewNode->Level = NewLvl;
+		for (UINT8 Index = 0; Index < MaxLvl; Index++)
+		{
+			NewNode->Next[Index] = nullptr;
+			NewNode->Prev[Index] = nullptr;
+		}
+
+		while (NewLvl > 0)
+		{
+			Current = Update[NewLvl];
+
+			NewNode->Next[NewLvl] = Current->Next[NewLvl];
+			Current->Next[NewLvl] = NewNode;
+
+			NewNode->Prev[NewLvl] = Current;
+			NewNode->Next[NewLvl]->Prev[NewLvl] = NewNode;
+			NewLvl--;
+		}
+
 		this->Sz++;
+
 	}
 
 	BOOL Delete(K Key)
 	{
-		if (this->Head == nullptr)
+		this->Setup();
+
+		KVPair *Update[MaxLvl];
+		INT16 Lvl = this->Level;
+
+		KVPair *Current = this->Head;
+		KVPair *Next = Current;
+		while (Lvl >= 0)
 		{
-			return FALSE;
+			Next = Current->Next[Lvl];
+			while (Next && (Next->Key <= Key))
+			{
+				Current = Next;
+				Next = Current->Next[Lvl];
+			}
+			Update[Lvl] = Current;
+			Lvl--;
 		}
 
-		KVPair *Cur = this->Head;
-		KVPair *Prev = nullptr;
-
-		while (Cur)
+		/* This is where we'll need to be: this needs to match the current key. */
+		if (Current->Key == Key)
 		{
-			for (; Cur->Next && Cur->Next->Key < Key; Cur = Cur->Next) { }
-			Prev = Cur;
-			Cur = Cur->Down;
-			if (Prev->Next && Prev->Next->Key == Key)
+			UINT8 CurLvl = Current->Level;
+			for (UINT8 Lvl = 0; Lvl < CurLvl; Lvl++)
 			{
-				Prev->Next = Cur->Next;
-				delete Cur;
-				this->Sz--;
-				return TRUE;
+				Current->Prev[Lvl]->Next[Lvl] = Current->Next[Lvl];
+				Current->Next[Lvl]->Prev[Lvl] = Current->Prev[Lvl];
 			}
+
+			/* If this was top, we might have to fix levels. */
+			if (CurLvl == this->Level)
+			{
+				while (this->Head->Next[CurLvl] == this->Head && this->Head->Prev[CurLvl] == this->Head)
+				{
+					if (CurLvl > 0)
+					{
+						CurLvl--;
+					} else
+					{
+						break;
+					}
+					
+				}
+				this->Level = CurLvl;
+			}
+
+			this->Sz--;
+			delete Current;
+			return TRUE;
 		}
 		return FALSE;
 	}
@@ -155,16 +215,25 @@ public:
 
 	V& operator[](K Key)
 	{
-		KVPair *Cur = this->Head;
-		while (Cur)
+		this->Setup();
+
+		INT16 Lvl = this->Level;
+		KVPair *Current = this->Head;
+		KVPair *Next = Current;
+		while (Lvl >= 0)
 		{
-			for (; Cur->Next && Cur->Next->Key < Key; Cur = Cur->Next) { }
-			if (Cur->Next && Cur->Next->Key == Key)
+			Next = Current->Next[Lvl];
+			while (Next && (Next->Key <= Key))
 			{
-				return Cur->Value;
+				Current = Next;
+				Next = Current->Next[Lvl];
 			}
-			Cur = Cur->Down;
-		
+			Lvl--;
+		}
+
+		if (Current->Key == Key)
+		{
+			return Current->Value;
 		}
 		static V DefaultItem;
 		return DefaultItem;
@@ -175,35 +244,47 @@ private:
 	{
 		K Key;
 		V Value;
-		KVPair *Next;
-		KVPair *Down;
-
-		/* To be implemented: this helps seeking!*/
-		KVPair *Prev;
-		KVPair *Up;
+		UINT64 Level;
+		KVPair *Next[MaxLvl];
+		KVPair *Prev[MaxLvl];
 	};
 
 	static_assert(sizeof(KVPair) > 32);
 
 	KVPair *Head;
-	UINT64 MaxLevel;
+	INT16 Level;
 	UINT64 Sz;
 
-	UINT64 RandLevel()
+	UINT8 RandLevel()
 	{
-		UINT64 Level = 1;
+		UINT8 Level = 1;
 
 		/* Rand() generates a 64-bit number.
 		 * The probability of any one bit in particular being 0 or 1
-		 * is 50% for either case. We only care about one bit,
-		 * so let's use the top bit for this.
+		 * is 25% for either case. We only care about two bits,
+		 * so let's use the bottom 2 bits for this.
 		 */
-		const UINT64 MAX_INT64 = 0x7FFFFFFFFFFFFFFF;
-		while (pantheon::Rand() < MAX_INT64 && Level < MaxLevel)
+		while ((pantheon::Rand() & 0x3) && Level < MaxLvl)
 		{
 			Level++;
 		}
-		return Level;
+		return Level % MaxLvl;
+	}
+
+	void Setup()
+	{
+		if (this->Head == nullptr)
+		{
+			this->Head = new KVPair();
+			this->Level = 0;
+			this->Head->Key = K() - 1; /* HACK: Sets this at a huge value for integers only */
+			this->Head->Value = V();
+			for (UINT8 Lvl = 0; Lvl < MaxLvl; Lvl++)
+			{
+				this->Head->Next[Lvl] = this->Head;
+				this->Head->Prev[Lvl] = this->Head;
+			}		
+		}
 	}
 };
 
