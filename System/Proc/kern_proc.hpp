@@ -39,6 +39,7 @@ typedef enum ProcessCreateFlags
 
 typedef struct ProcessCreateInfo
 {
+	UINT32 ID;
 	String Name;
 	pantheon::vmm::VirtualAddress EntryPoint;
 

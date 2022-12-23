@@ -102,7 +102,7 @@ static void RunExecutable(void *ElfLocation, const char *Name)
 	pantheon::vmm::VirtualAddress Base = pantheon::GenerateALSRBase();
 	UINT32 PID = pantheon::Scheduler::CreateProcess(Name, (void*)(Base + Header().e_entry));
 	RunElf(Header(), (const char*)ElfLocation, PID, Base);
-	pantheon::Scheduler::RunProcess(PID);	
+	pantheon::Scheduler::SetState(PID, pantheon::Process::STATE_RUNNING);	
 }
 
 void pantheon::UnpackInitPrograms()

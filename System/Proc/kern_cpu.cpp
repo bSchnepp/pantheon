@@ -59,7 +59,7 @@ pantheon::TrapFrame *pantheon::CPU::GetCurFrame()
 	return pantheon::CPU::GetCoreInfo()->CurFrame;
 }
 
-pantheon::LocalScheduler *GetLocalSched(UINT8 ProcNo)
+pantheon::LocalScheduler *pantheon::CPU::GetLocalSched(UINT8 ProcNo)
 {
 	if (ProcNo >= pantheon::CPU::GetNoCPUs())
 	{

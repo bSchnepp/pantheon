@@ -63,7 +63,7 @@ void pantheon::Process::Initialize(const pantheon::ProcessCreateInfo &CreateInfo
 	this->CurState = pantheon::Process::STATE_INIT;
 	this->CurPriority = pantheon::Process::PRIORITY_NORMAL;
 	this->ProcessString = CreateInfo.Name;
-	this->PID = pantheon::Scheduler::AcquireProcessID();
+	this->PID = CreateInfo.ID;
 	this->TTBR0 = pantheon::PageAllocator::Alloc();
 	this->EntryPoint = CreateInfo.EntryPoint;
 	this->HandTable.Clear();

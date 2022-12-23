@@ -151,6 +151,24 @@ public:
 		return FALSE;
 	}
 
+
+	V& operator[](K Key)
+	{
+		KVPair *Cur = this->Head;
+		while (Cur)
+		{
+			for (; Cur->Next && Cur->Next->Key < Key; Cur = Cur->Next) { }
+			if (Cur->Next && Cur->Next->Key == Key)
+			{
+				return Cur->Value;
+			}
+			Cur = Cur->Down;
+		
+		}
+		static V DefaultItem;
+		return DefaultItem;
+	}
+
 private:
 	struct KVPair : public Allocatable<struct KVPair, 4096>
 	{

@@ -22,6 +22,14 @@
 /**
  * @file Common/Proc/kern_sched.cpp
  * \~english @brief Definitions for basic kernel scheduling data structures and algorithms.
+ * \~english @details Pantheon implements Con Kolivas' MuQSS scheduling algorithm, an efficient algorithm 
+ *  which takes priorities into account to provide a semi-"realtime" scheduling system to ensure 
+ *  fairness between processes. In contrast to BFS, lock contention is avoided by fairly distributing
+ *  work between individual processors: in this case, threads are the fundamental schedulable unit,
+ *  which is what is assigned virtual deadlines. Note that "realtime" is in quotes as to my knowledge, no definitive
+ *  proof exists to guarantee that any given task will always meet it's virtual deadline, though algorithmic 
+ *  bounds assert that the worst case is not too bad anyway.
+ * @see http://ck.kolivas.org/patches/muqss/sched-MuQSS.txt
  * \~english @author Brian Schnepp
  */
 
@@ -39,6 +47,11 @@ extern "C" void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New,
 extern "C" VOID drop_usermode(UINT64 PC, UINT64 PSTATE, UINT64 SP);
 
 
+/**
+ * \~english @brief Counts the number of threads under this scheduler which belong to a given PID.
+ * \~english @invariant This scheduler is not locked
+ * \~english @return The number of threads under this manager which belong to a given process 
+ */
 UINT64 pantheon::LocalScheduler::CountThreads(UINT64 PID)
 {
 	UINT64 Res = 0;
@@ -50,9 +63,13 @@ UINT64 pantheon::LocalScheduler::CountThreads(UINT64 PID)
 	return Res;
 }
 
+/**
+ * \~english @brief Obtains a thread from the local runqueue which can be run, and removes it from the local runqueue.
+ * \~english @invariant This scheduler is locked
+ * \~english @return A thread which can be run, if it exists. Nullptr otherwise.
+ */
 pantheon::Thread *pantheon::LocalScheduler::AcquireThread()
 {
-	pantheon::ScopedLock _L(this);
 	Optional<UINT64> LowestKey = this->LocalRunQueue.MinKey();
 	if (!LowestKey.GetOkay())
 	{
@@ -72,12 +89,15 @@ pantheon::Thread *pantheon::LocalScheduler::AcquireThread()
 
 static UINT64 CalculateDeadline(UINT64 Jiffies, UINT64 PrioRatio, UINT64 RRInterval)
 {
+	/* We don't necessarilly have a high resolution timer, so let's just use jiffies. */
 	return Jiffies + (PrioRatio * RRInterval);
 }
 
 /**
  * \~english @brief Inserts a thread for this local scheduler
- * \~english @param Thr The thread object to insert. Must be locked before calling.
+ * \~english @invariant The thread to be inserted is locked before calling
+ * \~english @invariant This scheduler is not locked
+ * \~english @param Thr The thread object to insert.
  */
 void pantheon::LocalScheduler::InsertThread(pantheon::Thread *Thr)
 {
@@ -103,6 +123,9 @@ void pantheon::Scheduler::Unlock()
 	SchedLock.Release();
 }
 
+
+static pantheon::LinkedList<pantheon::Process> ProcessList;
+
 /**
  * \~english @brief Creates a process, visible globally, from a name and address.
  * \~english @details A process is created, such that it can be run on any
@@ -112,17 +135,35 @@ void pantheon::Scheduler::Unlock()
  * initial threaq should execute when scheduled.
  * \~english @param[in] ProcStr A human-readable name for the process
  * \~english @param[in] StartAddr The initial value of the program counter
- * \~english @return TRUE is the process was sucessfully created, false otherwise.
+ * \~english @return New PID if the process was sucessfully created, 0 otherwise.
  * \~english @author Brian Schnepp
  */
 UINT32 pantheon::Scheduler::CreateProcess(const pantheon::String &ProcStr, void *StartAddr)
 {
-	PANTHEON_UNUSED(ProcStr);
-	PANTHEON_UNUSED(StartAddr);
-	return 0;
+	pantheon::ScopedGlobalSchedulerLock _L;
+
+	UINT32 NewID = pantheon::Scheduler::AcquireProcessID();
+
+	pantheon::Process *Proc = pantheon::Process::Create();
+	if (Proc == nullptr)
+	{
+		return 0;
+	}
+
+	pantheon::ScopedLock _SL(Proc);
+
+	pantheon::ProcessCreateInfo CreateInfo{};
+	CreateInfo.EntryPoint = reinterpret_cast<pantheon::vmm::VirtualAddress>(StartAddr);
+	CreateInfo.Name = ProcStr;
+	CreateInfo.ID = NewID;
+	Proc->Initialize(CreateInfo);
+
+	ProcessList.PushFront(Proc);
+
+	return NewID;
 }
 
-pantheon::Thread *pantheon::Scheduler::CreateThread(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority)
+pantheon::Thread *pantheon::Scheduler::CreateThread(UINT32 Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority)
 {
 	PANTHEON_UNUSED(Proc);
 	PANTHEON_UNUSED(StartAddr);
@@ -134,8 +175,16 @@ pantheon::Thread *pantheon::Scheduler::CreateThread(pantheon::Process *Proc, voi
 
 UINT64 pantheon::Scheduler::CountThreads(UINT64 PID)
 {
+	pantheon::ScopedGlobalSchedulerLock _L;
+
 	UINT64 Count = 0;
-	PANTHEON_UNUSED(PID);
+	UINT8 MyCPU = pantheon::CPU::GetProcessorNumber();
+	UINT8 NoCPUs = pantheon::CPU::GetNoCPUs();
+	for (UINT8 Index = 0; Index < NoCPUs; Index++)
+	{
+		UINT8 LocalIndex = (MyCPU + Index) % NoCPUs;
+		Count += pantheon::CPU::GetLocalSched(LocalIndex)->CountThreads(PID);
+	}
 	return Count;
 }
 
@@ -176,7 +225,7 @@ UINT64 pantheon::Scheduler::AcquireThreadID()
  */
 void pantheon::Scheduler::Reschedule()
 {
-
+	/* NYI */
 }
 
 void pantheon::Scheduler::AttemptReschedule()
@@ -224,17 +273,18 @@ BOOL pantheon::Scheduler::MapPages(UINT32 PID, const pantheon::vmm::VirtualAddre
 	return Success;
 }
 
-BOOL pantheon::Scheduler::RunProcess(UINT32 PID)
-{
-	BOOL Success = FALSE;
-	PANTHEON_UNUSED(PID);
-	return Success;	
-}
-
 BOOL pantheon::Scheduler::SetState(UINT32 PID, pantheon::Process::State State)
 {
-	BOOL Success = FALSE;
-	PANTHEON_UNUSED(PID);
-	PANTHEON_UNUSED(State);
-	return Success;	
+	pantheon::ScopedGlobalSchedulerLock _L;
+
+	for (pantheon::Process &Item : ProcessList)
+	{
+		if (Item.ProcessID() == PID)
+		{
+			pantheon::ScopedLock _L(&Item);
+			Item.SetState(State);
+			return TRUE;
+		}
+	}
+	return FALSE;
 }
