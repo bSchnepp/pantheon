@@ -52,6 +52,7 @@ extern "C" void kern_init_core()
 		/* Loop until core 0 finished essential kernel setup */
 	}
 
+	pantheon::CPU::InitCore(CpuNo);
 	PerCoreInit();
 
 	while (pantheon::GetKernelStatus() < pantheon::KERNEL_STATUS_OK)

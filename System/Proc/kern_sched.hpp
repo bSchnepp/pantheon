@@ -20,7 +20,7 @@
 namespace pantheon
 {
 
-class LocalScheduler : public pantheon::Lockable
+class LocalScheduler : public pantheon::Allocatable<LocalScheduler, 256>, pantheon::Lockable
 {
 
 public:

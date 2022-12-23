@@ -30,7 +30,7 @@
  * \~english @brief Initalizes an instance of a per-core scheduler.
  * \~english @author Brian Schnepp
  */
-pantheon::LocalScheduler::LocalScheduler() : pantheon::Lockable("Scheduler")
+pantheon::LocalScheduler::LocalScheduler() : pantheon::Allocatable<LocalScheduler, 256>(), pantheon::Lockable("Scheduler")
 {
 }
 

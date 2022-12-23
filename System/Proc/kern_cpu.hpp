@@ -38,10 +38,16 @@ typedef struct CoreInfo
 	pantheon::Thread *CurThread;
 	pantheon::Process *CurProcess;
 	pantheon::TrapFrame *CurFrame;
+	pantheon::LocalScheduler *LocalSched;
+
+
 	UINT64 LocalJiffies;
 	UINT64 NOff;
 	BOOL IntStatus;
 }CoreInfo;
+
+UINT8 GetNoCPUs();
+void InitCore(UINT8 CoreNo);
 
 CoreInfo *GetCoreInfo();
 
@@ -50,6 +56,7 @@ UINT8 GetProcessorNumber();
 pantheon::Thread *GetCurThread();
 pantheon::Process *GetCurProcess();
 pantheon::TrapFrame *GetCurFrame();
+pantheon::LocalScheduler *GetLocalSched(UINT8 ProcNo);
 
 UINT64 GetJiffies();
 

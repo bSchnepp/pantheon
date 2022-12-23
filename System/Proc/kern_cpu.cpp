@@ -14,7 +14,20 @@
 #include <System/Memory/kern_alloc.hpp>
 
 /* Avoid having too high a number of cores to look through. */
+static UINT8 NoCPUs = 0;
 static pantheon::CPU::CoreInfo PerCoreInfo[MAX_NUM_CPUS];
+
+void pantheon::CPU::InitCore(UINT8 CoreNo)
+{
+	PerCoreInfo[CoreNo] = {};
+	PerCoreInfo[CoreNo].LocalSched = pantheon::LocalScheduler::Create();
+	NoCPUs++;
+}
+
+UINT8 pantheon::CPU::GetNoCPUs()
+{
+	return NoCPUs;
+}
 
 pantheon::CPU::CoreInfo *pantheon::CPU::GetCoreInfo()
 {
@@ -44,6 +57,15 @@ UINT64 pantheon::CPU::GetJiffies()
 pantheon::TrapFrame *pantheon::CPU::GetCurFrame()
 {
 	return pantheon::CPU::GetCoreInfo()->CurFrame;
+}
+
+pantheon::LocalScheduler *GetLocalSched(UINT8 ProcNo)
+{
+	if (ProcNo >= pantheon::CPU::GetNoCPUs())
+	{
+		return nullptr;
+	}
+	return PerCoreInfo[ProcNo].LocalSched;
 }
 
 void *pantheon::CPU::GetStackArea(UINT64 Core)
