@@ -125,6 +125,7 @@ void pantheon::Scheduler::Unlock()
 
 
 static pantheon::LinkedList<pantheon::Process> ProcessList;
+static pantheon::SkipList<UINT64, pantheon::Thread*> ThreadList;
 
 /**
  * \~english @brief Creates a process, visible globally, from a name and address.
@@ -163,13 +164,30 @@ UINT32 pantheon::Scheduler::CreateProcess(const pantheon::String &ProcStr, void 
 	return NewID;
 }
 
-pantheon::Thread *pantheon::Scheduler::CreateThread(UINT32 Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority)
+pantheon::Thread *pantheon::Scheduler::CreateThread(UINT32 PID, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority)
 {
-	PANTHEON_UNUSED(Proc);
-	PANTHEON_UNUSED(StartAddr);
-	PANTHEON_UNUSED(ThreadData);
-	PANTHEON_UNUSED(Priority);
-	return nullptr;
+	pantheon::ScopedGlobalSchedulerLock _L;
+
+	pantheon::Process *MyProc = nullptr;
+	for (pantheon::Process &Proc : ProcessList)
+	{
+		if (Proc.ProcessID() == PID)
+		{
+			MyProc = &Proc;
+			break;
+		}
+	}
+
+	if(!MyProc)
+	{
+		/* Huh? You're asking for a PID that doesn't exist. */
+		return nullptr;
+	}
+
+	pantheon::Thread *Thr = pantheon::Thread::Create();
+	Thr->Initialize(MyProc, StartAddr, ThreadData, Priority, TRUE);
+	ThreadList.Insert(Thr->ThreadID(), Thr);
+	return Thr;
 }
 
 
@@ -264,6 +282,8 @@ extern "C" VOID FinishThread()
 
 BOOL pantheon::Scheduler::MapPages(UINT32 PID, const pantheon::vmm::VirtualAddress *VAddresses, const pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages)
 {
+	/* TODO: Move into a more sensible namespace like pantheon::mm or something */
+
 	BOOL Success = FALSE;
 	PANTHEON_UNUSED(PID);
 	PANTHEON_UNUSED(VAddresses);
