@@ -41,6 +41,12 @@ public:
 		this->ObjLock.Release();
 	}
 
+	BOOL TryLock()
+	{
+		OBJECT_SELF_ASSERT();
+		return this->ObjLock.TryAcquire();
+	}
+
 	[[nodiscard]]
 	BOOL IsLocked() const
 	{
