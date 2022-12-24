@@ -1,7 +1,10 @@
 #include <kern_datatypes.hpp>
+
+#include <System/Proc/kern_cpu.hpp>
+
 #include <Common/kern_rand.hpp>
 #include <Common/Sync/kern_atomic.hpp>
-
+#include <Common/Sync/kern_lockable.hpp>
 
 /**
  * @brief An implementation of Wichmann-Hill random number generation
@@ -9,8 +12,13 @@
  */
 UINT64 pantheon::Rand()
 {
+	/* Do something about this at some point... */
+	static pantheon::Spinlock RNGLock("Random Number Lock");
+
+	RNGLock.Acquire();
+
 	/* Arbitrary seeds. These were randomly generated. */
-	static Atomic<UINT64> Seeds[3] = 
+	static UINT64 Seeds[3] = 
 	{ 
 		0x5648AD4DA64862EB, 
 		0xF7293DDAD5921465, 
@@ -27,14 +35,21 @@ UINT64 pantheon::Rand()
 	static const UINT64 Additions[3] =
 	{
 		0xC14A13C7025F69E3,
-		0xD398EB8584DBF6d2,
+		0xD398EB8584DBF6D2,
 		0x2C1AF76BB6FADB0E,
 	};
 
-	for (UINT8 Index = 0; Index < 3; Index++)
+	/* Use jiffies to help make this more random */
+	UINT64 Jiffies = pantheon::CPU::GetJiffies() % 16;
+	for (UINT64 Counter = 0; Counter < Jiffies; Counter++)
 	{
-		Seeds[0].Store(Mults[Index] * Seeds[Index].Load() + Additions[Index]);
+		for (UINT8 Index = 0; Index < 3; Index++)
+		{
+			Seeds[Index] = Jiffies + (Mults[Index] * Seeds[Index] + Additions[Index]);
+		}
 	}
 
-	return Seeds[0].Load() ^ Seeds[1].Load() ^ Seeds[2].Load();
+	UINT64 Result = Seeds[0] ^ Seeds[1] ^ Seeds[2];
+	RNGLock.Release();
+	return Result;
 }
