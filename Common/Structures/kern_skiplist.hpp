@@ -141,7 +141,7 @@ public:
 			NewNode->Prev[Index] = nullptr;
 		}
 
-		while (NewLvl > 0)
+		while (NewLvl >= 0)
 		{
 			Current = Update[NewLvl];
 

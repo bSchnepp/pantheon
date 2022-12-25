@@ -45,7 +45,7 @@ static void kern_stage2_init()
 	pantheon::UnpackInitPrograms();
 }
 
-extern "C" void kern_init_core()
+static void kern_init_core()
 {
 	UINT8 CpuNo = pantheon::CPU::GetProcessorNumber();
 
@@ -56,25 +56,19 @@ extern "C" void kern_init_core()
 
 	pantheon::CPU::InitCore(CpuNo);
 	PerCoreInit();
+}
 
+static void kern_stage2_init_core()
+{
+	UINT8 CpuNo = pantheon::CPU::GetProcessorNumber();
 	while (pantheon::GetKernelStatus() < pantheon::KERNEL_STATUS_OK)
 	{
 		/* Loop until core 0 finished kernel setup */
 	}
-	
 	SERIAL_LOG("Pantheon booted with core %hhu\n", CpuNo);
 	pantheon::RearmSystemTimer(1000);
 	pantheon::CPU::STI();
-
-	for (;;)
-	{
-		if (CpuNo == 0)
-		{
-			pantheon::Scheduler::Reschedule();
-		}
-	}
 }
-
 
 extern "C" void kern_init(InitialBootInfo *InitBootInfo)
 {
@@ -84,9 +78,20 @@ extern "C" void kern_init(InitialBootInfo *InitBootInfo)
 		BoardRuntimeInit();
 		kern_basic_init(InitBootInfo);
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_SECOND_STAGE);
+	}
+
+	kern_init_core();
+
+	if (pantheon::CPU::GetProcessorNumber() == 0)
+	{
 		kern_stage2_init();
 		pantheon::SetKernelStatus(pantheon::KERNEL_STATUS_OK);
 	}
-	kern_init_core();
+
+	kern_stage2_init_core();
+	for (;;)
+	{
+		pantheon::Scheduler::Reschedule();
+	}
 	pantheon::StopError("Broke out of reschedule loop\n");
 }

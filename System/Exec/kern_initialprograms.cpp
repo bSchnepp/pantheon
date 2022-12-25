@@ -103,6 +103,9 @@ static void RunExecutable(void *ElfLocation, const char *Name)
 	UINT32 PID = pantheon::Scheduler::CreateProcess(Name, (void*)(Base + Header().e_entry));
 	RunElf(Header(), (const char*)ElfLocation, PID, Base);
 	pantheon::Scheduler::SetState(PID, pantheon::Process::STATE_RUNNING);	
+
+	/* Create our initial thread */
+	pantheon::Scheduler::CreateThread(PID, (void*)(Base + Header().e_entry), nullptr);
 }
 
 void pantheon::UnpackInitPrograms()

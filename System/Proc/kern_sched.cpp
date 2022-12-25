@@ -228,6 +228,9 @@ pantheon::Thread *pantheon::Scheduler::CreateThread(UINT32 PID, void *StartAddr,
 	pantheon::Thread *Thr = pantheon::Thread::Create();
 	Thr->Initialize(MyProc, StartAddr, ThreadData, Priority, TRUE);
 	ThreadList.Insert(Thr->ThreadID(), Thr);
+	
+	pantheon::ScopedLock _STL(Thr);
+	pantheon::CPU::GetMyLocalSched()->InsertThread(Thr);
 	return Thr;
 }
 
@@ -327,7 +330,7 @@ static SwapContext SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *Ne
 	if (NextThread->MyState() != pantheon::Thread::STATE_WAITING)
 	{
 		/* Huh? Why are we still here? */
-		pantheon::StopErrorFmt("Thread %lx was on the runqueue, but wasn't waiting\n", NextThread->MyState());
+		return {nullptr, nullptr};
 	}
 
 	/* Okay, we have to do a weird little dance. We need this to prevent
@@ -340,8 +343,8 @@ static SwapContext SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *Ne
 	pantheon::Process::Switch(NextThread->MyProc());
 	pantheon::ipc::SetThreadLocalRegion(NextThread->GetThreadLocalAreaRegister());
 
-	pantheon::Scheduler::SetThreadState(CurThread->ThreadID(), pantheon::Thread::STATE_WAITING);
-	pantheon::Scheduler::SetThreadState(NextThread->ThreadID(), pantheon::Thread::STATE_RUNNING);
+	CurThread->SetState(pantheon::Thread::STATE_WAITING);
+	NextThread->SetState(pantheon::Thread::STATE_RUNNING);
 
 	pantheon::CpuContext *OldContext = CurThread->GetRegisters();
 	pantheon::CpuContext *NewContext = NextThread->GetRegisters();
