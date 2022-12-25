@@ -96,10 +96,9 @@ public:
 	[[nodiscard]] UINT64 TicksLeft() const;
 	[[nodiscard]] UINT64 ThreadID() const;
 
-	VOID AddTicks(UINT64 TickCount);
 	VOID CountTick();
 	VOID RefreshTicks();
-	VOID SetTicks(UINT64 TickCount);
+	VOID SetTicks(INT64 TickCount);
 
 	VOID SetState(Thread::State State);
 	VOID SetPriority(Thread::Priority Priority);
@@ -135,8 +134,8 @@ private:
 	Thread::State CurState;
 	Thread::Priority CurPriority;
 
-	pantheon::Atomic<UINT64> PreemptCount;
-	pantheon::Atomic<UINT64> RemainingTicks;
+	pantheon::AtomicInteger<INT64> PreemptCount;
+	pantheon::AtomicInteger<INT64> RemainingTicks;
 
 	void *KernelStackSpace;
 	void *UserStackSpace;

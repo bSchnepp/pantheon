@@ -118,7 +118,15 @@ void pantheon::LocalScheduler::Setup()
 static UINT64 CalculateDeadline(UINT64 Jiffies, UINT64 PrioRatio, UINT64 RRInterval)
 {
 	/* We don't necessarilly have a high resolution timer, so let's just use jiffies. */
-	return Jiffies + (PrioRatio * RRInterval);
+	UINT64 Deadline = Jiffies + (PrioRatio * RRInterval);
+
+	/* However, we have to ban -1, since we're using a SkipList. */
+	if ((Deadline & ~0ULL) == ~0ULL)
+	{
+		Deadline = 0;
+	}
+
+	return Deadline;
 }
 
 /**
@@ -129,6 +137,11 @@ static UINT64 CalculateDeadline(UINT64 Jiffies, UINT64 PrioRatio, UINT64 RRInter
  */
 void pantheon::LocalScheduler::InsertThread(pantheon::Thread *Thr)
 {
+	if (Thr == nullptr)
+	{
+		return;
+	}
+
 	pantheon::ScopedLock _L(this);
 	this->Threads.PushFront(Thr);
 	if (Thr->MyState() == pantheon::Thread::STATE_WAITING)
@@ -252,10 +265,16 @@ UINT64 pantheon::Scheduler::AcquireThreadID()
 	/* TODO: When we run out of IDs, go back and ensure we don't
 	 * reuse an ID already in use!
 	 */
-	UINT32 RetVal = 0;
+	UINT64 RetVal = 0;
 	static UINT64 ThreadID = 0;
 	/* A copy has to be made since we haven't unlocked the spinlock yet. */
 	RetVal = ThreadID++;
+	
+	/* Ban 0 and -1, since these are special values. */
+	if (RetVal == 0 || RetVal == ~0ULL)
+	{
+		return pantheon::Scheduler::AcquireThreadID();
+	}
 	return RetVal;
 }
 
@@ -267,8 +286,9 @@ static pantheon::Thread *GetNextThread()
 	{
 		UINT8 LocalIndex = (MyCPU + Index) % NoCPUs;
 		pantheon::LocalScheduler *Sched = pantheon::CPU::GetLocalSched(LocalIndex);
-		if (Sched && Sched->TryLock())
+		if (Sched)
 		{
+			Sched->Lock();	/* This needs to be TryAcquire at some point. */
 			pantheon::Thread *Thr = Sched->AcquireThread();
 			Sched->Unlock();
 			if (Thr != nullptr)
@@ -288,44 +308,45 @@ struct SwapContext
 
 static SwapContext SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *NextThread)
 {
-	pantheon::Process *CurProcess = pantheon::CPU::GetCurProcess();
-
-	/* If this is the same thread, we've got a problem. Put it back and abort. */
-	pantheon::ScopedLock _NL(NextThread);
-	if (NextThread == CurThread)
+	/* If we have no next, give up and use the idle thread. */
+	if (NextThread == nullptr)
 	{
-		pantheon::CPU::GetMyLocalSched()->InsertThread(NextThread);
-		return {nullptr, nullptr};
+		NextThread = pantheon::CPU::GetMyLocalSched()->Idle();
 	}
 
-	/* If the new thread somehow isn't waiting, definitely don't run it. */
-	if (NextThread->MyState() != pantheon::Thread::STATE_WAITING)
+	pantheon::ScopedLock _NL(NextThread);
+
+	/* Don't try to swap to ourselves. */
+	if (NextThread == CurThread)
 	{
 		return {nullptr, nullptr};
 	}
 
 	pantheon::ScopedLock _OL(CurThread);
-	NextThread->RefreshTicks();
 
-	pantheon::ScopedLocalSchedulerLock _LSL;
-	pantheon::Scheduler::SetThreadState(CurThread->ThreadID(), pantheon::Thread::STATE_WAITING);
-
-	/* Switch the current process */
-	pantheon::Process *NextProc = NextThread->MyProc();
-	if (NextProc != CurProcess)
+	if (NextThread->MyState() != pantheon::Thread::STATE_WAITING)
 	{
-		pantheon::Process::Switch(NextProc);
+		/* Huh? Why are we still here? */
+		pantheon::StopErrorFmt("Thread %lx was on the runqueue, but wasn't waiting\n", NextThread->MyState());
 	}
 
-	NextThread->SetState(pantheon::Thread::STATE_RUNNING);
-	pantheon::CPU::GetCoreInfo()->CurProcess = NextProc;
-	pantheon::CPU::GetCoreInfo()->CurThread = NextThread;
+	/* Okay, we have to do a weird little dance. We need this to prevent
+	 * trying to reschedule and trip on ourselves. This gets restored
+	 * when we context switch back here.
+	 */
+	pantheon::CPU::GetCurThread()->BlockScheduling();
+
+	/* Change contexts */
+	pantheon::Process::Switch(NextThread->MyProc());
+	pantheon::ipc::SetThreadLocalRegion(NextThread->GetThreadLocalAreaRegister());
+
+	pantheon::Scheduler::SetThreadState(CurThread->ThreadID(), pantheon::Thread::STATE_WAITING);
+	pantheon::Scheduler::SetThreadState(NextThread->ThreadID(), pantheon::Thread::STATE_RUNNING);
 
 	pantheon::CpuContext *OldContext = CurThread->GetRegisters();
 	pantheon::CpuContext *NewContext = NextThread->GetRegisters();
 
-	/* Switch the thread local region */
-	pantheon::ipc::SetThreadLocalRegion(NextThread->GetThreadLocalAreaRegister());
+	pantheon::CPU::GetMyLocalSched()->InsertThread(CurThread);
 
 	return {OldContext, NewContext};
 }
@@ -351,12 +372,6 @@ void pantheon::Scheduler::Reschedule()
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	pantheon::Thread *NextThread = GetNextThread();
 
-	/* If we have no next, give up and use the idle thread. */
-	if (NextThread == nullptr)
-	{
-		NextThread = pantheon::CPU::GetMyLocalSched()->Idle();
-	}
-
 	SwapContext Con = SwapThreads(CurThread, NextThread);
 
 	if (Con.New && Con.Old)
@@ -364,6 +379,7 @@ void pantheon::Scheduler::Reschedule()
 		pantheon::Sync::DSBISH();
 		pantheon::Sync::ISB();
 		cpu_switch(Con.Old, Con.New, CpuIRegOffset);
+		pantheon::CPU::GetCurThread()->EnableScheduling();
 	}
 }
 
@@ -449,10 +465,5 @@ BOOL pantheon::Scheduler::SetThreadState(UINT64 TID, pantheon::Thread::State Sta
 	pantheon::ScopedLock _LL(Thr);
 
 	Thr->SetState(State);
-
-	if (State == pantheon::Thread::STATE_WAITING)
-	{
-		pantheon::CPU::GetMyLocalSched()->InsertThread(Thr);
-	}
 	return TRUE;
 }

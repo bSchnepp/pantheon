@@ -28,8 +28,6 @@ public:
 	~LocalScheduler() override = default;
 	UINT64 CountThreads(UINT64 PID);
 
-	[[nodiscard]] UINT64 BusyRatio() const { return this->Threads.Size() / this->LocalRunQueue.Size(); }
-
 	pantheon::Thread *AcquireThread();
 	void InsertThread(pantheon::Thread *Thr);
 
@@ -72,11 +70,11 @@ public:
 	FORCE_INLINE ~ScopedGlobalSchedulerLock() { pantheon::Scheduler::Unlock(); }	
 };
 
-class ScopedLocalSchedulerLock
+class ScopedRescheduleLock
 {
 public:
-	FORCE_INLINE ScopedLocalSchedulerLock() { pantheon::CPU::GetCurThread()->BlockScheduling(); }
-	FORCE_INLINE ~ScopedLocalSchedulerLock() { pantheon::CPU::GetCurThread()->EnableScheduling(); }	
+	FORCE_INLINE ScopedRescheduleLock() { pantheon::CPU::GetCurThread()->BlockScheduling(); }
+	FORCE_INLINE ~ScopedRescheduleLock() { pantheon::CPU::GetCurThread()->EnableScheduling(); }	
 };
 
 }

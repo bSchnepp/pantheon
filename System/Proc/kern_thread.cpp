@@ -212,20 +212,6 @@ UINT64 pantheon::Thread::ThreadID() const
 	return this->TID;
 }
 
-/**
- * \~english @brief Forcefully adds execution time to the current process.
- * \~english @author Brian Schnepp
- */
-VOID pantheon::Thread::AddTicks(UINT64 TickCount)
-{
-	OBJECT_SELF_ASSERT();
-	if (this->IsLocked() == FALSE)
-	{
-		StopError("AddTicks without lock");
-	}
-	this->RemainingTicks.Store(this->RemainingTicks.Load() + TickCount);
-}
-
 VOID pantheon::Thread::RefreshTicks()
 {
 	OBJECT_SELF_ASSERT();
@@ -250,14 +236,14 @@ VOID pantheon::Thread::SetState(Thread::State St)
 	this->CurState = St;
 }
 
-VOID pantheon::Thread::SetTicks(UINT64 TickCount)
+VOID pantheon::Thread::SetTicks(INT64 TickCount)
 {
 	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
 	{
 		StopError("SetTicks without lock");
 	}
-	this->RemainingTicks = TickCount;
+	this->RemainingTicks = (TickCount < 0) ? 0 : TickCount;
 }
 
 /**
@@ -354,18 +340,16 @@ void pantheon::Thread::BlockScheduling()
 {
 	OBJECT_SELF_ASSERT();
 	pantheon::Sync::DSBISH();
-	this->PreemptCount.Store(this->PreemptCount.Load() + 1);
+	this->PreemptCount.Add(1LL);
 	pantheon::Sync::DSBISH();
 }
 
 void pantheon::Thread::EnableScheduling()
 {
 	OBJECT_SELF_ASSERT();
-	this->Lock();
 	pantheon::Sync::DSBISH();
-	this->PreemptCount.Store(this->PreemptCount.Load() - 1);
+	this->PreemptCount.Add(-1LL);
 	pantheon::Sync::DSBISH();
-	this->Unlock();
 }
 
 extern "C" VOID drop_usermode(UINT64 PC, UINT64 PSTATE, UINT64 SP);
