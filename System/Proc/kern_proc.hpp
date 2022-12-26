@@ -136,11 +136,8 @@ public:
 			return;
 		}
 		
-		pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
-		if (CurProc && CurProc != Next)
-		{
-			pantheon::CPUReg::W_TTBR0_EL1(Next->GetTTBR0());
-		}
+		pantheon::CPUReg::W_TTBR0_EL1(Next->GetTTBR0());
+		pantheon::CPU::GetCoreInfo()->CurProcess = Next;
 	}
 
 private:

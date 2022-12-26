@@ -349,6 +349,7 @@ static SwapContext SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *Ne
 	pantheon::CpuContext *OldContext = CurThread->GetRegisters();
 	pantheon::CpuContext *NewContext = NextThread->GetRegisters();
 
+	pantheon::CPU::GetCoreInfo()->CurThread = NextThread;
 	pantheon::CPU::GetMyLocalSched()->InsertThread(CurThread);
 
 	return {OldContext, NewContext};
