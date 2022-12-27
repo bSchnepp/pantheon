@@ -67,7 +67,6 @@ pantheon::Thread::Thread(Process *OwningProcess, Priority Pri) : pantheon::Locka
 	this->TID = pantheon::Scheduler::AcquireThreadID();
 
 	/* 45 for NORMAL, 30 for LOW, 15 for VERYLOW, etc. */
-	this->RefreshTicks();
 	this->Unlock();
 }
 
@@ -174,35 +173,19 @@ BOOL pantheon::Thread::Preempted() const
 }
 
 /**
- * \~english @brief Gets the number of timer interrupts remaining for the thread
- * \~english @author Brian Schnepp
- * \~english @return The number of times the processor core will need to be
- * interrupted before the thread is preempted and some other work resumes on
- * the current processor core.
- */
-UINT64 pantheon::Thread::TicksLeft() const
-{
-	OBJECT_SELF_ASSERT();
-	return this->RemainingTicks.Load();
-}
-
-/**
  * \~english @brief Counts down the number of timer interrupts for this thread
  * \~english @author Brian Schnepp
  */
-VOID pantheon::Thread::CountTick()
+INT64 pantheon::Thread::CountTick()
 {
 	OBJECT_SELF_ASSERT();
-	if (this->IsLocked() == FALSE)
+	pantheon::ScopedLock _L(this);
+	if (this->RemainingTicks.Load() <= 0)
 	{
-		StopError("CountTicks without lock");
+		this->SetTicks(0);
+		return 0;
 	}
-
-	if (this->RemainingTicks == 0)
-	{
-		return;
-	}
-	this->RemainingTicks.Store(this->RemainingTicks.Load() - 1);
+	return this->RemainingTicks.Sub(1);
 }
 
 [[nodiscard]]
@@ -210,16 +193,6 @@ UINT64 pantheon::Thread::ThreadID() const
 {
 	OBJECT_SELF_ASSERT();
 	return this->TID;
-}
-
-VOID pantheon::Thread::RefreshTicks()
-{
-	OBJECT_SELF_ASSERT();
-	if (this->IsLocked() == FALSE)
-	{
-		StopError("RefreshTicks without lock");
-	}
-	this->RemainingTicks = 6;
 }
 
 /**
@@ -348,7 +321,7 @@ void pantheon::Thread::EnableScheduling()
 {
 	OBJECT_SELF_ASSERT();
 	pantheon::Sync::DSBISH();
-	this->PreemptCount.Add(-1LL);
+	this->PreemptCount.Sub(1LL);
 	pantheon::Sync::DSBISH();
 }
 
@@ -363,6 +336,9 @@ static void true_drop_process(void *StartAddress, pantheon::vmm::VirtualAddress 
 void pantheon::Thread::Initialize(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority, BOOL UserMode)
 {
 	static constexpr UINT64 InitialThreadStackSize = pantheon::vmm::SmallestPageSize * pantheon::Thread::InitialNumStackPages;
+	this->TID = pantheon::Scheduler::AcquireThreadID();
+	this->CurState = pantheon::Thread::STATE_DEAD;
+
 	Optional<void*> StackSpace = BasicMalloc(InitialThreadStackSize);
 	if (StackSpace.GetOkay())
 	{

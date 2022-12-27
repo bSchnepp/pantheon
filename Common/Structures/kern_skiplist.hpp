@@ -182,7 +182,7 @@ public:
 		if (Current->Key == Key)
 		{
 			UINT8 CurLvl = Current->Level;
-			for (UINT8 Lvl = 0; Lvl < CurLvl; Lvl++)
+			for (UINT8 Lvl = 0; Lvl <= CurLvl; Lvl++)
 			{
 				Current->Prev[Lvl]->Next[Lvl] = Current->Next[Lvl];
 				Current->Next[Lvl]->Prev[Lvl] = Current->Prev[Lvl];

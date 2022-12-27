@@ -74,6 +74,11 @@ BOOL pantheon::Spinlock::TryAcquire()
 		__sync_synchronize();
 		return TRUE;
 	}
+	
+	while (__atomic_load_n(&this->Locked, __ATOMIC_RELAXED))
+	{
+		pantheon::CPU::PAUSE();
+	}	
 	__sync_synchronize();
 	pantheon::CPU::POPI();
 	return FALSE;

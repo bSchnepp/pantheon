@@ -43,7 +43,7 @@ static pantheon::SkipList<UINT64, pantheon::Thread*> ThreadList;
  * \~english @brief Initalizes an instance of a per-core scheduler.
  * \~english @author Brian Schnepp
  */
-pantheon::LocalScheduler::LocalScheduler() : pantheon::Allocatable<LocalScheduler, 256>(), pantheon::Lockable("Scheduler")
+pantheon::LocalScheduler::LocalScheduler() : pantheon::Lockable("Scheduler")
 {
 	this->IdleThread = nullptr;
 }
@@ -108,6 +108,9 @@ void pantheon::LocalScheduler::Setup()
 		if (Proc.ProcessID() == 0)
 		{
 			Idle->Initialize(&Proc, nullptr, nullptr, pantheon::Thread::PRIORITY_VERYLOW, FALSE);
+			Idle->Lock();
+			Idle->SetState(pantheon::Thread::STATE_RUNNING);
+			Idle->Unlock();
 		}
 	}
 
@@ -148,7 +151,13 @@ void pantheon::LocalScheduler::InsertThread(pantheon::Thread *Thr)
 	{
 		UINT64 Jiffies = pantheon::CPU::GetJiffies();
 		UINT64 Prio = pantheon::Thread::PRIORITY_MAX - Thr->MyPriority();
-		this->LocalRunQueue.Insert(CalculateDeadline(Jiffies, Prio, 6), Thr);
+
+		UINT64 Deadline = CalculateDeadline(Jiffies, Prio, 6);
+		while (this->LocalRunQueue.Contains(Deadline))
+		{
+			Deadline++;
+		}
+		this->LocalRunQueue.Insert(Deadline, Thr);
 	}
 }
 
@@ -258,8 +267,8 @@ UINT32 pantheon::Scheduler::AcquireProcessID()
 	 * 0 should be reserved for the generic idle process.
 	 */
 	UINT32 RetVal = 0;
-	static UINT32 ProcessID = 1;
-	RetVal = ProcessID++;
+	static pantheon::AtomicInteger<UINT32> ProcessID = 1;
+	RetVal = ProcessID.Add(1);
 	return RetVal;
 }
 
@@ -269,9 +278,8 @@ UINT64 pantheon::Scheduler::AcquireThreadID()
 	 * reuse an ID already in use!
 	 */
 	UINT64 RetVal = 0;
-	static UINT64 ThreadID = 0;
-	/* A copy has to be made since we haven't unlocked the spinlock yet. */
-	RetVal = ThreadID++;
+	static pantheon::AtomicInteger<UINT64> ThreadID = 1;
+	RetVal = ThreadID.Add(1);
 	
 	/* Ban 0 and -1, since these are special values. */
 	if (RetVal == 0 || RetVal == ~0ULL)
@@ -345,13 +353,13 @@ static SwapContext SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *Ne
 
 	CurThread->SetState(pantheon::Thread::STATE_WAITING);
 	NextThread->SetState(pantheon::Thread::STATE_RUNNING);
+	NextThread->SetTicks(6);
 
 	pantheon::CpuContext *OldContext = CurThread->GetRegisters();
 	pantheon::CpuContext *NewContext = NextThread->GetRegisters();
 
 	pantheon::CPU::GetCoreInfo()->CurThread = NextThread;
 	pantheon::CPU::GetMyLocalSched()->InsertThread(CurThread);
-
 	return {OldContext, NewContext};
 }
 
@@ -367,12 +375,6 @@ static SwapContext SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *Ne
  */
 void pantheon::Scheduler::Reschedule()
 {
-	/* Don't reschedule if interrupts are off */
-	if (pantheon::CPU::ICOUNT())
-	{
-		return;
-	}
-
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	pantheon::Thread *NextThread = GetNextThread();
 
@@ -390,28 +392,10 @@ void pantheon::Scheduler::Reschedule()
 void pantheon::Scheduler::AttemptReschedule()
 {
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+	INT64 RemainingTicks = CurThread->CountTick();
 
-	if (CurThread)
+	if (RemainingTicks <= 0 && !CurThread->Preempted())
 	{
-		CurThread->Lock();
-		CurThread->CountTick();
-		UINT64 RemainingTicks = CurThread->TicksLeft();
-
-		if (RemainingTicks > 0 || CurThread->Preempted())
-		{
-			CurThread->Unlock();
-			return;
-		}
-		
-		CurThread->SetTicks(0);
-		CurThread->Unlock();
-
-
-		if (pantheon::CPU::ICOUNT() != 0)
-		{
-			StopError("Interrupts not allowed for reschedule");
-		}
-
 		pantheon::Scheduler::Reschedule();
 	}
 }

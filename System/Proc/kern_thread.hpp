@@ -92,12 +92,9 @@ public:
 	[[nodiscard]] Process *MyProc() const;
 	[[nodiscard]] Thread::State MyState() const;
 	[[nodiscard]] Thread::Priority MyPriority() const;
-
-	[[nodiscard]] UINT64 TicksLeft() const;
 	[[nodiscard]] UINT64 ThreadID() const;
 
-	VOID CountTick();
-	VOID RefreshTicks();
+	INT64 CountTick();
 	VOID SetTicks(INT64 TickCount);
 
 	VOID SetState(Thread::State State);

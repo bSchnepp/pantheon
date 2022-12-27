@@ -20,7 +20,7 @@
 namespace pantheon
 {
 
-class LocalScheduler : public pantheon::Allocatable<LocalScheduler, 256>, public pantheon::Lockable
+class LocalScheduler : public pantheon::Allocatable<LocalScheduler, MAX_NUM_CPUS>, public pantheon::Lockable
 {
 
 public:

@@ -119,6 +119,16 @@ public:
 		#endif
 	}
 
+	T Sub(T Item)
+	{
+		#ifndef ONLY_TESTS
+		return __atomic_fetch_sub(&(this->Content), Item, __ATOMIC_SEQ_CST);
+		#else
+		this->Content -= Item;
+		return this->Content;
+		#endif
+	}
+
 	[[nodiscard]] 
 	bool operator==(const Atomic<T> &Other) const
 	{
