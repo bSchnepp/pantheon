@@ -361,6 +361,12 @@ void pantheon::Thread::Initialize(pantheon::Process *Proc, void *StartAddr, void
 		}
 		this->SetState(pantheon::Thread::STATE_WAITING);
 		this->SetPriority(Priority);
+
+		/* Don't set up a TLS for idle proc. */
+		if (Proc->ProcessID() != 0)
+		{
+			this->SetupThreadLocalArea();
+		}
 		this->Unlock();
 	}
 }

@@ -35,7 +35,7 @@
 
 
 static pantheon::Spinlock SchedLock("Global Scheduler Lock");
-static pantheon::LinkedList<pantheon::Process> ProcessList;
+static pantheon::SkipList<UINT32, pantheon::Process*> ProcessList;
 static pantheon::SkipList<UINT64, pantheon::Thread*> ThreadList;
 
 
@@ -103,16 +103,16 @@ void pantheon::LocalScheduler::Setup()
 	pantheon::ScopedGlobalSchedulerLock _L;
 
 	pantheon::Thread *Idle = pantheon::Thread::Create();
-	for (pantheon::Process &Proc : ProcessList)
+	Optional<pantheon::Process*> MProc = ProcessList.Get(0);
+	if (!MProc.GetOkay())
 	{
-		if (Proc.ProcessID() == 0)
-		{
-			Idle->Initialize(&Proc, nullptr, nullptr, pantheon::Thread::PRIORITY_VERYLOW, FALSE);
-			Idle->Lock();
-			Idle->SetState(pantheon::Thread::STATE_RUNNING);
-			Idle->Unlock();
-		}
+		pantheon::StopErrorFmt("No PID 0!\n");
 	}
+
+	Idle->Initialize(MProc.GetValue(), nullptr, nullptr, pantheon::Thread::PRIORITY_VERYLOW, FALSE);
+	Idle->Lock();
+	Idle->SetState(pantheon::Thread::STATE_RUNNING);
+	Idle->Unlock();
 
 	pantheon::CPU::GetCoreInfo()->CurThread = Idle;
 	this->IdleThread = Idle;	
@@ -164,7 +164,7 @@ void pantheon::LocalScheduler::InsertThread(pantheon::Thread *Thr)
 void pantheon::Scheduler::Init()
 {
 	static pantheon::Process IdleProc;
-	ProcessList.PushFront(&IdleProc);
+	ProcessList.Insert(0, &IdleProc);
 }
 
 void pantheon::Scheduler::Lock()
@@ -209,7 +209,7 @@ UINT32 pantheon::Scheduler::CreateProcess(const pantheon::String &ProcStr, void 
 	CreateInfo.ID = NewID;
 	Proc->Initialize(CreateInfo);
 
-	ProcessList.PushFront(Proc);
+	ProcessList.Insert(NewID, Proc);
 
 	return NewID;
 }
@@ -218,22 +218,13 @@ pantheon::Thread *pantheon::Scheduler::CreateThread(UINT32 PID, void *StartAddr,
 {
 	pantheon::ScopedGlobalSchedulerLock _L;
 
-	pantheon::Process *MyProc = nullptr;
-	for (pantheon::Process &Proc : ProcessList)
-	{
-		if (Proc.ProcessID() == PID)
-		{
-			MyProc = &Proc;
-			break;
-		}
-	}
-
-	if(!MyProc)
+	if(!ProcessList.Contains(PID))
 	{
 		/* Huh? You're asking for a PID that doesn't exist. */
 		return nullptr;
 	}
 
+	pantheon::Process *MyProc = ProcessList.Get(PID).GetValue();
 	pantheon::Thread *Thr = pantheon::Thread::Create();
 	Thr->Initialize(MyProc, StartAddr, ThreadData, Priority, TRUE);
 	ThreadList.Insert(Thr->ThreadID(), Thr);
@@ -261,30 +252,26 @@ UINT64 pantheon::Scheduler::CountThreads(UINT64 PID)
 
 UINT32 pantheon::Scheduler::AcquireProcessID()
 {
-	/* TODO: When we run out of IDs, go back and ensure we don't
-	 * reuse an ID already in use!
-	 * 
-	 * 0 should be reserved for the generic idle process.
-	 */
 	UINT32 RetVal = 0;
 	static pantheon::AtomicInteger<UINT32> ProcessID = 1;
 	RetVal = ProcessID.Add(1);
+	while (ProcessList.Contains(RetVal) || RetVal == 0)
+	{
+		RetVal = ProcessID.Add(1);
+	}
 	return RetVal;
 }
 
 UINT64 pantheon::Scheduler::AcquireThreadID()
 {
-	/* TODO: When we run out of IDs, go back and ensure we don't
-	 * reuse an ID already in use!
-	 */
 	UINT64 RetVal = 0;
 	static pantheon::AtomicInteger<UINT64> ThreadID = 1;
 	RetVal = ThreadID.Add(1);
 	
 	/* Ban 0 and -1, since these are special values. */
-	if (RetVal == 0 || RetVal == ~0ULL)
+	while (RetVal == 0 || RetVal == ~0ULL || ThreadList.Contains(RetVal))
 	{
-		return pantheon::Scheduler::AcquireThreadID();
+		RetVal = ThreadID.Add(1);
 	}
 	return RetVal;
 }
@@ -409,35 +396,34 @@ BOOL pantheon::Scheduler::MapPages(UINT32 PID, const pantheon::vmm::VirtualAddre
 {
 	/* TODO: Move into a more sensible namespace like pantheon::mm or something */
 	pantheon::ScopedGlobalSchedulerLock _L;
-	for (pantheon::Process &Item : ProcessList)
+
+	if (!ProcessList.Contains(PID))
 	{
-		if (Item.ProcessID() == PID)
-		{
-			pantheon::ScopedLock _LL(&Item);
-			for (UINT64 Index = 0; Index < NumPages; ++Index)
-			{
-				Item.MapAddress(VAddresses[Index], PAddresses[Index], PageAttributes);
-			}
-			return TRUE;
-		}
+		return FALSE;
 	}
-	return FALSE;
+
+	pantheon::Process *Proc = ProcessList.Get(PID).GetValue();
+	pantheon::ScopedLock _LL(Proc);
+	for (UINT64 Index = 0; Index < NumPages; ++Index)
+	{
+		Proc->MapAddress(VAddresses[Index], PAddresses[Index], PageAttributes);
+	}
+	return TRUE;
 }
 
 BOOL pantheon::Scheduler::SetState(UINT32 PID, pantheon::Process::State State)
 {
 	pantheon::ScopedGlobalSchedulerLock _L;
 
-	for (pantheon::Process &Item : ProcessList)
+	if (!ProcessList.Contains(PID))
 	{
-		if (Item.ProcessID() == PID)
-		{
-			pantheon::ScopedLock _LL(&Item);
-			Item.SetState(State);
-			return TRUE;
-		}
+		return FALSE;
 	}
-	return FALSE;
+
+	pantheon::Process *Proc = ProcessList.Get(PID).GetValue();
+	pantheon::ScopedLock _LL(Proc);
+	Proc->SetState(State);
+	return TRUE;
 }
 
 BOOL pantheon::Scheduler::SetThreadState(UINT64 TID, pantheon::Thread::State State)
