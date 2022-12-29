@@ -79,6 +79,8 @@ public:
 		PRIORITY_MAX,
 	}Priority;
 
+	static constexpr UINT64 RR_INTERVAL = 6;
+
 public:
 	Thread();
 	Thread(Process *ParentProcess);

@@ -152,7 +152,7 @@ void pantheon::LocalScheduler::InsertThread(pantheon::Thread *Thr)
 		UINT64 Jiffies = pantheon::CPU::GetJiffies();
 		UINT64 Prio = pantheon::Thread::PRIORITY_MAX - Thr->MyPriority();
 
-		UINT64 Deadline = CalculateDeadline(Jiffies, Prio, 6);
+		UINT64 Deadline = CalculateDeadline(Jiffies, Prio, pantheon::Thread::RR_INTERVAL);
 		while (this->LocalRunQueue.Contains(Deadline))
 		{
 			Deadline++;
@@ -340,7 +340,7 @@ static SwapContext SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *Ne
 
 	CurThread->SetState(pantheon::Thread::STATE_WAITING);
 	NextThread->SetState(pantheon::Thread::STATE_RUNNING);
-	NextThread->SetTicks(6);
+	NextThread->SetTicks(pantheon::Thread::RR_INTERVAL);
 
 	pantheon::CpuContext *OldContext = CurThread->GetRegisters();
 	pantheon::CpuContext *NewContext = NextThread->GetRegisters();
@@ -365,12 +365,13 @@ void pantheon::Scheduler::Reschedule()
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	pantheon::Thread *NextThread = GetNextThread();
 
+	pantheon::Sync::DSBISH();
+	pantheon::Sync::ISB();
+	
 	SwapContext Con = SwapThreads(CurThread, NextThread);
 
 	if (Con.New && Con.Old)
 	{
-		pantheon::Sync::DSBISH();
-		pantheon::Sync::ISB();
 		cpu_switch(Con.Old, Con.New, CpuIRegOffset);
 		pantheon::CPU::GetCurThread()->EnableScheduling();
 	}

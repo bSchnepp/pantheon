@@ -65,8 +65,6 @@ pantheon::Thread::Thread(Process *OwningProcess, Priority Pri) : pantheon::Locka
 	this->CurState = pantheon::Thread::STATE_INIT;
 
 	this->TID = pantheon::Scheduler::AcquireThreadID();
-
-	/* 45 for NORMAL, 30 for LOW, 15 for VERYLOW, etc. */
 	this->Unlock();
 }
 
@@ -136,7 +134,7 @@ pantheon::Process *pantheon::Thread::MyProc() const
 pantheon::Thread::State pantheon::Thread::MyState() const
 {
 	OBJECT_SELF_ASSERT();
-	UINT64 State = this->CurState;	/* ubsan says this is a problem. */
+	UINT64 State = this->CurState;
 	if (State > pantheon::Thread::STATE_MAX)
 	{
 		StopErrorFmt("Invalid thread state: got 0x%lx\n", this->CurState);
