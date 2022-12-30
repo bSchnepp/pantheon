@@ -121,6 +121,23 @@ public:
 	ThreadLocalRegion *GetThreadLocalArea();
 	VOID SetupThreadLocalArea();
 
+	/**
+	 * @brief Switches thread context to another thread
+	 */
+	static void Switch(Thread *Next)
+	{
+		if (Next == nullptr)
+		{
+			return;
+		}
+
+		pantheon::ipc::SetThreadLocalRegion(Next->LocalRegion);
+		pantheon::CPU::GetCurThread()->SetState(pantheon::Thread::STATE_WAITING);
+		Next->SetState(Thread::STATE_RUNNING);
+		Next->SetTicks(Thread::RR_INTERVAL);
+		pantheon::CPU::GetCoreInfo()->CurThread = Next;
+	}
+
 private:
 	VOID SetEntryLocation(UINT64 IP, UINT64 SP, VOID* ThreadData);
 

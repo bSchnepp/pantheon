@@ -334,18 +334,12 @@ static SwapContext SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *Ne
 	 */
 	pantheon::CPU::GetCurThread()->BlockScheduling();
 
-	/* Change contexts */
+	/* Change kernel view of contexts */
 	pantheon::Process::Switch(NextThread->MyProc());
-	pantheon::ipc::SetThreadLocalRegion(NextThread->GetThreadLocalAreaRegister());
-
-	CurThread->SetState(pantheon::Thread::STATE_WAITING);
-	NextThread->SetState(pantheon::Thread::STATE_RUNNING);
-	NextThread->SetTicks(pantheon::Thread::RR_INTERVAL);
+	pantheon::Thread::Switch(NextThread);
 
 	pantheon::CpuContext *OldContext = CurThread->GetRegisters();
 	pantheon::CpuContext *NewContext = NextThread->GetRegisters();
-
-	pantheon::CPU::GetCoreInfo()->CurThread = NextThread;
 	pantheon::CPU::GetMyLocalSched()->InsertThread(CurThread);
 	return {OldContext, NewContext};
 }
@@ -364,11 +358,10 @@ void pantheon::Scheduler::Reschedule()
 {
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	pantheon::Thread *NextThread = GetNextThread();
-
-	pantheon::Sync::DSBISH();
-	pantheon::Sync::ISB();
 	
 	SwapContext Con = SwapThreads(CurThread, NextThread);
+	pantheon::Sync::DSBISH();
+	pantheon::Sync::ISB();
 
 	if (Con.New && Con.Old)
 	{
