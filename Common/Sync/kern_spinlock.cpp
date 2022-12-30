@@ -31,13 +31,13 @@ void pantheon::Spinlock::Acquire()
 {
 	if (this->DebugName == nullptr)
 	{
-		StopError("bad spinlock", this);
+		StopErrorFmt("Bad Spinlock: was nullptr\n");
 	}
 	
 	pantheon::CPU::PUSHI();
 	if (this->IsHolding())
 	{
-		StopError(this->DebugName, this);
+		StopErrorFmt("Spinlock: %s (source %p), trying to acquire when already held", this->DebugName, this);
 	}
 
 	for (;;)
@@ -59,7 +59,7 @@ BOOL pantheon::Spinlock::TryAcquire()
 {
 	if (this->DebugName == nullptr)
 	{
-		StopError("bad spinlock", this);
+		StopErrorFmt("Bad Spinlock: was nullptr\n");
 	}
 	
 	pantheon::CPU::PUSHI();
@@ -88,7 +88,7 @@ void pantheon::Spinlock::Release()
 {
 	if (!this->IsHolding())
 	{
-		pantheon::StopError(this->DebugName, this);
+		StopErrorFmt("Spinlock: %s (source %p), trying to release when not held (holder is %hd)\n", this->DebugName, this, this->Holder());
 	}
 	this->CoreNo = -1;
 	__sync_synchronize();
@@ -111,12 +111,12 @@ BOOL pantheon::Spinlock::IsLocked() const
 
 /**
  * \~english @brief Gets the current holder of this lock, if it is held.
- * \~english @details Returns 0 is this lock isn't held, otherwise gets the core number.
+ * \~english @details Returns -1 is this lock isn't held, otherwise gets the core number.
  * 
  * \~english @author Brian Schnepp
  */
 [[nodiscard]] 
-UINT8 pantheon::Spinlock::Holder() const
+INT16 pantheon::Spinlock::Holder() const
 {
-	return (this->Locked ? this->CoreNo : 0);
+	return (this->Locked ? this->CoreNo : static_cast<INT16>(-1));
 }
