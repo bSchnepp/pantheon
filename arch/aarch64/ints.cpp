@@ -29,13 +29,13 @@ extern "C" void err_handler_el1_sp0(pantheon::TrapFrame *Frame)
 extern "C" void fiq_handler_el1_sp0(pantheon::TrapFrame *Frame)
 {
 	PANTHEON_UNUSED(Frame);
-	SERIAL_LOG_UNSAFE("%s\n", "ERR: FIQ HANDLER EL1 SP0");
+	SERIAL_LOG("%s\n", "ERR: FIQ HANDLER EL1 SP0");
 }
 
 extern "C" void irq_handler_el1_sp0(pantheon::TrapFrame *Frame)
 {
 	PANTHEON_UNUSED(Frame);
-	SERIAL_LOG_UNSAFE("%s\n", "ERR: IRQ HANDLER EL1 SP0");
+	SERIAL_LOG("%s\n", "ERR: IRQ HANDLER EL1 SP0");
 }
 
 extern "C" void sync_handler_el1(pantheon::TrapFrame *Frame)
@@ -67,7 +67,7 @@ extern "C" void err_handler_el1(pantheon::TrapFrame *Frame)
 extern "C" void fiq_handler_el1(pantheon::TrapFrame *Frame)
 {
 	PANTHEON_UNUSED(Frame);
-	SERIAL_LOG_UNSAFE("%s\n", "ERR: FIQ HANDLER EL1");
+	SERIAL_LOG("%s\n", "ERR: FIQ HANDLER EL1");
 }
 
 class CurFrameMgr
@@ -119,8 +119,7 @@ extern "C" void sync_handler_el0(pantheon::TrapFrame *Frame)
 	else
 	{
 		pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-		SERIAL_LOG_UNSAFE("Bad sync handler el0: esr: 0x%lx far: 0x%lx elr: 0x%lx spsr: 0x%lx\n", ESR, FAR, ELR, SPSR);
-		SERIAL_LOG_UNSAFE("Process ID was %ld\n", CurThread->MyProc()->ProcessID());		
+		SERIAL_LOG("PID %d: Bad sync handler el0: esr: 0x%lx far: 0x%lx elr: 0x%lx spsr: 0x%lx\n", CurThread->MyProc()->ProcessID(), ESR, FAR, ELR, SPSR);
 		if (ESR == 0x2000000)
 		{
 			pantheon::vmm::PageTable *PT = CurThread->MyProc()->GetPageTable();
@@ -132,13 +131,13 @@ extern "C" void sync_handler_el0(pantheon::TrapFrame *Frame)
 extern "C" void err_handler_el0(pantheon::TrapFrame *Frame)
 {
 	PANTHEON_UNUSED(Frame);
-	SERIAL_LOG_UNSAFE("%s\n", "ERR: ERR HANDLER EL0");
+	SERIAL_LOG("%s\n", "ERR: ERR HANDLER EL0");
 }
 
 extern "C" void fiq_handler_el0(pantheon::TrapFrame *Frame)
 {
 	PANTHEON_UNUSED(Frame);
-	SERIAL_LOG_UNSAFE("%s\n", "ERR: FIQ HANDLER EL0");
+	SERIAL_LOG("%s\n", "ERR: FIQ HANDLER EL0");
 }
 
 extern "C" void irq_handler_el0(pantheon::TrapFrame *Frame)
@@ -150,25 +149,25 @@ extern "C" void irq_handler_el0(pantheon::TrapFrame *Frame)
 extern "C" void sync_handler_el0_32(pantheon::TrapFrame *Frame)
 {
 	PANTHEON_UNUSED(Frame);
-	SERIAL_LOG_UNSAFE("%s\n", "ERR: SYNC HANDLER EL0_32");
+	SERIAL_LOG("%s\n", "ERR: SYNC HANDLER EL0_32");
 }
 
 extern "C" void err_handler_el0_32(pantheon::TrapFrame *Frame)
 {
 	PANTHEON_UNUSED(Frame);
-	SERIAL_LOG_UNSAFE("%s\n", "ERR: ERR HANDLER EL0_32");
+	SERIAL_LOG("%s\n", "ERR: ERR HANDLER EL0_32");
 }
 
 extern "C" void fiq_handler_el0_32(pantheon::TrapFrame *Frame)
 {
 	PANTHEON_UNUSED(Frame);
-	SERIAL_LOG_UNSAFE("%s\n", "ERR: FIQ HANDLER EL0_32");
+	SERIAL_LOG("%s\n", "ERR: FIQ HANDLER EL0_32");
 }
 
 extern "C" void irq_handler_el0_32(pantheon::TrapFrame *Frame)
 {
 	PANTHEON_UNUSED(Frame);
-	SERIAL_LOG_UNSAFE("%s\n", "ERR: IRQ HANDLER EL0_32");
+	SERIAL_LOG("%s\n", "ERR: IRQ HANDLER EL0_32");
 }
 
 VOID pantheon::arm::LoadInterruptTable(VOID *Table)

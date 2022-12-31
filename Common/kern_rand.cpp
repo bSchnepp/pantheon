@@ -6,15 +6,15 @@
 #include <Common/Sync/kern_atomic.hpp>
 #include <Common/Sync/kern_lockable.hpp>
 
+/* Do something about this at some point... */
+static pantheon::Spinlock RNGLock("Random Number Lock");
+
 /**
  * @brief An implementation of Wichmann-Hill random number generation
  * @return A (cryptographically insecure) random number
  */
 UINT64 pantheon::Rand()
 {
-	/* Do something about this at some point... */
-	static pantheon::Spinlock RNGLock("Random Number Lock");
-
 	RNGLock.Acquire();
 
 	/* Arbitrary seeds. These were randomly generated. */

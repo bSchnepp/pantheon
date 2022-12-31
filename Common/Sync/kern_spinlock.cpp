@@ -29,6 +29,8 @@ pantheon::Spinlock::~Spinlock()
 
 void pantheon::Spinlock::Acquire()
 {
+	OBJECT_SELF_ASSERT();
+
 	if (this->DebugName == nullptr)
 	{
 		StopErrorFmt("Bad Spinlock: was nullptr\n");
@@ -57,6 +59,8 @@ void pantheon::Spinlock::Acquire()
 
 BOOL pantheon::Spinlock::TryAcquire()
 {
+	OBJECT_SELF_ASSERT();
+
 	if (this->DebugName == nullptr)
 	{
 		StopErrorFmt("Bad Spinlock: was nullptr\n");
@@ -86,6 +90,8 @@ BOOL pantheon::Spinlock::TryAcquire()
 
 void pantheon::Spinlock::Release()
 {
+	OBJECT_SELF_ASSERT();
+	
 	__sync_synchronize();
 	if (!this->IsHolding())
 	{

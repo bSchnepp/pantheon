@@ -163,6 +163,9 @@ void pantheon::LocalScheduler::InsertThread(pantheon::Thread *Thr)
 
 void pantheon::Scheduler::Init()
 {
+	/* This is probably unnecessary, but let's be safe... */
+	ScopedGlobalSchedulerLock _L;
+
 	static pantheon::Process IdleProc;
 	ProcessList.Insert(0, &IdleProc);
 }
@@ -253,16 +256,18 @@ UINT64 pantheon::Scheduler::CountThreads(UINT64 PID)
 UINT32 pantheon::Scheduler::AcquireProcessID()
 {
 	UINT32 RetVal = 0;
-	static pantheon::Spinlock PIDLock("Process ID Lock");
 	static UINT32 ProcessID = 1;
 
-	PIDLock.Acquire();
+	if (!SchedLock.IsLocked())
+	{
+		pantheon::StopErrorFmt("Acquire thread without locking Global Scheduler\n");
+	}
+
 	RetVal = ProcessID++;
 	while (ProcessList.Contains(RetVal) || RetVal == 0)
 	{
 		RetVal = ProcessID++;
 	}
-	PIDLock.Release();
 
 	return RetVal;
 }
@@ -270,17 +275,19 @@ UINT32 pantheon::Scheduler::AcquireProcessID()
 UINT64 pantheon::Scheduler::AcquireThreadID()
 {
 	UINT64 RetVal = 0;
-	static pantheon::Spinlock TIDLock("Thread ID Lock");
 	static UINT64 ThreadID = 1;
 
-	TIDLock.Acquire();
+	if (!SchedLock.IsLocked())
+	{
+		pantheon::StopErrorFmt("Acquire thread without locking Global Scheduler\n");
+	}
+
 	RetVal = ThreadID++;
 	/* Ban 0 and -1, since these are special values. */
 	while (RetVal == 0 || RetVal == ~0ULL || ThreadList.Contains(RetVal))
 	{
 		RetVal = ThreadID++;
 	}
-	TIDLock.Release();
 	return RetVal;
 }
 
@@ -292,9 +299,8 @@ static pantheon::Thread *GetNextThread()
 	{
 		UINT8 LocalIndex = (MyCPU + Index) % NoCPUs;
 		pantheon::LocalScheduler *Sched = pantheon::CPU::GetLocalSched(LocalIndex);
-		if (Sched)
+		if (Sched && Sched->TryLock())
 		{
-			Sched->Lock();	/* This needs to be TryAcquire at some point. */
 			pantheon::Thread *Thr = Sched->AcquireThread();
 			Sched->Unlock();
 			if (Thr != nullptr)
@@ -303,7 +309,9 @@ static pantheon::Thread *GetNextThread()
 			}
 		}
 	}
-	return nullptr;
+
+	/* If we have no next, give up and use the idle thread. */
+	return pantheon::CPU::GetMyLocalSched()->Idle();
 }
 
 struct SwapContext
@@ -314,12 +322,6 @@ struct SwapContext
 
 static SwapContext SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *NextThread)
 {
-	/* If we have no next, give up and use the idle thread. */
-	if (NextThread == nullptr)
-	{
-		NextThread = pantheon::CPU::GetMyLocalSched()->Idle();
-	}
-
 	pantheon::ScopedLock _NL(NextThread);
 
 	/* Don't try to swap to ourselves. */
@@ -336,11 +338,12 @@ static SwapContext SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *Ne
 		return {nullptr, nullptr};
 	}
 
-	/* Okay, we have to do a weird little dance. We need this to prevent
-	 * trying to reschedule and trip on ourselves. This gets restored
-	 * when we context switch back here.
-	 */
-	pantheon::CPU::GetCurThread()->BlockScheduling();
+	/* Did we get swapped out from under ourselves? */
+	if (CurThread != pantheon::CPU::GetCurThread())
+	{
+		CurThread->EnableScheduling();
+		return {nullptr, nullptr};
+	}
 
 	/* Change kernel view of contexts */
 	pantheon::Process::Switch(NextThread->MyProc());
@@ -349,11 +352,7 @@ static SwapContext SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *Ne
 	pantheon::CpuContext *OldContext = CurThread->GetRegisters();
 	pantheon::CpuContext *NewContext = NextThread->GetRegisters();
 
-	/* Don't put idle jobs on the runqueue */
-	if (CurThread->MyProc()->ProcessID() != 0)
-	{
-		pantheon::CPU::GetMyLocalSched()->InsertThread(CurThread);
-	}
+	pantheon::CPU::GetMyLocalSched()->InsertThread(CurThread);
 	return {OldContext, NewContext};
 }
 
@@ -369,17 +368,18 @@ static SwapContext SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *Ne
  */
 void pantheon::Scheduler::Reschedule()
 {
+	pantheon::ScopedRescheduleLock _L;
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-	pantheon::Thread *NextThread = GetNextThread();
-	
-	SwapContext Con = SwapThreads(CurThread, NextThread);
-	pantheon::Sync::DSBISH();
-	pantheon::Sync::ISB();
 
-	if (Con.New && Con.Old && NextThread)
+	/* Okay, we have to do a weird little dance. We need this to prevent
+	 * trying to reschedule and trip on ourselves. This gets restored
+	 * when we context switch back here.
+	 */
+	pantheon::Thread *NextThread = GetNextThread();
+	SwapContext Con = SwapThreads(CurThread, NextThread);
+	if (Con.New && Con.Old)
 	{
 		cpu_switch(Con.Old, Con.New, CpuIRegOffset);
-		pantheon::CPU::GetCurThread()->EnableScheduling();
 	}
 }
 

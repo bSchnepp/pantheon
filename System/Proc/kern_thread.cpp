@@ -202,7 +202,7 @@ VOID pantheon::Thread::SetState(Thread::State St)
 	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
 	{
-		StopError("SetState without lock");
+		StopError("SetState without lock", this);
 	}	
 	this->CurState = St;
 }
@@ -212,7 +212,7 @@ VOID pantheon::Thread::SetTicks(INT64 TickCount)
 	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
 	{
-		StopError("SetTicks without lock");
+		StopError("SetTicks without lock", this);
 	}
 	this->RemainingTicks = (TickCount < 0) ? 0 : TickCount;
 }
@@ -300,17 +300,13 @@ pantheon::Thread &pantheon::Thread::operator=(pantheon::Thread &&Other) noexcept
 void pantheon::Thread::BlockScheduling()
 {
 	OBJECT_SELF_ASSERT();
-	pantheon::Sync::DSBISH();
 	this->PreemptCount.Add(1LL);
-	pantheon::Sync::DSBISH();
 }
 
 void pantheon::Thread::EnableScheduling()
 {
 	OBJECT_SELF_ASSERT();
-	pantheon::Sync::DSBISH();
 	this->PreemptCount.Sub(1LL);
-	pantheon::Sync::DSBISH();
 }
 
 extern "C" VOID drop_usermode(UINT64 PC, UINT64 PSTATE, UINT64 SP);
