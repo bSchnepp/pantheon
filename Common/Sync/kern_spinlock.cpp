@@ -65,7 +65,7 @@ BOOL pantheon::Spinlock::TryAcquire()
 	pantheon::CPU::PUSHI();
 	if (this->IsHolding())
 	{
-		StopError(this->DebugName, this);
+		StopErrorFmt("Spinlock: %s (source %p), trying to (try) acquire when already held", this->DebugName, this);
 	}
 
 	if (__sync_lock_test_and_set(&this->Locked, TRUE) == FALSE)
@@ -86,6 +86,7 @@ BOOL pantheon::Spinlock::TryAcquire()
 
 void pantheon::Spinlock::Release()
 {
+	__sync_synchronize();
 	if (!this->IsHolding())
 	{
 		StopErrorFmt("Spinlock: %s (source %p), trying to release when not held (holder is %hd)\n", this->DebugName, this, this->Holder());
@@ -94,6 +95,7 @@ void pantheon::Spinlock::Release()
 	__sync_synchronize();
 	__sync_lock_release(&this->Locked);
 	pantheon::CPU::POPI();
+	__sync_synchronize();
 	
 }
 

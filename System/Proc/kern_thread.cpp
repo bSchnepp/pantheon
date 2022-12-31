@@ -64,7 +64,7 @@ pantheon::Thread::Thread(Process *OwningProcess, Priority Pri) : pantheon::Locka
 	this->Registers.Wipe();
 	this->CurState = pantheon::Thread::STATE_INIT;
 
-	this->TID = pantheon::Scheduler::AcquireThreadID();
+	this->TID = 0;
 	this->Unlock();
 }
 
@@ -360,11 +360,7 @@ void pantheon::Thread::Initialize(pantheon::Process *Proc, void *StartAddr, void
 		this->SetState(pantheon::Thread::STATE_WAITING);
 		this->SetPriority(Priority);
 
-		/* Don't set up a TLS for idle proc. */
-		if (Proc->ProcessID() != 0)
-		{
-			this->SetupThreadLocalArea();
-		}
+		this->SetupThreadLocalArea();
 		this->Unlock();
 	}
 }
@@ -395,6 +391,12 @@ pantheon::Thread::ThreadLocalRegion *pantheon::Thread::GetThreadLocalArea()
 
 VOID pantheon::Thread::SetupThreadLocalArea()
 {
+	/* Don't make a TLS for kernel idle threads */
+	if (this->MyProc()->ProcessID() == 0)
+	{
+		return;
+	}
+
 	this->LocalRegion = pantheon::Process::ThreadLocalBase + (this->ThreadID() * 0x1000);
 
 	/* Map in the TLR. */

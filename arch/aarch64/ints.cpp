@@ -69,9 +69,18 @@ extern "C" void fiq_handler_el1(pantheon::TrapFrame *Frame)
 	SERIAL_LOG_UNSAFE("%s\n", "ERR: FIQ HANDLER EL1");
 }
 
+class CurFrameMgr
+{
+public:
+	CurFrameMgr(pantheon::TrapFrame *Frame) { pantheon::CPU::GetCoreInfo()->CurFrame = Frame; }
+	~CurFrameMgr() { pantheon::CPU::GetCoreInfo()->CurFrame = nullptr; }
+};
+
+
 extern "C" void irq_handler_el1(pantheon::TrapFrame *Frame)
 {
-	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
+	CurFrameMgr _M(Frame);
+
 	UINT32 IAR = pantheon::arm::GICRecvInterrupt();
 	pantheon::arm::GICAckInterrupt(IAR);
 	if ((IAR & 0x3FF) == 30)
@@ -82,7 +91,6 @@ extern "C" void irq_handler_el1(pantheon::TrapFrame *Frame)
 		pantheon::arm::RearmSystemTimer();
 		pantheon::Scheduler::AttemptReschedule();
 	}
-	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void enable_interrupts();
@@ -90,7 +98,7 @@ extern "C" void disable_interrupts();
 
 extern "C" void sync_handler_el0(pantheon::TrapFrame *Frame)
 {
-	pantheon::CPU::GetCoreInfo()->CurFrame = Frame;
+	CurFrameMgr _M(Frame);
 	UINT64 ESR, FAR, ELR, SPSR;
 	asm volatile(
 		"mrs %0, esr_el1\n"
@@ -109,15 +117,15 @@ extern "C" void sync_handler_el0(pantheon::TrapFrame *Frame)
 	} 
 	else
 	{
+		pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 		SERIAL_LOG_UNSAFE("Bad sync handler el0: esr: 0x%lx far: 0x%lx elr: 0x%lx spsr: 0x%lx\n", ESR, FAR, ELR, SPSR);
-		SERIAL_LOG_UNSAFE("Process ID was %ld\n", pantheon::CPU::GetCurThread()->MyProc()->ProcessID());		
+		SERIAL_LOG_UNSAFE("Process ID was %ld\n", CurThread->MyProc()->ProcessID());		
 		if (ESR == 0x2000000)
 		{
-			pantheon::vmm::PageTable *PT = pantheon::CPU::GetCurThread()->MyProc()->GetPageTable();
+			pantheon::vmm::PageTable *PT = CurThread->MyProc()->GetPageTable();
 			pantheon::vmm::PrintPageTablesNoZeroes(PT);
 		}
 	} 
-	pantheon::CPU::GetCoreInfo()->CurFrame = nullptr;
 }
 
 extern "C" void err_handler_el0(pantheon::TrapFrame *Frame)

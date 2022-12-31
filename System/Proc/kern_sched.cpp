@@ -253,26 +253,34 @@ UINT64 pantheon::Scheduler::CountThreads(UINT64 PID)
 UINT32 pantheon::Scheduler::AcquireProcessID()
 {
 	UINT32 RetVal = 0;
-	static pantheon::AtomicInteger<UINT32> ProcessID = 1;
-	RetVal = ProcessID.Add(1);
+	static pantheon::Spinlock PIDLock("Process ID Lock");
+	static UINT32 ProcessID = 1;
+
+	PIDLock.Acquire();
+	RetVal = ProcessID++;
 	while (ProcessList.Contains(RetVal) || RetVal == 0)
 	{
-		RetVal = ProcessID.Add(1);
+		RetVal = ProcessID++;
 	}
+	PIDLock.Release();
+
 	return RetVal;
 }
 
 UINT64 pantheon::Scheduler::AcquireThreadID()
 {
 	UINT64 RetVal = 0;
-	static pantheon::AtomicInteger<UINT64> ThreadID = 1;
-	RetVal = ThreadID.Add(1);
-	
+	static pantheon::Spinlock TIDLock("Thread ID Lock");
+	static UINT64 ThreadID = 1;
+
+	TIDLock.Acquire();
+	RetVal = ThreadID++;
 	/* Ban 0 and -1, since these are special values. */
 	while (RetVal == 0 || RetVal == ~0ULL || ThreadList.Contains(RetVal))
 	{
-		RetVal = ThreadID.Add(1);
+		RetVal = ThreadID++;
 	}
+	TIDLock.Release();
 	return RetVal;
 }
 
@@ -340,7 +348,12 @@ static SwapContext SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *Ne
 
 	pantheon::CpuContext *OldContext = CurThread->GetRegisters();
 	pantheon::CpuContext *NewContext = NextThread->GetRegisters();
-	pantheon::CPU::GetMyLocalSched()->InsertThread(CurThread);
+
+	/* Don't put idle jobs on the runqueue */
+	if (CurThread->MyProc()->ProcessID() != 0)
+	{
+		pantheon::CPU::GetMyLocalSched()->InsertThread(CurThread);
+	}
 	return {OldContext, NewContext};
 }
 
@@ -363,7 +376,7 @@ void pantheon::Scheduler::Reschedule()
 	pantheon::Sync::DSBISH();
 	pantheon::Sync::ISB();
 
-	if (Con.New && Con.Old)
+	if (Con.New && Con.Old && NextThread)
 	{
 		cpu_switch(Con.Old, Con.New, CpuIRegOffset);
 		pantheon::CPU::GetCurThread()->EnableScheduling();
