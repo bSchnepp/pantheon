@@ -103,23 +103,16 @@ public:
 	VOID SetPriority(Thread::Priority Priority);
 
 	CpuContext *GetRegisters();
+	ThreadLocalRegion *GetThreadLocalArea();
 	[[nodiscard]] pantheon::vmm::VirtualAddress GetThreadLocalAreaRegister() const { return this->LocalRegion; }
 
 	Thread &operator=(const Thread &Other);
 	Thread &operator=(Thread &&Other) noexcept;
 
-	void SetProc(pantheon::Process *Proc);
-
 	void BlockScheduling();
 	void EnableScheduling();
 	[[nodiscard]] BOOL Preempted() const;
 
-	[[nodiscard]] BOOL End() const;
-	Thread *Next();
-	void SetNext(pantheon::Thread *Item);
-
-	ThreadLocalRegion *GetThreadLocalArea();
-	VOID SetupThreadLocalArea();
 
 	/**
 	 * @brief Switches thread context to another thread

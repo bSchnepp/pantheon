@@ -297,16 +297,6 @@ pantheon::Thread &pantheon::Thread::operator=(pantheon::Thread &&Other) noexcept
 	return *this;
 }
 
-void pantheon::Thread::SetProc(pantheon::Process *Proc)
-{
-	OBJECT_SELF_ASSERT();
-	if (this->IsLocked() == FALSE)
-	{
-		StopError("SetProc without lock");
-	}	
-	this->ParentProcess = Proc;
-}
-
 void pantheon::Thread::BlockScheduling()
 {
 	OBJECT_SELF_ASSERT();
@@ -337,6 +327,8 @@ void pantheon::Thread::Initialize(pantheon::Process *Proc, void *StartAddr, void
 	this->TID = pantheon::Scheduler::AcquireThreadID();
 	this->CurState = pantheon::Thread::STATE_DEAD;
 
+	this->Lock();
+
 	Optional<void*> StackSpace = BasicMalloc(InitialThreadStackSize);
 	if (StackSpace.GetOkay())
 	{
@@ -346,7 +338,6 @@ void pantheon::Thread::Initialize(pantheon::Process *Proc, void *StartAddr, void
 		#endif
 		IStackSpace += InitialThreadStackSize;
 		this->ParentProcess = Proc;
-		this->Lock();
 
 		UINT64 IStartAddr = (UINT64)true_drop_process;
 		UINT64 IThreadData = (UINT64)ThreadData;
@@ -359,25 +350,32 @@ void pantheon::Thread::Initialize(pantheon::Process *Proc, void *StartAddr, void
 		}
 		this->SetState(pantheon::Thread::STATE_WAITING);
 		this->SetPriority(Priority);
-
-		this->SetupThreadLocalArea();
-		this->Unlock();
 	}
-}
 
-[[nodiscard]] BOOL pantheon::Thread::End() const
-{
-	return this->NextThread == nullptr;
-}
+	/* Don't create a TLS for kernel threads */
+	if (UserMode)
+	{
+		this->LocalRegion = pantheon::Process::ThreadLocalBase + (this->ThreadID() * 0x1000);
 
-pantheon::Thread *pantheon::Thread::Next()
-{
-	return this->NextThread.Load();
-}
+		/* Map in the TLR. */
+		pantheon::vmm::PageTableEntry Entry;
+		Entry.SetBlock(TRUE);
+		Entry.SetMapped(TRUE);
+		Entry.SetUserNoExecute(TRUE);
+		Entry.SetKernelNoExecute(TRUE);
 
-void pantheon::Thread::SetNext(pantheon::Thread *Item)
-{
-	this->NextThread = Item;
+		/* Yuck. But we need to make page permissions less bad...*/
+		UINT64 PagePermission = 0x1 << 6;
+		Entry.SetPagePermissions(PagePermission);
+
+		Entry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
+		Entry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
+		Entry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
+
+		pantheon::ScopedLock _L(this->MyProc());
+		this->MyProc()->MapAddress(this->LocalRegion, pantheon::PageAllocator::Alloc(), Entry);
+	}
+	this->Unlock();	
 }
 
 pantheon::Thread::ThreadLocalRegion *pantheon::Thread::GetThreadLocalArea() 
@@ -387,33 +385,4 @@ pantheon::Thread::ThreadLocalRegion *pantheon::Thread::GetThreadLocalArea()
 	pantheon::vmm::PhysicalAddress PhyAddr = pantheon::vmm::VirtualToPhysicalAddress(Proc->GetPageTable(), this->LocalRegion);
 	pantheon::vmm::VirtualAddress VirtAddr = pantheon::vmm::PhysicalToVirtualAddress(PhyAddr);
 	return reinterpret_cast<ThreadLocalRegion*>(VirtAddr);
-}
-
-VOID pantheon::Thread::SetupThreadLocalArea()
-{
-	/* Don't make a TLS for kernel idle threads */
-	if (this->MyProc()->ProcessID() == 0)
-	{
-		return;
-	}
-
-	this->LocalRegion = pantheon::Process::ThreadLocalBase + (this->ThreadID() * 0x1000);
-
-	/* Map in the TLR. */
-	pantheon::vmm::PageTableEntry Entry;
-	Entry.SetBlock(TRUE);
-	Entry.SetMapped(TRUE);
-	Entry.SetUserNoExecute(TRUE);
-	Entry.SetKernelNoExecute(TRUE);
-
-	/* Yuck. But we need to make page permissions less bad...*/
-	UINT64 PagePermission = 0x1 << 6;
-	Entry.SetPagePermissions(PagePermission);
-
-	Entry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
-	Entry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
-	Entry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
-
-	pantheon::ScopedLock _L(this->MyProc());
-	this->MyProc()->MapAddress(this->LocalRegion, pantheon::PageAllocator::Alloc(), Entry);
 }
