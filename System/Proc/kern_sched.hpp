@@ -24,15 +24,37 @@ class LocalScheduler : public pantheon::Allocatable<LocalScheduler, MAX_NUM_CPUS
 {
 
 public:
+	/**
+	 * \~english @brief Initalizes an instance of a per-core scheduler.
+	 * \~english @author Brian Schnepp
+	 */
 	LocalScheduler();
 	~LocalScheduler() override = default;
+
+	/**
+	 * \~english @brief Counts the number of threads under this scheduler which belong to a given PID.
+	 * \~english @pre This scheduler is not locked
+	 * \~english @return The number of threads under this manager which belong to a given process 
+	 */
 	UINT64 CountThreads(UINT64 PID);
 
+	/**
+	 * \~english @brief Obtains a thread from the local runqueue which can be run, and removes it from the local runqueue.
+	 * \~english @pre This scheduler is locked
+	 * \~english @return A thread which can be run, if it exists. Nullptr otherwise.
+	 */
 	pantheon::Thread *AcquireThread();
+
+	/**
+	 * \~english @brief Inserts a thread for this local scheduler
+	 * \~english @pre The thread to be inserted is locked before calling
+	 * \~english @pre This scheduler is not locked
+	 * \~english @param Thr The thread object to insert.
+	 */
 	void InsertThread(pantheon::Thread *Thr);
 
-	void Setup();
-	pantheon::Thread *Idle();
+	/** @private */ void Setup();
+	/** @private */ pantheon::Thread *Idle();
 
 private:
 	pantheon::SkipList<UINT64, pantheon::Thread*> LocalRunQueue;

@@ -20,7 +20,7 @@
 #include <Common/Structures/kern_linkedlist.hpp>
 
 /**
- * @file Common/Proc/kern_sched.cpp
+ * @file System/Proc/kern_sched.cpp
  * \~english @brief Definitions for basic kernel scheduling data structures and algorithms.
  * \~english @details Pantheon implements Con Kolivas' MuQSS scheduling algorithm, an efficient algorithm 
  *  which takes priorities into account to provide a semi-"realtime" scheduling system to ensure 
@@ -38,26 +38,24 @@ static pantheon::Spinlock SchedLock("Global Scheduler Lock");
 static pantheon::SkipList<UINT32, pantheon::Process*> ProcessList;
 static pantheon::SkipList<UINT64, pantheon::Thread*> ThreadList;
 
-
-/**
- * \~english @brief Initalizes an instance of a per-core scheduler.
- * \~english @author Brian Schnepp
- */
 pantheon::LocalScheduler::LocalScheduler() : pantheon::Lockable("Scheduler")
 {
 	this->IdleThread = nullptr;
 }
 
-/* Provided by the arch/ subdir. These differ between hardware platforms. */
+/** 
+ * @private
+ * @brief Provided by the arch/ subdir. Swaps the current context
+ */
 extern "C" void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New, UINT64 RegOffset);
+
+/** 
+ * @private
+ * @brief Provided by the arch/ subdir. Drops a new thread to have a different PSTATE
+ */
 extern "C" VOID drop_usermode(UINT64 PC, UINT64 PSTATE, UINT64 SP);
 
 
-/**
- * \~english @brief Counts the number of threads under this scheduler which belong to a given PID.
- * \~english @invariant This scheduler is not locked
- * \~english @return The number of threads under this manager which belong to a given process 
- */
 UINT64 pantheon::LocalScheduler::CountThreads(UINT64 PID)
 {
 	UINT64 Res = 0;
@@ -69,11 +67,6 @@ UINT64 pantheon::LocalScheduler::CountThreads(UINT64 PID)
 	return Res;
 }
 
-/**
- * \~english @brief Obtains a thread from the local runqueue which can be run, and removes it from the local runqueue.
- * \~english @invariant This scheduler is locked
- * \~english @return A thread which can be run, if it exists. Nullptr otherwise.
- */
 pantheon::Thread *pantheon::LocalScheduler::AcquireThread()
 {
 	Optional<UINT64> LowestKey = this->LocalRunQueue.MinKey();
@@ -93,11 +86,19 @@ pantheon::Thread *pantheon::LocalScheduler::AcquireThread()
 
 }
 
+/**
+ * @private
+ * @brief Obtains the idle thread
+ */
 pantheon::Thread *pantheon::LocalScheduler::Idle()
 {
 	return this->IdleThread;
 }
 
+/**
+ * @private
+ * @brief Sets up a local scheduler 
+ */
 void pantheon::LocalScheduler::Setup()
 {
 	pantheon::ScopedGlobalSchedulerLock _L;
@@ -132,12 +133,6 @@ static UINT64 CalculateDeadline(UINT64 Jiffies, UINT64 PrioRatio, UINT64 RRInter
 	return Deadline;
 }
 
-/**
- * \~english @brief Inserts a thread for this local scheduler
- * \~english @invariant The thread to be inserted is locked before calling
- * \~english @invariant This scheduler is not locked
- * \~english @param Thr The thread object to insert.
- */
 void pantheon::LocalScheduler::InsertThread(pantheon::Thread *Thr)
 {
 	if (Thr == nullptr)
@@ -146,7 +141,6 @@ void pantheon::LocalScheduler::InsertThread(pantheon::Thread *Thr)
 	}
 
 	pantheon::ScopedLock _L(this);
-	this->Threads.PushFront(Thr);
 	if (Thr->MyState() == pantheon::Thread::STATE_WAITING)
 	{
 		UINT64 Jiffies = pantheon::CPU::GetJiffies();
@@ -161,6 +155,11 @@ void pantheon::LocalScheduler::InsertThread(pantheon::Thread *Thr)
 	}
 }
 
+
+/**
+ * @internal
+ * @brief Sets up a global scheduler 
+ */
 void pantheon::Scheduler::Init()
 {
 	/* This is probably unnecessary, but let's be safe... */
@@ -170,6 +169,11 @@ void pantheon::Scheduler::Init()
 	ProcessList.Insert(0, &IdleProc);
 }
 
+/**
+ * \~english @brief Locks the global scheduler
+ * \~english @details Locks the global scheduler, so that it is safe to perform
+ * operations such as manipulating the global process table or global thread table.
+ */
 void pantheon::Scheduler::Lock()
 {
 	SchedLock.Acquire();
@@ -314,6 +318,10 @@ static pantheon::Thread *GetNextThread()
 	return pantheon::CPU::GetMyLocalSched()->Idle();
 }
 
+/** 
+ * @private
+ * @brief Struct to hold context registers
+ */
 struct SwapContext
 {
 	pantheon::CpuContext *Old;
@@ -369,13 +377,10 @@ static SwapContext SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *Ne
 void pantheon::Scheduler::Reschedule()
 {
 	pantheon::ScopedRescheduleLock _L;
-	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 
-	/* Okay, we have to do a weird little dance. We need this to prevent
-	 * trying to reschedule and trip on ourselves. This gets restored
-	 * when we context switch back here.
-	 */
+	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	pantheon::Thread *NextThread = GetNextThread();
+	
 	SwapContext Con = SwapThreads(CurThread, NextThread);
 	if (Con.New && Con.Old)
 	{
@@ -394,6 +399,10 @@ void pantheon::Scheduler::AttemptReschedule()
 	}
 }
 
+/** 
+ * @private
+ * @brief Finish routine for jumping to userspace
+ */
 extern "C" VOID FinishThread()
 {
 	pantheon::CPU::GetCurThread()->EnableScheduling();
