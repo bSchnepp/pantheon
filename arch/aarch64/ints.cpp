@@ -14,6 +14,23 @@
 
 static UINT64 TimerClock = 1000;
 
+VOID TraceStack(UINT64 X29)
+{
+	struct Frame
+	{
+		Frame *Next;
+		UINT64 PC;
+	};
+
+	UINT64 Counter = 0;
+	Frame *Cur = reinterpret_cast<Frame*>(X29);
+	while (Cur && Cur->PC)
+	{
+		SERIAL_LOG("[Frame %lu]: %lx\n", Counter++, Cur->PC);
+		Cur = Cur->Next;
+	}
+}
+
 extern "C" void sync_handler_el1_sp0(pantheon::TrapFrame *Frame)
 {
 	PANTHEON_UNUSED(Frame);
@@ -40,7 +57,6 @@ extern "C" void irq_handler_el1_sp0(pantheon::TrapFrame *Frame)
 
 extern "C" void sync_handler_el1(pantheon::TrapFrame *Frame)
 {
-	PANTHEON_UNUSED(Frame);
 	UINT64 ESR, FAR, ELR, SPSR, SP;
 	asm volatile(
 		"mrs %0, esr_el1\n"
@@ -53,6 +69,13 @@ extern "C" void sync_handler_el1(pantheon::TrapFrame *Frame)
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
 
+	TraceStack(Frame->Regs[29]);
+	for (UINT64 Index = 0; Index < 31; Index++)
+	{
+		SERIAL_LOG("x%lu: %lx ", Index, Frame->Regs[Index]);
+	}
+	SERIAL_LOG("\n");
+
 	pantheon::StopErrorFmt(
 		"ERR: SYNC HANDLER EL1: esr: %lx far: %lx elr: %lx spsr: %lx, sp: %lx pid: %u, tid: %lu\n", 
 		ESR, FAR, ELR, SPSR, SP, CurProc->ProcessID(), CurThread->ThreadID());
@@ -60,7 +83,7 @@ extern "C" void sync_handler_el1(pantheon::TrapFrame *Frame)
 
 extern "C" void err_handler_el1(pantheon::TrapFrame *Frame)
 {
-	PANTHEON_UNUSED(Frame);
+	TraceStack(Frame->Regs[29]);
 	pantheon::StopError("ERR: ERR HANDLER EL1");
 }
 
