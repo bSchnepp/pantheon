@@ -80,11 +80,23 @@ namespace Scheduler
 	 * \~english @pre The global scheduler lock is not held by this processor
 	 * \~english @pre The thread lock is not held by this processor
 	 * \~english @param[in] TID The thread ID to modify
-	 * \~english @param[in] State The state to set the process to
+	 * \~english @param[in] State The state to set the thread to
 	 */
 	BOOL SetThreadState(UINT64 TID, pantheon::Thread::State State);
 
-
+	/**
+	 * \~english @brief Maps some pages into a given process' address space
+	 * \~english @param[in] PID The process ID to map addresses into
+	 * \~english @param[in] VAddresses The set of virtual addresses to map these pages as
+	 * \~english @param[in] PAddresses The set of physical addresses to map these pages from
+	 * \~english @param[in] PageAttributes The set of page attributes (permissions, cachability, etc.) to use for all of these pages
+	 * \~english @param[in] NumPages The number of pages to map
+	 * \~english @return TRUE on success, FALSE otherwise
+	 * \~english @pre Length(VAddresses) == Length(PAddress)
+	 * \~english @pre Length(VAddresses) >= NumPages
+	 * \~english @pre Length(PAddresses) >= NumPages
+	 * \~english @author Brian Schnepp
+	 */
 	BOOL MapPages(UINT32 PID, const pantheon::vmm::VirtualAddress *VAddresses, const pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages);
 
 	/**
@@ -100,11 +112,25 @@ namespace Scheduler
 	 * \~english @author Brian Schnepp
 	 */
 	UINT32 CreateProcess(const pantheon::String &ProcStr, void *StartAddr);
-	pantheon::Thread *CreateThread(UINT32 Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
+	UINT64 CreateThread(UINT32 Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
 
+	/**
+	 * \~english @brief Counts the number of threads which belong to a given PID.
+	 * \~english @pre Global scheduler is not locked
+	 * \~english @return The number of threads which belong to a given process 
+	 */
 	UINT64 CountThreads(UINT64 PID);
 
+	/**
+	 * \~english @brief Locks the global scheduler, preventing operations such as thread or process modification from proceeding on other threads
+	 * @see ScopedGlobalSchedulerLock
+	 */
 	void Lock();
+
+	/**
+	 * \~english @brief Releases the global scheduler, allowing operations such as thread or process modification to proceed on other threads
+	 * @see ScopedGlobalSchedulerLock
+	 */
 	void Unlock();
 
 	/**

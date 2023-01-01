@@ -14,7 +14,7 @@
 
 static UINT64 TimerClock = 1000;
 
-VOID TraceStack(UINT64 X29)
+VOID TraceStack(UINT64 PC, UINT64 X29)
 {
 	struct Frame
 	{
@@ -24,6 +24,7 @@ VOID TraceStack(UINT64 X29)
 
 	UINT64 Counter = 0;
 	Frame *Cur = reinterpret_cast<Frame*>(X29);
+	SERIAL_LOG("[Frame %lu]: %lx\n", Counter++, PC);
 	while (Cur && Cur->PC)
 	{
 		SERIAL_LOG("[Frame %lu]: %lx\n", Counter++, Cur->PC);
@@ -69,7 +70,7 @@ extern "C" void sync_handler_el1(pantheon::TrapFrame *Frame)
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
 
-	TraceStack(Frame->Regs[29]);
+	TraceStack(Frame->PC, Frame->Regs[29]);
 	for (UINT64 Index = 0; Index < 31; Index++)
 	{
 		SERIAL_LOG("x%lu: %lx ", Index, Frame->Regs[Index]);
@@ -83,7 +84,7 @@ extern "C" void sync_handler_el1(pantheon::TrapFrame *Frame)
 
 extern "C" void err_handler_el1(pantheon::TrapFrame *Frame)
 {
-	TraceStack(Frame->Regs[29]);
+	TraceStack(Frame->PC, Frame->Regs[29]);
 	pantheon::StopError("ERR: ERR HANDLER EL1");
 }
 

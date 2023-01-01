@@ -382,3 +382,24 @@ pantheon::Thread::ThreadLocalRegion *pantheon::Thread::GetThreadLocalArea()
 	pantheon::vmm::VirtualAddress VirtAddr = pantheon::vmm::PhysicalToVirtualAddress(PhyAddr);
 	return reinterpret_cast<ThreadLocalRegion*>(VirtAddr);
 }
+
+/**
+ * @brief Switches thread context to another thread
+ */
+void pantheon::Thread::Switch(pantheon::Thread *NextThread)
+{
+	if (NextThread == nullptr)
+	{
+		return;
+	}
+
+	pantheon::Thread *CurThread = pantheon::CPU::GetCoreInfo()->CurThread;
+	pantheon::CPU::GetCurThread()->SetState(pantheon::Thread::STATE_WAITING);
+	NextThread->SetState(Thread::STATE_RUNNING);
+	NextThread->SetTicks(Thread::RR_INTERVAL);
+
+	pantheon::ipc::SetThreadLocalRegion(NextThread->LocalRegion);
+	
+	pantheon::CPU::GetCoreInfo()->CurThread = NextThread;
+	pantheon::CPU::GetMyLocalSched()->InsertThread(CurThread);
+}

@@ -40,6 +40,9 @@ static pantheon::SkipList<UINT64, pantheon::Thread*> ThreadList;
 
 pantheon::LocalScheduler::LocalScheduler() : pantheon::Lockable("Scheduler")
 {
+	/* Because of the ordering required for init_array, the actual
+	 * setup must be done with the Setup() function, not the constructor.
+	 */
 	this->IdleThread = nullptr;
 }
 
@@ -257,14 +260,14 @@ UINT32 pantheon::Scheduler::CreateProcess(const pantheon::String &ProcStr, void 
 	return NewID;
 }
 
-pantheon::Thread *pantheon::Scheduler::CreateThread(UINT32 PID, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority)
+UINT64 pantheon::Scheduler::CreateThread(UINT32 PID, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority)
 {
 	pantheon::ScopedGlobalSchedulerLock _L;
 
 	if(!ProcessList.Contains(PID))
 	{
 		/* Huh? You're asking for a PID that doesn't exist. */
-		return nullptr;
+		return 0;
 	}
 
 	pantheon::Process *MyProc = ProcessList.Get(PID).GetValue();
@@ -274,7 +277,7 @@ pantheon::Thread *pantheon::Scheduler::CreateThread(UINT32 PID, void *StartAddr,
 	
 	pantheon::ScopedLock _STL(Thr);
 	pantheon::CPU::GetMyLocalSched()->InsertThread(Thr);
-	return Thr;
+	return Thr->ThreadID();
 }
 
 
@@ -328,6 +331,7 @@ struct SwapContext
 
 static SwapContext SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *NextThread)
 {
+	pantheon::ScopedGlobalSchedulerLock _L;
 	pantheon::ScopedLock _NL(NextThread);
 
 	/* Don't try to swap to ourselves. */
@@ -338,32 +342,23 @@ static SwapContext SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *Ne
 
 	pantheon::ScopedLock _OL(CurThread);
 
-	if (NextThread->MyState() != pantheon::Thread::STATE_WAITING)
-	{
-		/* Huh? Why are we still here? */
-		return {nullptr, nullptr};
-	}
-
-	/* Did we get swapped out from under ourselves? */
-	if (CurThread != pantheon::CPU::GetCurThread())
-	{
-		CurThread->EnableScheduling();
-		return {nullptr, nullptr};
-	}
+	pantheon::CpuContext *OldContext = CurThread->GetRegisters();
+	pantheon::CpuContext *NewContext = NextThread->GetRegisters();
 
 	/* Change kernel view of contexts */
 	pantheon::Process::Switch(NextThread->MyProc());
 	pantheon::Thread::Switch(NextThread);
-
-	pantheon::CpuContext *OldContext = CurThread->GetRegisters();
-	pantheon::CpuContext *NewContext = NextThread->GetRegisters();
-
-	pantheon::CPU::GetMyLocalSched()->InsertThread(CurThread);
 	return {OldContext, NewContext};
 }
 
 void pantheon::Scheduler::Reschedule()
 {
+	/* Interrupts must be enabled before we can do anything. */
+	if (pantheon::CPU::ICOUNT())
+	{
+		return;
+	}
+
 	ScopedRescheduleLock _L;
 
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
@@ -372,6 +367,8 @@ void pantheon::Scheduler::Reschedule()
 	SwapContext Con = SwapThreads(CurThread, NextThread);
 	if (Con.New && Con.Old)
 	{
+		pantheon::Sync::DSBISH();
+		pantheon::Sync::ISB();
 		cpu_switch(Con.Old, Con.New, CpuIRegOffset);
 	}
 }
