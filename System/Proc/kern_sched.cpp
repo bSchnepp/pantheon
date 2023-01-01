@@ -208,7 +208,7 @@ void pantheon::LocalScheduler::InsertThread(pantheon::Thread *Thr)
 
 
 /**
- * @internal
+ * @private
  * @brief Sets up a global scheduler 
  */
 void pantheon::Scheduler::Init()
@@ -220,11 +220,6 @@ void pantheon::Scheduler::Init()
 	ProcessList.Insert(0, &IdleProc);
 }
 
-/**
- * \~english @brief Locks the global scheduler
- * \~english @details Locks the global scheduler, so that it is safe to perform
- * operations such as manipulating the global process table or global thread table.
- */
 void pantheon::Scheduler::Lock()
 {
 	SchedLock.Acquire();
