@@ -89,7 +89,7 @@ public:
 	Thread(Thread &&Other) noexcept;
 	~Thread() override;
 
-	void Initialize(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority, BOOL UserMode);
+	void Initialize(UINT64 TID, pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority, BOOL UserMode);
 
 	[[nodiscard]] Process *MyProc() const;
 	[[nodiscard]] Thread::State MyState() const;

@@ -317,10 +317,10 @@ static void true_drop_process(void *StartAddress, pantheon::vmm::VirtualAddress 
 	drop_usermode((UINT64)StartAddress, 0x00, StackAddr);
 }
 
-void pantheon::Thread::Initialize(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority, BOOL UserMode)
+void pantheon::Thread::Initialize(UINT64 TID, pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority, BOOL UserMode)
 {
 	static constexpr UINT64 InitialThreadStackSize = pantheon::vmm::SmallestPageSize * pantheon::Thread::InitialNumStackPages;
-	this->TID = pantheon::Scheduler::AcquireThreadID();
+	this->TID = TID;
 	this->CurState = pantheon::Thread::STATE_DEAD;
 
 	this->Lock();

@@ -64,11 +64,41 @@ private:
 
 namespace Scheduler
 {
-	void Init();
+	/** @private */ void Init();
+
+	/**
+	 * \~english @brief Sets the state of a given process
+	 * \~english @pre The global scheduler lock is not held by this processor
+	 * \~english @pre The process lock is not held by this processor
+	 * \~english @param[in] PID The process ID to modify
+	 * \~english @param[in] State The state to set the process to
+	 */
 	BOOL SetState(UINT32 PID, pantheon::Process::State State);
+
+	/**
+	 * \~english @brief Sets the state of a given thread
+	 * \~english @pre The global scheduler lock is not held by this processor
+	 * \~english @pre The thread lock is not held by this processor
+	 * \~english @param[in] TID The thread ID to modify
+	 * \~english @param[in] State The state to set the process to
+	 */
 	BOOL SetThreadState(UINT64 TID, pantheon::Thread::State State);
+
+
 	BOOL MapPages(UINT32 PID, const pantheon::vmm::VirtualAddress *VAddresses, const pantheon::vmm::PhysicalAddress *PAddresses, const pantheon::vmm::PageTableEntry &PageAttributes, UINT64 NumPages);
 
+	/**
+	 * \~english @brief Creates a process, visible globally, from a name and address.
+	 * \~english @details A process is created, such that it can be run on any
+	 * available processor on the system. The given process name identifies the
+	 * process for debugging purposes and as a user-readable way to identify a
+	 * process, and the start address is a pointer to the first instruction the
+	 * initial threaq should execute when scheduled.
+	 * \~english @param[in] ProcStr A human-readable name for the process
+	 * \~english @param[in] StartAddr The initial value of the program counter
+	 * \~english @return New PID if the process was sucessfully created, 0 otherwise.
+	 * \~english @author Brian Schnepp
+	 */
 	UINT32 CreateProcess(const pantheon::String &ProcStr, void *StartAddr);
 	pantheon::Thread *CreateThread(UINT32 Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority = pantheon::Thread::PRIORITY_NORMAL);
 
@@ -76,11 +106,18 @@ namespace Scheduler
 
 	void Lock();
 	void Unlock();
+
+	/**
+	 * \~english @brief Changes the current thread of this core.
+	 * \~english @details Forcefully changes the current thread by iterating to
+	 * the next thread in the list of threads belonging to this core. The active
+	 * count for the current thread is set to zero, and the new thread is run until
+	 * either the core is forcefully rescheduled, or the timer indicates the current
+	 * thread should quit.
+	 * 
+	 * \~english @author Brian Schnepp
+	 */
 	void Reschedule();
-
-	UINT32 AcquireProcessID();
-	UINT64 AcquireThreadID();
-
 	void AttemptReschedule();
 };
 
@@ -89,13 +126,6 @@ class ScopedGlobalSchedulerLock
 public:
 	FORCE_INLINE ScopedGlobalSchedulerLock() { pantheon::Scheduler::Lock(); }
 	FORCE_INLINE ~ScopedGlobalSchedulerLock() { pantheon::Scheduler::Unlock(); }	
-};
-
-class ScopedRescheduleLock
-{
-public:
-	FORCE_INLINE ScopedRescheduleLock() { pantheon::CPU::GetCurThread()->BlockScheduling(); }
-	FORCE_INLINE ~ScopedRescheduleLock() { pantheon::CPU::GetCurThread()->EnableScheduling(); }	
 };
 
 }

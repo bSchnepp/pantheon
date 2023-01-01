@@ -55,6 +55,16 @@ extern "C" void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New,
  */
 extern "C" VOID drop_usermode(UINT64 PC, UINT64 PSTATE, UINT64 SP);
 
+/** 
+ * @private
+ * @brief Prevent rescheduling under this current thread
+ */
+class ScopedRescheduleLock
+{
+public:
+	FORCE_INLINE ScopedRescheduleLock() { pantheon::CPU::GetCurThread()->BlockScheduling(); }
+	FORCE_INLINE ~ScopedRescheduleLock() { pantheon::CPU::GetCurThread()->EnableScheduling(); }	
+};
 
 UINT64 pantheon::LocalScheduler::CountThreads(UINT64 PID)
 {
@@ -95,6 +105,44 @@ pantheon::Thread *pantheon::LocalScheduler::Idle()
 	return this->IdleThread;
 }
 
+static UINT32 AcquireProcessID()
+{
+	UINT32 RetVal = 0;
+	static UINT32 ProcessID = 1;
+
+	if (!SchedLock.IsLocked())
+	{
+		pantheon::StopErrorFmt("Acquire thread without locking Global Scheduler\n");
+	}
+
+	RetVal = ProcessID++;
+	while (ProcessList.Contains(RetVal) || RetVal == 0)
+	{
+		RetVal = ProcessID++;
+	}
+
+	return RetVal;
+}
+
+static UINT64 AcquireThreadID()
+{
+	UINT64 RetVal = 0;
+	static UINT64 ThreadID = 1;
+
+	if (!SchedLock.IsLocked())
+	{
+		pantheon::StopErrorFmt("Acquire thread without locking Global Scheduler\n");
+	}
+
+	RetVal = ThreadID++;
+	/* Ban 0 and -1, since these are special values. */
+	while (RetVal == 0 || RetVal == ~0ULL || ThreadList.Contains(RetVal))
+	{
+		RetVal = ThreadID++;
+	}
+	return RetVal;
+}
+
 /**
  * @private
  * @brief Sets up a local scheduler 
@@ -110,7 +158,7 @@ void pantheon::LocalScheduler::Setup()
 		pantheon::StopErrorFmt("No PID 0!\n");
 	}
 
-	Idle->Initialize(MProc.GetValue(), nullptr, nullptr, pantheon::Thread::PRIORITY_VERYLOW, FALSE);
+	Idle->Initialize(AcquireThreadID(), MProc.GetValue(), nullptr, nullptr, pantheon::Thread::PRIORITY_VERYLOW, FALSE);
 	Idle->Lock();
 	Idle->SetState(pantheon::Thread::STATE_RUNNING);
 	Idle->Unlock();
@@ -184,23 +232,11 @@ void pantheon::Scheduler::Unlock()
 	SchedLock.Release();
 }
 
-/**
- * \~english @brief Creates a process, visible globally, from a name and address.
- * \~english @details A process is created, such that it can be run on any
- * available processor on the system. The given process name identifies the
- * process for debugging purposes and as a user-readable way to identify a
- * process, and the start address is a pointer to the first instruction the
- * initial threaq should execute when scheduled.
- * \~english @param[in] ProcStr A human-readable name for the process
- * \~english @param[in] StartAddr The initial value of the program counter
- * \~english @return New PID if the process was sucessfully created, 0 otherwise.
- * \~english @author Brian Schnepp
- */
 UINT32 pantheon::Scheduler::CreateProcess(const pantheon::String &ProcStr, void *StartAddr)
 {
 	pantheon::ScopedGlobalSchedulerLock _L;
 
-	UINT32 NewID = pantheon::Scheduler::AcquireProcessID();
+	UINT32 NewID = AcquireProcessID();
 
 	pantheon::Process *Proc = pantheon::Process::Create();
 	if (Proc == nullptr)
@@ -233,7 +269,7 @@ pantheon::Thread *pantheon::Scheduler::CreateThread(UINT32 PID, void *StartAddr,
 
 	pantheon::Process *MyProc = ProcessList.Get(PID).GetValue();
 	pantheon::Thread *Thr = pantheon::Thread::Create();
-	Thr->Initialize(MyProc, StartAddr, ThreadData, Priority, TRUE);
+	Thr->Initialize(AcquireThreadID(), MyProc, StartAddr, ThreadData, Priority, TRUE);
 	ThreadList.Insert(Thr->ThreadID(), Thr);
 	
 	pantheon::ScopedLock _STL(Thr);
@@ -255,44 +291,6 @@ UINT64 pantheon::Scheduler::CountThreads(UINT64 PID)
 		Count += pantheon::CPU::GetLocalSched(LocalIndex)->CountThreads(PID);
 	}
 	return Count;
-}
-
-UINT32 pantheon::Scheduler::AcquireProcessID()
-{
-	UINT32 RetVal = 0;
-	static UINT32 ProcessID = 1;
-
-	if (!SchedLock.IsLocked())
-	{
-		pantheon::StopErrorFmt("Acquire thread without locking Global Scheduler\n");
-	}
-
-	RetVal = ProcessID++;
-	while (ProcessList.Contains(RetVal) || RetVal == 0)
-	{
-		RetVal = ProcessID++;
-	}
-
-	return RetVal;
-}
-
-UINT64 pantheon::Scheduler::AcquireThreadID()
-{
-	UINT64 RetVal = 0;
-	static UINT64 ThreadID = 1;
-
-	if (!SchedLock.IsLocked())
-	{
-		pantheon::StopErrorFmt("Acquire thread without locking Global Scheduler\n");
-	}
-
-	RetVal = ThreadID++;
-	/* Ban 0 and -1, since these are special values. */
-	while (RetVal == 0 || RetVal == ~0ULL || ThreadList.Contains(RetVal))
-	{
-		RetVal = ThreadID++;
-	}
-	return RetVal;
 }
 
 static pantheon::Thread *GetNextThread()
@@ -364,23 +362,13 @@ static SwapContext SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *Ne
 	return {OldContext, NewContext};
 }
 
-/**
- * \~english @brief Changes the current thread of this core.
- * \~english @details Forcefully changes the current thread by iterating to
- * the next thread in the list of threads belonging to this core. The active
- * count for the current thread is set to zero, and the new thread is run until
- * either the core is forcefully rescheduled, or the timer indicates the current
- * thread should quit.
- * 
- * \~english @author Brian Schnepp
- */
 void pantheon::Scheduler::Reschedule()
 {
-	pantheon::ScopedRescheduleLock _L;
+	ScopedRescheduleLock _L;
 
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	pantheon::Thread *NextThread = GetNextThread();
-	
+
 	SwapContext Con = SwapThreads(CurThread, NextThread);
 	if (Con.New && Con.Old)
 	{
