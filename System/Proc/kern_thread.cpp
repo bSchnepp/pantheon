@@ -383,15 +383,11 @@ pantheon::Thread::ThreadLocalRegion *pantheon::Thread::GetThreadLocalArea()
  */
 void pantheon::Thread::Switch(pantheon::Thread *CurThread, pantheon::Thread *NextThread)
 {
-	pantheon::ScopedLock _O(CurThread);
-	CurThread->SetState(pantheon::Thread::STATE_WAITING);
-
-	pantheon::ScopedLock _N(NextThread);
 	NextThread->SetState(Thread::STATE_RUNNING);
 	NextThread->SetTicks(Thread::RR_INTERVAL);
 
 	pantheon::ipc::SetThreadLocalRegion(NextThread->LocalRegion);
-	
 	pantheon::CPU::GetCoreInfo()->CurThread = NextThread;
-	pantheon::CPU::GetMyLocalSched()->InsertThread(CurThread);
+
+	CurThread->SetState(pantheon::Thread::STATE_WAITING);
 }

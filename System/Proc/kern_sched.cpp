@@ -345,20 +345,17 @@ static pantheon::Thread *GetNextThread()
 
 static void SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *NextThread)
 {
-	/* Don't try to swap to ourselves. */
-	if (NextThread == CurThread)
-	{
-		return;
-	}
+	pantheon::Thread::Switch(CurThread, NextThread);
+	pantheon::Process::Switch(NextThread->MyProc());
 
 	pantheon::CpuContext *OldContext = CurThread->GetRegisters();
 	pantheon::CpuContext *NewContext = NextThread->GetRegisters();
 
-	/* Change kernel view of contexts */
-	pantheon::Process::Switch(NextThread->MyProc());
-	pantheon::Thread::Switch(CurThread, NextThread);
+	pantheon::CPU::GetMyLocalSched()->InsertThread(CurThread);
+	NextThread->Unlock();
 
 	cpu_switch(OldContext, NewContext, CpuIRegOffset);
+	CurThread->Unlock();
 }
 
 void pantheon::Scheduler::Reschedule()
@@ -372,7 +369,24 @@ void pantheon::Scheduler::Reschedule()
 	}
 
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+	CurThread->Lock();
+
 	pantheon::Thread *NextThread = GetNextThread();
+	if (NextThread == CurThread)
+	{
+		CurThread->Unlock();
+		return;
+	}
+
+	NextThread->Lock();
+
+	if (NextThread->MyState() == pantheon::Thread::STATE_RUNNING 
+		|| CurThread->MyState() != pantheon::Thread::STATE_RUNNING)
+	{
+		NextThread->Unlock();
+		CurThread->Unlock();
+		return;
+	}
 
 	SwapThreads(CurThread, NextThread);
 }
