@@ -64,6 +64,7 @@ private:
 	pantheon::SkipList<UINT64, pantheon::Thread*> LocalRunQueue;
 	pantheon::LinkedList<pantheon::Thread> Threads;
 	pantheon::Thread *IdleThread;
+	BOOL Ready;
 };
 
 /**

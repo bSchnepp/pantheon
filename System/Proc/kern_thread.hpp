@@ -111,13 +111,13 @@ public:
 
 	void BlockScheduling();
 	void EnableScheduling();
-	[[nodiscard]] BOOL Preempted() const;
+	[[nodiscard]] INT64 Preempted() const;
 
 
 	/**
 	 * @brief Switches thread context to another thread
 	 */
-	static void Switch(Thread *Next);
+	static void Switch(Thread *CurThread, Thread *NextThread);
 
 private:
 	VOID SetEntryLocation(UINT64 IP, UINT64 SP, VOID* ThreadData);

@@ -14,7 +14,7 @@
 #include <System/Memory/kern_alloc.hpp>
 
 /* Avoid having too high a number of cores to look through. */
-static UINT8 NoCPUs = 0;
+static atomic_uint_fast8_t NoCPUs = 0;
 static pantheon::CPU::CoreInfo PerCoreInfo[MAX_NUM_CPUS];
 
 void pantheon::CPU::InitCore(UINT8 CoreNo)

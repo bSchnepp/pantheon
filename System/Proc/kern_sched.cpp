@@ -44,6 +44,7 @@ pantheon::LocalScheduler::LocalScheduler() : pantheon::Lockable("Scheduler")
 	 * setup must be done with the Setup() function, not the constructor.
 	 */
 	this->IdleThread = nullptr;
+	this->Ready = FALSE;
 }
 
 /** 
@@ -71,6 +72,11 @@ public:
 
 UINT64 pantheon::LocalScheduler::CountThreads(UINT64 PID)
 {
+	if (!this->Ready)
+	{
+		this->Setup();
+	}
+
 	UINT64 Res = 0;
 	pantheon::ScopedLock _L(this);
 	for (const auto &Item : this->Threads)
@@ -82,6 +88,11 @@ UINT64 pantheon::LocalScheduler::CountThreads(UINT64 PID)
 
 pantheon::Thread *pantheon::LocalScheduler::AcquireThread()
 {
+	if (!this->Ready)
+	{
+		this->Setup();
+	}
+
 	Optional<UINT64> LowestKey = this->LocalRunQueue.MinKey();
 	if (!LowestKey.GetOkay())
 	{
@@ -105,6 +116,11 @@ pantheon::Thread *pantheon::LocalScheduler::AcquireThread()
  */
 pantheon::Thread *pantheon::LocalScheduler::Idle()
 {
+	if (!this->Ready)
+	{
+		this->Setup();
+	}
+
 	return this->IdleThread;
 }
 
@@ -167,7 +183,10 @@ void pantheon::LocalScheduler::Setup()
 	Idle->Unlock();
 
 	pantheon::CPU::GetCoreInfo()->CurThread = Idle;
-	this->IdleThread = Idle;	
+	this->IdleThread = Idle;
+	this->Ready = TRUE;
+
+	pantheon::CPU::GetMyLocalSched()->InsertThread(Idle);	
 }
 
 static UINT64 CalculateDeadline(UINT64 Jiffies, UINT64 PrioRatio, UINT64 RRInterval)
@@ -314,58 +333,38 @@ static pantheon::Thread *GetNextThread()
 	return pantheon::CPU::GetMyLocalSched()->Idle();
 }
 
-/** 
- * @private
- * @brief Struct to hold context registers
- */
-struct SwapContext
+static void SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *NextThread)
 {
-	pantheon::CpuContext *Old;
-	pantheon::CpuContext *New;
-};
-
-static SwapContext SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *NextThread)
-{
-	pantheon::ScopedGlobalSchedulerLock _L;
-	pantheon::ScopedLock _NL(NextThread);
-
 	/* Don't try to swap to ourselves. */
 	if (NextThread == CurThread)
 	{
-		return {nullptr, nullptr};
+		return;
 	}
-
-	pantheon::ScopedLock _OL(CurThread);
 
 	pantheon::CpuContext *OldContext = CurThread->GetRegisters();
 	pantheon::CpuContext *NewContext = NextThread->GetRegisters();
 
 	/* Change kernel view of contexts */
 	pantheon::Process::Switch(NextThread->MyProc());
-	pantheon::Thread::Switch(NextThread);
-	return {OldContext, NewContext};
+	pantheon::Thread::Switch(CurThread, NextThread);
+
+	cpu_switch(OldContext, NewContext, CpuIRegOffset);
 }
 
 void pantheon::Scheduler::Reschedule()
 {
+	ScopedRescheduleLock _L;
+
 	/* Interrupts must be enabled before we can do anything. */
 	if (pantheon::CPU::ICOUNT())
 	{
 		return;
 	}
 
-	ScopedRescheduleLock _L;
-
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	pantheon::Thread *NextThread = GetNextThread();
 
-	SwapContext Con = SwapThreads(CurThread, NextThread);
-	if (Con.New && Con.Old)
-	{
-		pantheon::Sync::DSBISH();
-		pantheon::Sync::ISB();
-		cpu_switch(Con.Old, Con.New, CpuIRegOffset);
-	}
+	SwapThreads(CurThread, NextThread);
 }
 
 void pantheon::Scheduler::AttemptReschedule()

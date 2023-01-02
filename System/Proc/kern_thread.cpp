@@ -161,10 +161,10 @@ pantheon::Thread::Priority pantheon::Thread::MyPriority() const
 /**
  * \~english @brief Checks if this thread is valid to interrupt at this moment
  * \~english @author Brian Schnepp
- * \~english @return 0 if not doing system work currently, 1 otherwise.
+ * \~english @return 0 if not doing system work currently, positive integer otherwise.
  */
 [[nodiscard]]
-BOOL pantheon::Thread::Preempted() const
+INT64 pantheon::Thread::Preempted() const
 {
 	OBJECT_SELF_ASSERT();
 	return this->PreemptCount != 0;
@@ -245,11 +245,6 @@ VOID pantheon::Thread::SetPriority(Thread::Priority Pri)
 pantheon::CpuContext *pantheon::Thread::GetRegisters()
 {
 	OBJECT_SELF_ASSERT();
-	if (this->IsLocked() == FALSE)
-	{
-		StopError("GetRegisters without lock");
-	}
-
 	/* TODO: Copy the actual registers to the internal representation! */
 	return &this->Registers;
 }
@@ -386,15 +381,12 @@ pantheon::Thread::ThreadLocalRegion *pantheon::Thread::GetThreadLocalArea()
 /**
  * @brief Switches thread context to another thread
  */
-void pantheon::Thread::Switch(pantheon::Thread *NextThread)
+void pantheon::Thread::Switch(pantheon::Thread *CurThread, pantheon::Thread *NextThread)
 {
-	if (NextThread == nullptr)
-	{
-		return;
-	}
+	pantheon::ScopedLock _O(CurThread);
+	CurThread->SetState(pantheon::Thread::STATE_WAITING);
 
-	pantheon::Thread *CurThread = pantheon::CPU::GetCoreInfo()->CurThread;
-	pantheon::CPU::GetCurThread()->SetState(pantheon::Thread::STATE_WAITING);
+	pantheon::ScopedLock _N(NextThread);
 	NextThread->SetState(Thread::STATE_RUNNING);
 	NextThread->SetTicks(Thread::RR_INTERVAL);
 
