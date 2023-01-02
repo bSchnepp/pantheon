@@ -24,10 +24,10 @@ VOID TraceStack(UINT64 PC, UINT64 X29)
 
 	UINT64 Counter = 0;
 	Frame *Cur = reinterpret_cast<Frame*>(X29);
-	SERIAL_LOG("[Frame %lu]: %lx\n", Counter++, PC);
+	SERIAL_LOG("[Core No %hhu, Frame %lu]: %lx\n", pantheon::CPU::GetProcessorNumber(), Counter++, PC);
 	while (Cur && Cur->PC)
 	{
-		SERIAL_LOG("[Frame %lu]: %lx\n", Counter++, Cur->PC);
+		SERIAL_LOG("[Core No %hhu, Frame %lu]: %lx\n", pantheon::CPU::GetProcessorNumber(), Counter++, Cur->PC);
 		Cur = Cur->Next;
 	}
 }
