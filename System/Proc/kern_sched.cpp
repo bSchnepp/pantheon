@@ -129,6 +129,13 @@ pantheon::Thread *pantheon::LocalScheduler::Idle()
 	return this->IdleThread;
 }
 
+[[nodiscard]] 
+UINT64 pantheon::LocalScheduler::GetLowestDeadline() const
+{
+	Optional<UINT64> Val = this->LocalRunQueue.MinKey();
+	return Val.GetOkay() ? Val.GetValue() : -1;
+}
+
 static UINT32 AcquireProcessID()
 {
 	UINT32 RetVal = 0;
@@ -324,9 +331,28 @@ static pantheon::Thread *GetNextThread()
 {
 	UINT8 MyCPU = pantheon::CPU::GetProcessorNumber();
 	UINT8 NoCPUs = pantheon::CPU::GetNoCPUs();
+
+	UINT64 LowestDeadline = -1;
+	UINT8 LowestScheduler = MyCPU;
+
 	for (UINT8 Index = 0; Index < NoCPUs; Index++)
 	{
 		UINT8 LocalIndex = (MyCPU + Index) % NoCPUs;
+		pantheon::LocalScheduler *Sched = pantheon::CPU::GetLocalSched(LocalIndex);
+		if (Sched)
+		{
+			UINT64 Deadline = Sched->GetLowestDeadline();
+			if (Deadline < LowestDeadline)
+			{
+				LowestScheduler = LocalIndex;
+				LowestDeadline = Deadline;
+			}
+		}
+	}
+
+	for (UINT8 Index = 0; Index < NoCPUs; Index++)
+	{
+		UINT8 LocalIndex = (LowestScheduler + Index) % NoCPUs;
 		pantheon::LocalScheduler *Sched = pantheon::CPU::GetLocalSched(LocalIndex);
 		if (Sched && Sched->TryLock())
 		{

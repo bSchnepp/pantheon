@@ -57,6 +57,13 @@ public:
 	 */
 	void InsertThread(pantheon::Thread *Thr);
 
+	/**
+	 * \~english @brief Gets the lowest virtual deadline that is enqueued
+	 * \~english @pre This scheduler is not locked
+	 * \~english @returns The lowest virtual deadline in this scheduler, or -1 if none exists
+	 */
+	[[nodiscard]] UINT64 GetLowestDeadline() const;
+
 	/** @private */ void Setup();
 	/** @private */ pantheon::Thread *Idle();
 
