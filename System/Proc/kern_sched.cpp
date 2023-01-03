@@ -23,12 +23,12 @@
  * @file System/Proc/kern_sched.cpp
  * \~english @brief Definitions for basic kernel scheduling data structures and algorithms.
  * \~english @details Pantheon implements Con Kolivas' MuQSS scheduling algorithm, an efficient algorithm 
- *  which takes priorities into account to provide a semi-"realtime" scheduling system to ensure 
+ *  which takes priorities into account to provide a fair scheduling system to ensure 
  *  fairness between processes. In contrast to BFS, lock contention is avoided by fairly distributing
  *  work between individual processors: in this case, threads are the fundamental schedulable unit,
- *  which is what is assigned virtual deadlines. Note that "realtime" is in quotes as to my knowledge, no definitive
- *  proof exists to guarantee that any given task will always meet it's virtual deadline, though all jobs should
- *  just by induction eventually all run anyway, even if they miss their deadlines.
+ *  which is what is assigned virtual deadlines.
+ *  Some details are either simplified or ignored: this implementation ignores nice levels, and ignores cache locality, SMT thread groups,
+ *  and does not use a high precision timer (relying on jiffies wherever the corresponding Linux patch uses niffies), and lacks any runtime tunable parameters.
  * @see http://ck.kolivas.org/patches/muqss/sched-MuQSS.txt
  * \~english @author Brian Schnepp
  */

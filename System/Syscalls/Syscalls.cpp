@@ -329,7 +329,6 @@ pantheon::Result pantheon::SVCYield(pantheon::TrapFrame *CurFrame)
 	{
 		pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 		pantheon::ScopedLock ScopeLockThread(CurThread);
-		CurThread->SetTicks(0);
 	}
 	pantheon::Scheduler::Reschedule();
 	return pantheon::Result::SYS_OK;
