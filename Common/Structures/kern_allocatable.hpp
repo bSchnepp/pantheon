@@ -18,7 +18,6 @@ public:
 	static void Init()
 	{
 		AllocSpinlock = pantheon::Spinlock("Allocatable Lock");
-		ClearBuffer((CHAR*)Items, sizeof(T) * Count);
 		Allocator = pantheon::mm::SlabCache<T>(Items, Count);
 	}
 
