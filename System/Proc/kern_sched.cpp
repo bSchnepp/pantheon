@@ -59,17 +59,6 @@ extern "C" void cpu_switch(pantheon::CpuContext *Old, pantheon::CpuContext *New,
  */
 extern "C" VOID drop_usermode(UINT64 PC, UINT64 PSTATE, UINT64 SP);
 
-/** 
- * @private
- * @brief Prevent rescheduling under this current thread
- */
-class ScopedRescheduleLock
-{
-public:
-	FORCE_INLINE ScopedRescheduleLock() { pantheon::CPU::GetCurThread()->BlockScheduling(); }
-	FORCE_INLINE ~ScopedRescheduleLock() { pantheon::CPU::GetCurThread()->EnableScheduling(); }	
-};
-
 UINT64 pantheon::LocalScheduler::CountThreads(UINT64 PID)
 {
 	if (!this->Ready)
@@ -110,8 +99,12 @@ pantheon::Thread *pantheon::LocalScheduler::AcquireThread()
 		return nullptr;
 	}
 
-	this->LocalRunQueue.Delete(LowestKey.GetValue());
-	return Lowest.GetValue();
+	UINT64 Key = LowestKey.GetValue();
+	this->LocalRunQueue.Delete(Key);
+
+	pantheon::Thread *Value = Lowest.GetValue();
+	Value->Lock();
+	return Value;
 
 }
 
@@ -365,12 +358,50 @@ static pantheon::Thread *GetNextThread()
 		}
 	}
 
-	/* If we have no next, give up and use the idle thread. */
-	return pantheon::CPU::GetMyLocalSched()->Idle();
+	return nullptr;
 }
 
-static void SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *NextThread)
+void pantheon::Scheduler::Reschedule()
 {
+	/* Interrupts must be enabled before we can do anything. */
+	if (pantheon::CPU::ICOUNT())
+	{
+		return;
+	}
+
+	pantheon::CPU::GetCurThread()->Lock();
+	pantheon::CPU::GetCurThread()->BlockScheduling();
+	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+
+	pantheon::Thread *NextThread = GetNextThread();
+	if (NextThread == nullptr)
+	{
+		NextThread = pantheon::CPU::GetMyLocalSched()->Idle();
+		if (NextThread->IsLocked())
+		{
+			CurThread->Unlock();
+			pantheon::CPU::GetCurThread()->EnableScheduling();
+			return;
+		}
+		NextThread->Lock();
+	}
+
+	if (NextThread == CurThread)
+	{
+		CurThread->Unlock();
+		pantheon::CPU::GetCurThread()->EnableScheduling();
+		return;
+	}
+
+	if (NextThread->MyState() == pantheon::Thread::STATE_RUNNING 
+		|| CurThread->MyState() != pantheon::Thread::STATE_RUNNING)
+	{
+		NextThread->Unlock();
+		CurThread->Unlock();
+		pantheon::CPU::GetCurThread()->EnableScheduling();
+		return;
+	}
+
 	pantheon::Thread::Switch(CurThread, NextThread);
 	pantheon::Process::Switch(NextThread->MyProc());
 
@@ -379,42 +410,10 @@ static void SwapThreads(pantheon::Thread *CurThread, pantheon::Thread *NextThrea
 
 	pantheon::CPU::GetMyLocalSched()->InsertThread(CurThread);
 	NextThread->Unlock();
+	CurThread->Unlock();
 
 	cpu_switch(OldContext, NewContext, CpuIRegOffset);
-	CurThread->Unlock();
-}
-
-void pantheon::Scheduler::Reschedule()
-{
-	ScopedRescheduleLock _L;
-
-	/* Interrupts must be enabled before we can do anything. */
-	if (pantheon::CPU::ICOUNT())
-	{
-		return;
-	}
-
-	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
-	CurThread->Lock();
-
-	pantheon::Thread *NextThread = GetNextThread();
-	if (NextThread == CurThread)
-	{
-		CurThread->Unlock();
-		return;
-	}
-
-	NextThread->Lock();
-
-	if (NextThread->MyState() == pantheon::Thread::STATE_RUNNING 
-		|| CurThread->MyState() != pantheon::Thread::STATE_RUNNING)
-	{
-		NextThread->Unlock();
-		CurThread->Unlock();
-		return;
-	}
-
-	SwapThreads(CurThread, NextThread);
+	pantheon::CPU::GetCurThread()->EnableScheduling();
 }
 
 void pantheon::Scheduler::AttemptReschedule()

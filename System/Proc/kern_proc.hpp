@@ -131,11 +131,6 @@ public:
 	 */
 	static void Switch(Process *Next)
 	{
-		if (Next == nullptr)
-		{
-			return;
-		}
-		
 		pantheon::CPUReg::W_TTBR0_EL1(Next->GetTTBR0());
 		pantheon::CPU::GetCoreInfo()->CurProcess = Next;
 	}

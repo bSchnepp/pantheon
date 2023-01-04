@@ -112,7 +112,7 @@ public:
 	T Add(T Item)
 	{
 		#ifndef ONLY_TESTS
-		return __atomic_fetch_add(&(this->Content), Item, __ATOMIC_SEQ_CST) + Item;
+		return __atomic_fetch_add(&(this->Content), Item, __ATOMIC_SEQ_CST);
 		#else
 		this->Content += Item;
 		return this->Content;
@@ -122,7 +122,7 @@ public:
 	T Sub(T Item)
 	{
 		#ifndef ONLY_TESTS
-		return __atomic_fetch_sub(&(this->Content), Item, __ATOMIC_SEQ_CST) - Item;
+		return __atomic_fetch_sub(&(this->Content), Item, __ATOMIC_SEQ_CST);
 		#else
 		this->Content -= Item;
 		return this->Content;
