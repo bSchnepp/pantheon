@@ -93,14 +93,11 @@ pantheon::Thread *pantheon::LocalScheduler::AcquireThread()
 		return nullptr;
 	}
 
-	Optional<pantheon::Thread*> Lowest = this->LocalRunQueue.Get(LowestKey.GetValue());
+	Optional<pantheon::Thread*> Lowest = this->LocalRunQueue.Pop(LowestKey.GetValue());
 	if (!Lowest.GetOkay())
 	{
 		return nullptr;
 	}
-
-	UINT64 Key = LowestKey.GetValue();
-	this->LocalRunQueue.Delete(Key);
 
 	pantheon::Thread *Value = Lowest.GetValue();
 	Value->Lock();
@@ -183,14 +180,12 @@ void pantheon::LocalScheduler::Setup()
 	}
 
 	Idle->Initialize(AcquireThreadID(), MProc.GetValue(), nullptr, nullptr, pantheon::Thread::PRIORITY_VERYLOW, FALSE);
+
 	Idle->Lock();
 	Idle->SetState(pantheon::Thread::STATE_RUNNING);
-
 	pantheon::CPU::GetCoreInfo()->CurThread = Idle;
 	this->IdleThread = Idle;
 	this->Ready = TRUE;
-
-	pantheon::CPU::GetMyLocalSched()->InsertThread(Idle);	
 	Idle->Unlock();
 }
 
@@ -210,6 +205,7 @@ static UINT64 CalculateDeadline(UINT64 Jiffies, UINT64 PrioRatio, UINT64 RRInter
 
 void pantheon::LocalScheduler::InsertThread(pantheon::Thread *Thr)
 {
+	pantheon::ScopedLock _L(this);
 	if (Thr == nullptr)
 	{
 		return;
@@ -220,7 +216,6 @@ void pantheon::LocalScheduler::InsertThread(pantheon::Thread *Thr)
 		pantheon::StopErrorFmt("Attempting to insert thread which wasn't locked into runqueue\n");
 	}
 
-	pantheon::ScopedLock _L(this);
 	if (Thr->MyState() == pantheon::Thread::STATE_WAITING)
 	{
 		UINT64 Jiffies = pantheon::CPU::GetJiffies();

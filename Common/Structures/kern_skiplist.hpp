@@ -212,6 +212,64 @@ public:
 		return FALSE;
 	}
 
+	Optional<V> Pop(K Key)
+	{
+		this->Setup();
+
+		KVPair *Update[MaxLvl];
+		INT16 Lvl = this->Level;
+
+		KVPair *Current = this->Head;
+		KVPair *Next = Current;
+		while (Lvl >= 0)
+		{
+			Next = Current->Next[Lvl];
+			while (Next && (Next->Key <= Key))
+			{
+				Current = Next;
+				Next = Current->Next[Lvl];
+			}
+			Update[Lvl] = Current;
+			Lvl--;
+		}
+
+		/* This is where we'll need to be: this needs to match the current key. */
+		if (Current->Key == Key)
+		{
+			UINT8 CurLvl = Current->Level;
+			for (UINT8 Lvl = 0; Lvl <= CurLvl; Lvl++)
+			{
+				Current->Prev[Lvl]->Next[Lvl] = Current->Next[Lvl];
+				Current->Next[Lvl]->Prev[Lvl] = Current->Prev[Lvl];
+			}
+
+			/* If this was top, we might have to fix levels. */
+			if (CurLvl == this->Level)
+			{
+				while (this->Head->Next[CurLvl] == this->Head && this->Head->Prev[CurLvl] == this->Head)
+				{
+					if (CurLvl > 0)
+					{
+						CurLvl--;
+					} else
+					{
+						break;
+					}
+					
+				}
+				this->Level = CurLvl;
+			}
+
+			this->Sz--;
+			if (Current->Key == Key)
+			{
+				return Optional<V>(Current->Value);
+			}
+			return Optional<V>();
+		}
+		return Optional<V>();
+	}
+
 
 	V& operator[](K Key)
 	{
