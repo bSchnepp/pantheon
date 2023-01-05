@@ -131,10 +131,7 @@ static UINT32 AcquireProcessID()
 	UINT32 RetVal = 0;
 	static UINT32 ProcessID = 1;
 
-	if (!SchedLock.IsLocked())
-	{
-		pantheon::StopErrorFmt("Acquire thread without locking Global Scheduler\n");
-	}
+	PANIC_ON(!SchedLock.IsLocked(), "Acquire process ID without locking Global Scheduler\n");
 
 	RetVal = ProcessID++;
 	while (ProcessList.Contains(RetVal) || RetVal == 0)
@@ -150,10 +147,7 @@ static UINT64 AcquireThreadID()
 	UINT64 RetVal = 0;
 	static UINT64 ThreadID = 1;
 
-	if (!SchedLock.IsLocked())
-	{
-		pantheon::StopErrorFmt("Acquire thread without locking Global Scheduler\n");
-	}
+	PANIC_ON(!SchedLock.IsLocked(), "Acquire thread ID without locking Global Scheduler\n");
 
 	RetVal = ThreadID++;
 	/* Ban 0 and -1, since these are special values. */
@@ -174,10 +168,7 @@ void pantheon::LocalScheduler::Setup()
 
 	pantheon::Thread *Idle = pantheon::Thread::Create();
 	Optional<pantheon::Process*> MProc = ProcessList.Get(0);
-	if (!MProc.GetOkay())
-	{
-		pantheon::StopErrorFmt("No PID 0!\n");
-	}
+	PANIC_ON(!MProc.GetOkay(), "PID 0 does not exist!\n");
 
 	Idle->Initialize(AcquireThreadID(), MProc.GetValue(), nullptr, nullptr, pantheon::Thread::PRIORITY_VERYLOW, FALSE);
 
@@ -211,10 +202,7 @@ void pantheon::LocalScheduler::InsertThread(pantheon::Thread *Thr)
 		return;
 	}
 
-	if (!Thr->IsLocked())
-	{
-		pantheon::StopErrorFmt("Attempting to insert thread which wasn't locked into runqueue\n");
-	}
+	PANIC_ON(!Thr->IsLocked(), "Attempting to insert thread which wasn't locked into runqueue\n");
 
 	if (Thr->MyState() == pantheon::Thread::STATE_WAITING)
 	{
@@ -345,6 +333,8 @@ static pantheon::Thread *GetNextThread()
 		if (Sched && Sched->TryLock())
 		{
 			pantheon::Thread *Thr = Sched->AcquireThread();
+			PANIC_ON(Thr && !Thr->Preempted(), "Trying to acquire thread which was preempted\n");
+
 			Sched->Unlock();
 			if (Thr != nullptr)
 			{
@@ -403,9 +393,13 @@ void pantheon::Scheduler::Reschedule()
 	pantheon::CpuContext *OldContext = CurThread->GetRegisters();
 	pantheon::CpuContext *NewContext = NextThread->GetRegisters();
 
-	pantheon::CPU::GetMyLocalSched()->InsertThread(CurThread);
-	NextThread->Unlock();
+	if (CurThread->MyState() == pantheon::Thread::STATE_WAITING)
+	{
+		pantheon::CPU::GetMyLocalSched()->InsertThread(CurThread);
+	}
 	CurThread->Unlock();
+
+	NextThread->Unlock();
 
 	cpu_switch(OldContext, NewContext, CpuIRegOffset);
 	pantheon::CPU::GetCurThread()->EnableScheduling();

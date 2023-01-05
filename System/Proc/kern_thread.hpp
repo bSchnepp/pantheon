@@ -140,8 +140,6 @@ private:
 	pantheon::vmm::VirtualAddress LocalRegion;
 
 	static constexpr UINT64 InitialNumStackPages = 4;
-
-	pantheon::Atomic<pantheon::Thread*> NextThread;
 };
 
 }

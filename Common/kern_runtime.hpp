@@ -297,5 +297,6 @@ BOOL Panicked();
 }
 
 #define OBJECT_SELF_ASSERT() if ((this) == nullptr) { StopError("called method was nullptr"); }
+#define PANIC_ON(cond, string) if (cond) { pantheon::StopError(string); }
 
 #endif

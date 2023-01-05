@@ -77,6 +77,7 @@ extern "C" void sync_handler_el1(pantheon::TrapFrame *Frame)
 	}
 	SERIAL_LOG("\n");
 
+	SERIAL_LOG("CurThread Status: preempted: %ld MyState: %ld\n", CurThread->Preempted(), CurThread->MyState());
 	pantheon::StopErrorFmt(
 		"ERR: SYNC HANDLER EL1: esr: %lx far: %lx elr: %lx spsr: %lx, sp: %lx pid: %u, tid: %lu\n", 
 		ESR, FAR, ELR, SPSR, SP, CurProc->ProcessID(), CurThread->ThreadID());
