@@ -1,0 +1,4 @@
+CompileFlags:
+    Add:
+        - "--include-directory=."
+        - "--include-directory=arch/aarch64/"
