@@ -100,9 +100,6 @@ void pantheon::Scheduler::Reschedule()
 	}
 
 	pantheon::ScopedLocalSchedulerLock _L;
-	Old->SetState(pantheon::Thread::STATE_WAITING);
-	Old->RefreshTicks();
-
 
 	pantheon::Process *NewProc = New->MyProc();
 	pantheon::Process::Switch(NewProc);
@@ -116,7 +113,12 @@ void pantheon::Scheduler::Reschedule()
 	pantheon::ipc::SetThreadLocalRegion(New->GetThreadLocalAreaRegister());
 
 	/* TODO: Make this better */
-	pantheon::GlobalScheduler::AppendIntoReadyList(Old);
+	if (Old->MyState() == pantheon::Thread::STATE_RUNNING)
+	{
+		pantheon::GlobalScheduler::AppendIntoReadyList(Old);
+		Old->SetState(pantheon::Thread::STATE_WAITING);
+		Old->RefreshTicks();
+	}
 	pantheon::GlobalScheduler::Unlock();
 
 	Old->Unlock();
@@ -462,6 +464,39 @@ void pantheon::GlobalScheduler::AppendIntoReadyList(pantheon::Thread *Next)
 		GlobalScheduler::ReadyHead = Next;
 	}
 	GlobalScheduler::ReadyTail->SetNext(nullptr);
+}
+
+void pantheon::GlobalScheduler::RemoveFromReadyList(pantheon::Thread *MyThread)
+{
+	/* Make sure we're locked before doing this... */
+	if (GlobalScheduler::AccessSpinlock.IsLocked() == FALSE)
+	{
+		StopError("Removing from readylist while not locked");
+	}
+
+	if (MyThread == nullptr)
+	{
+		StopError("Trying to remove nullptr from the ready list");
+		return;
+	}
+
+	pantheon::Thread *Current = GlobalScheduler::ReadyHead;
+	while (Current)
+	{
+		pantheon::Thread *Next = Current->Next();
+		if (Next == MyThread)
+		{
+			pantheon::Thread *NextNext = Next->Next();
+			Current->SetNext(NextNext);
+
+			if (Next == ReadyTail)
+			{
+				ReadyTail = Current;
+			}
+			return;
+		}
+		Current = Next;
+	}
 }
 
 pantheon::Thread *pantheon::GlobalScheduler::PopFromReadyList()

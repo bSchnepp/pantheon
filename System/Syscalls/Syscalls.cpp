@@ -598,6 +598,7 @@ pantheon::Result pantheon::SVCReplyAndRecieve(pantheon::TrapFrame *CurFrame)
 		if (Hand->GetType() != pantheon::HANDLE_TYPE_SERVER_CONNECTION)
 		{
 			/* This isn't what we were expecting... */
+			SERIAL_LOG("WAS NOT SERVER CONNECTION\n");
 			return pantheon::Result::SYS_FAIL;
 		}
 
@@ -605,6 +606,7 @@ pantheon::Result pantheon::SVCReplyAndRecieve(pantheon::TrapFrame *CurFrame)
 		pantheon::ipc::ServerConnection *Conn = CurProc->GetHandle(CurHandle)->GetPtr<pantheon::ipc::ServerConnection>();
 		if (Conn == nullptr)
 		{
+			SERIAL_LOG("WAS NULL CONNECTION\n");
 			return pantheon::Result::SYS_FAIL;
 		}
 
@@ -613,10 +615,14 @@ pantheon::Result pantheon::SVCReplyAndRecieve(pantheon::TrapFrame *CurFrame)
 		pantheon::Result Res = Conn->IssueReply(Region->RawData);
 		if (Res != pantheon::Result::SYS_OK)
 		{
+			SERIAL_LOG("WAS NOT OK ISSUING REPLY\n");
 			return Res;
 		}
 
 		CurThread->SetState(pantheon::Thread::STATE_BLOCKED);
+
+		pantheon::ScopedGlobalSchedulerLock _GL;
+		pantheon::GlobalScheduler::RemoveFromReadyList(CurThread);
 	}
 
 	/* NYI: Wait for subsequent responses */
