@@ -2,18 +2,14 @@
 A microkernel based OS for aarch64 machines
 
 ## Why?
-Operating system code is one of the most fun areas to work with!
-I've been fascinated with alternative designs to the traditional monolithic, *NIX-like
-architecture for a while now. As it turns out, there are a lot of different
-designs that radically depart from *NIX design and manage to better handle certain problems!
-Something really fascinating is being able to put GPU drivers and other ASIC drivers 
-entirely in userspace, and still achieve good performance out of them. A really interesting challenge
-is dealing with the case of a device with three distinct displays where a process draws on all of them: 
-each process to draw on all of them must have a minimum of 4 context switches per screen to handle drawing (proc --> gpu --> kernel --> proc), 
-with 2 framebuffers each, meaning there would be 24 context switches, and these need to be done 60 times per second at a minimum, or a budget of at most about 700 microseconds to do work at each stage.
-If the system can be carefully architected, perhaps these context switches can be mitigated, or can simply be made fast enough to not matter.
-Because of this, I believe it would be a wonderful excercise to simply try to create something vaguely inspired by these, aiming to solve many of the same problems, through 
-being different in some ways I think are important.
+Operating systems tend to be one of the most fun and exiciting areas to work with: lots of ideas can be explored here with wide-ranging effects on what a given computing platform can do.
+Being inspired by some of the developments of cutting-edge microkernel operating systems, most of which radically depart from UNIX-style design, it would be worthwhile to try them out, and experiment with a platform of my own.
+
+Something really fascinating is being able to put GPU drivers and other ASIC drivers entirely in userspace, and still achieve good performance out of them. A really interesting challenge is finding efficient ways to control peripherals
+like a display controller or other graphics accelerator safely in userspace, while avoiding context switches as much as possible. Likewise, many of the services traditionally associated with the kernel itself could equivalently be expressed through small userspace servers using RPCs to communicate with each other: this drags in the entire field of network operating systems and other distributed systems theory in, which is something I find fascinating.
+
+## IPC Design
+The main method of communication between processes is a Port, which requires use of a thread-local area for each thread issuing system calls, where the kernel does not typically have to validate any of the data on the fast path to be structured in any particular way. A message is typically structured by having a small header, a description of kernel-validated and enforced handles, and then data to be sent between processes: if no handles are bundled, then only the header has to be correct, which will be enforced by the kernel anyway to designate boundaries and size limits and other data for the message. These get transferred into the thread local area for the other process, which can access and manipulate the data accordingly: specific formats for accessing handles inside the IPC messages are yet to be done, but this scheme is complete enough to at least transfer data between two known programs.
 
 ## Goals to solve
 There's a couple of things that would be nice to focus on:
@@ -25,21 +21,23 @@ There's a couple of things that would be nice to focus on:
 	- Handle scheduling between many different processes in efficient manner to reduce *latency*
 	- Expose various hardware protocols to userspace applications in a nice and fair way (ie, create daemons at "i2c:port1", "gpio:pin1", etc.)
 	- Have a real wifi/ethernet driver! And be able to host a small static website from it.
-	- Perhaps allow system calls to be deferred to a userland process? (ie, a process thinks it has one kernel ABI, but it actually has its syscalls routed to another process, and that process calls into the kernel. This allows execution of binaries intended for another platform)
+	- Perhaps allow system calls to be deferred to a userland process? (ie, a process thinks it has one kernel ABI, but it actually has its syscalls routed to another process, and that process calls into the kernel. This allows execution of binaries intended for another platform, or emulation of another OS's APIs)
+	- Support DG2 graphics, possibly by porting i915 code into a userland GPU service. Requires complete PCIe driver first though.
 
 ## Organization
 Most core kernel code is located under `Common/`, with code for
 various physical protocols, processes, synchronization primitives, and other
 basic runtime code located there.
 
-Code for a specific board, such as `qemu-virt` can be found under `board/`.
+Code for a specific board, such as `qemu-virt` can be found under `BoardSupport/`.
 For now, only qemu-virt is supported, and addresses of it's peripherals,
 such as the PL011 UART, are hardcoded in. This should be changed to use the
-device tree more properly at a later time.
+device tree more properly at a later time. A branch exists for a port to the BCM2711 platform,
+but this is incomplete.
 
 Code for a specific processor architecture is under `arch/`. For now, the only
 supported processor architecture is `aarch64`, and specifically assumed to be
-an A72-compatible core.
+an A72-compatible core (at least Aarch64 v8.0).
 
 Specific CMake toolchain scripts are located under the `cmake/` directory.
 For supporting a different board combination, the format `<board>-<arch>.cmake`
