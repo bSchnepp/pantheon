@@ -21,7 +21,7 @@ template<typename T>
 static T ReadArgument(UINT64 Val)
 {
 	/* This is a hack: this should be validated later!!! */
-	return reinterpret_cast<T>(Val);
+	return (T)Val;
 }
 
 
@@ -574,9 +574,54 @@ pantheon::Result pantheon::SVCAcceptConnection(pantheon::TrapFrame *CurFrame)
 
 pantheon::Result pantheon::SVCReplyAndRecieve(pantheon::TrapFrame *CurFrame)
 {
-	/* NYI */
-	PANTHEON_UNUSED(CurFrame);
-	return pantheon::Result::SYS_FAIL;
+	/* (INT32 *ServerHandle, UINT16 NumHandles, INT32 *Handles) */
+	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
+	pantheon::ScopedLock _L(CurProc);
+
+	INT32 *ServerHandle = ReadArgumentAsPointer<INT32>(CurFrame->Regs[0]);
+
+	/* If this handle is invalid, return FAIL. */
+	INT32 CurHandle = *ServerHandle;
+	if (CurHandle < 0)
+	{
+		*ServerHandle = pantheon::INVALID_HANDLE_ID;
+		return pantheon::Result::SYS_FAIL;
+	}
+
+	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+	pantheon::ScopedLock _TL(CurThread);
+
+
+	/* Grab the current connection from the port */
+	pantheon::Handle *Hand = CurProc->GetHandle(CurHandle);
+	if (Hand->GetType() != pantheon::HANDLE_TYPE_SERVER_PORT)
+	{
+		/* This isn't what we were expecting... */
+		return pantheon::Result::SYS_FAIL;
+	}
+
+	/* Go grab the connection we expected to go through... */
+	pantheon::ipc::ServerConnection *Conn = CurProc->GetHandle(CurHandle)->GetPtr<pantheon::ipc::ServerConnection>();
+	if (Conn == nullptr)
+	{
+		return pantheon::Result::SYS_FAIL;
+	}
+
+	/* Grab the message through the connection: our reply will already be in the TLS. */
+	pantheon::Thread::ThreadLocalRegion *Region = CurThread->GetThreadLocalArea();
+	pantheon::Result Res = Conn->IssueReply(Region->RawData);
+	if (Res != pantheon::Result::SYS_OK)
+	{
+		return Res;
+	}
+
+	/* NYI: Wait for subsequent responses */
+
+
+
+
+
+	return pantheon::Result::SYS_OK;
 }
 
 pantheon::Result pantheon::SVCCloseHandle(pantheon::TrapFrame *CurFrame)

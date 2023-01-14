@@ -1,4 +1,5 @@
 #include <arch.hpp>
+#include <vmm/vmm.hpp>
 
 #include <kern_string.hpp>
 #include <kern_datatypes.hpp>
@@ -51,8 +52,15 @@ public:
 
 	typedef struct ThreadLocalRegion
 	{
-		ThreadLocalHeader Header;
-		ThreadLocalPayload Payload;
+		union
+		{
+			struct
+			{
+				ThreadLocalHeader Header;
+				ThreadLocalPayload Payload;
+			};
+			UINT32 RawData[1024];
+		};
 	}ThreadLocalRegion;
 
 	static_assert(sizeof(ThreadLocalRegion) == 4096);

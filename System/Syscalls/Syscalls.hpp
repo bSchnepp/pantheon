@@ -1,3 +1,5 @@
+#include <arch.hpp>
+
 #include <kern_result.hpp>
 #include <kern_datatypes.hpp>
 

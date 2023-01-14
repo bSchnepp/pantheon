@@ -1,4 +1,4 @@
-#include <SDK/pantheon.h>
+#include <Userland/SDK/pantheon.h>
 
 void sysm_Main()
 {
@@ -36,7 +36,7 @@ void sysm_Main()
 			{
 				Data->Payload.Data[Index] = 0xAA;
 			}
-			svc_ReplyAndRecieve(0, nullptr, &ServerConnection);
+			svc_ReplyAndRecieve(&ServerConnection, 0, nullptr);
 			svc_LogText("[sysm] Replying to session");
 		}
 		else

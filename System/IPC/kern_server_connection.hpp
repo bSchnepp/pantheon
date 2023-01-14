@@ -1,10 +1,14 @@
 #include <kern_result.hpp>
 #include <kern_datatypes.hpp>
 
+#include <Common/kern_object.hpp>
+#include <Common/kern_result.hpp>
+
 #include <Common/Sync/kern_atomic.hpp>
 #include <Common/Structures/kern_allocatable.hpp>
-
 #include <Common/Structures/kern_linkedlist.hpp>
+
+#include <System/Proc/kern_thread.hpp>
 
 #ifndef _KERN_SERVER_CONNECTION_HPP_
 #define _KERN_SERVER_CONNECTION_HPP_
@@ -22,7 +26,7 @@ public:
 	void Initialize(Connection *Owner) { this->Owner = Owner; }
 	[[nodiscard]] Connection *GetOwner() const { return this->Owner; }
 
-	void ReplyAndRecv(const UINT32 *Content);
+	pantheon::Result IssueReply(const UINT32 *Content);
 	pantheon::Result RequestHandler(pantheon::Thread *RqThread);
 	void ClientClosedHandler();
 

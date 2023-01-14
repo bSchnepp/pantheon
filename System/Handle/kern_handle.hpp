@@ -87,6 +87,8 @@ private:
 	HandleContent Content;
 };
 
+static constexpr INT32 INVALID_HANDLE_ID = -1;
+
 }
 
 #endif

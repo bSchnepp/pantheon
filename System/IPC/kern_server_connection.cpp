@@ -1,3 +1,4 @@
+#include "kern.h"
 #include <kern_runtime.hpp>
 #include <kern_datatypes.hpp>
 
@@ -8,11 +9,12 @@
 
 #include <System/Proc/kern_sched.hpp>
 
-void pantheon::ipc::ServerConnection::ReplyAndRecv(const UINT32 *Content)
+pantheon::Result pantheon::ipc::ServerConnection::IssueReply(const UINT32 *Content)
 {
 	OBJECT_SELF_ASSERT();
 	PANTHEON_UNUSED(Content);
 	/* NYI */
+	return pantheon::Result::SYS_OK;
 }
 
 pantheon::Result pantheon::ipc::ServerConnection::RequestHandler(pantheon::Thread *RqThread)

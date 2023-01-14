@@ -1,4 +1,3 @@
 CompileFlags:
     Add:
-        - "--include-directory=."
-        - "--include-directory=arch/aarch64/"
+        - "--include-directory=. --include-directory=Common/ --include-directory=System/ --include-directory=arch/aarch64/"
