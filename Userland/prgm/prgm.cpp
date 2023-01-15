@@ -26,6 +26,47 @@ void prgm_Main()
 		}
 		else 
 		{
+			ThreadLocalRegion *Location = GetTLS();
+			for (UINT32 &Index : Location->Payload.Data)
+			{
+				Index = 0;
+			}
+
+			/* Lorem ipsum tumbled a few times, this text is nonsense. */
+			static const char *RandomString = 
+				"Troublemaker"
+				"After the Gods of the West"
+				"We don't need Hendlerite Tellus Benenatis."
+				"Show me the hall, Pelentes."
+				"For fear of justice"
+				"Fuegia Varius Tota. Sometimes he laughs with hate."
+				"I'll take care of you at the Hendlerite course gate."
+				"The author of Pain also expected it."
+				"Who is the author of Mauris Vestibulum? Even the most cunning installations are possible."
+				"They are there because the elephants want freedom, but they are among the lions."
+				"Who fears the doors? My face is like a face, but a joke."
+				"The night who influences the moon fears the doors."
+				"The sea is ugly. Singing is more beautiful than pain";
+
+			UINT64 StrLen = 0;
+			for (UINT64 Index = 0; Index < 1022; Index++)
+			{
+				char Current = RandomString[Index];
+				if (Current == '\0')
+				{
+					break;
+				}
+				Location->Payload.Data[Index] = RandomString[Index];
+				StrLen++;
+			}
+
+			/* [10 bits Size] [2 Bits ReqType] [4 Bits ReqTypeData] */
+			Location->Header.Meta = (StrLen << 6) | (0 << 4) | (0 << 0);
+			Location->Header.Cmd = 0;
+
+			svc_SendRequest(ClientConn);
+
+
 			svc_SignalEvent(Write);
 			svc_CloseHandle(ClientConn);
 		}

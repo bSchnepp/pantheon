@@ -24,7 +24,7 @@ class Thread  : public pantheon::Object<Thread, 512>, public pantheon::Lockable
 public:
 	typedef struct ThreadLocalHeader
 	{
-		/* [10 bits Size] [2 Bits ReqType] [4 Bits ReqTypeData]*/
+		/* [10 bits Size] [2 Bits ReqType] [4 Bits ReqTypeData] */
 		UINT16 Meta;
 		UINT16 Cmd;
 		UINT32 ClientPID;

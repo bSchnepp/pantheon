@@ -1,3 +1,6 @@
+#include "kern.h"
+
+#include <kern_result.hpp>
 #include <kern_runtime.hpp>
 #include <kern_datatypes.hpp>
 
@@ -13,18 +16,21 @@ void pantheon::ipc::ClientConnection::Initialize(pantheon::ipc::Connection *Owne
 	this->Owner = Owner;
 }
 
-void pantheon::ipc::ClientConnection::Send(const UINT32 *Content)
+pantheon::Result pantheon::ipc::ClientConnection::Send(pantheon::Thread::ThreadLocalRegion *Region)
 {
 	OBJECT_SELF_ASSERT();
-	PANTHEON_UNUSED(Content);
+	PANTHEON_UNUSED(Region);
+
 	/* NYI */
+	return pantheon::Result::SYS_OK;
 }
 
-void pantheon::ipc::ClientConnection::Recieve(UINT32 *Content, UINT64 Size)
+pantheon::Result pantheon::ipc::ClientConnection::Recieve(pantheon::Thread::ThreadLocalRegion *Region)
 {
 	OBJECT_SELF_ASSERT();
-	ClearBuffer((CHAR*)Content, sizeof(UINT32) * Size);
+	PANTHEON_UNUSED(Region);
 	/* NYI */
+	return pantheon::Result::SYS_OK;
 }
 
 void pantheon::ipc::ClientConnection::ServerClosedHandler()

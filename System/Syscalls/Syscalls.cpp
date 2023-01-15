@@ -598,7 +598,6 @@ pantheon::Result pantheon::SVCReplyAndRecieve(pantheon::TrapFrame *CurFrame)
 		if (Hand->GetType() != pantheon::HANDLE_TYPE_SERVER_CONNECTION)
 		{
 			/* This isn't what we were expecting... */
-			SERIAL_LOG("WAS NOT SERVER CONNECTION\n");
 			return pantheon::Result::SYS_FAIL;
 		}
 
@@ -606,7 +605,6 @@ pantheon::Result pantheon::SVCReplyAndRecieve(pantheon::TrapFrame *CurFrame)
 		pantheon::ipc::ServerConnection *Conn = CurProc->GetHandle(CurHandle)->GetPtr<pantheon::ipc::ServerConnection>();
 		if (Conn == nullptr)
 		{
-			SERIAL_LOG("WAS NULL CONNECTION\n");
 			return pantheon::Result::SYS_FAIL;
 		}
 
@@ -615,7 +613,6 @@ pantheon::Result pantheon::SVCReplyAndRecieve(pantheon::TrapFrame *CurFrame)
 		pantheon::Result Res = Conn->IssueReply(Region->RawData);
 		if (Res != pantheon::Result::SYS_OK)
 		{
-			SERIAL_LOG("WAS NOT OK ISSUING REPLY\n");
 			return Res;
 		}
 
@@ -659,8 +656,50 @@ pantheon::Result pantheon::SVCCloseHandle(pantheon::TrapFrame *CurFrame)
 pantheon::Result pantheon::SVCSendRequest(pantheon::TrapFrame *CurFrame)
 {
 	/* NYI */
-	PANTHEON_UNUSED(CurFrame);
-	return pantheon::Result::SYS_FAIL;
+	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
+	{
+		pantheon::ScopedLock _L(CurProc);
+		INT32 ClientHandle = ReadArgument<INT32>(CurFrame->Regs[0]);
+
+		pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+		pantheon::ScopedLock _TL(CurThread);
+
+
+		/* Grab the current connection from the port */
+		pantheon::Handle *Hand = CurProc->GetHandle(ClientHandle);
+		if (Hand->GetType() != pantheon::HANDLE_TYPE_CLIENT_CONNECTION)
+		{
+			/* This isn't what we were expecting... */
+			SERIAL_LOG("WE DIDNT GET A CLIENT CONNECTION\n");
+			return pantheon::Result::SYS_FAIL;
+		}
+
+		/* Go grab the connection we expected to go through... */
+		pantheon::ipc::ClientConnection *Conn = CurProc->GetHandle(ClientHandle)->GetPtr<pantheon::ipc::ClientConnection>();
+		if (Conn == nullptr)
+		{
+			SERIAL_LOG("WE DIDNT GET A CLIENT CONNECTION THAT IS VALID\n");
+			return pantheon::Result::SYS_FAIL;
+		}
+
+		/* Send the message through the connection: our message will already be in the TLS. */
+		pantheon::Thread::ThreadLocalRegion *Region = CurThread->GetThreadLocalArea();
+		pantheon::Result Res = Conn->Send(Region);
+		if (Res != pantheon::Result::SYS_OK)
+		{
+			SERIAL_LOG("SEND RESULT WAS BAD\n");
+			return Res;
+		}
+
+
+		/* Block until we get an answer */
+		CurThread->SetState(pantheon::Thread::STATE_BLOCKED);
+		pantheon::ScopedGlobalSchedulerLock _GL;
+		pantheon::GlobalScheduler::RemoveFromReadyList(CurThread);
+	}
+
+
+	return pantheon::Result::SYS_OK;
 }
 
 typedef pantheon::Result (*SyscallFn)(pantheon::TrapFrame *);

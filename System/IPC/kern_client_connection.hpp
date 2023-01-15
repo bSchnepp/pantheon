@@ -1,8 +1,11 @@
+#include <kern_result.hpp>
 #include <kern_object.hpp>
 #include <kern_datatypes.hpp>
 
 #include <Common/Sync/kern_atomic.hpp>
 #include <Common/Structures/kern_allocatable.hpp>
+
+#include <System/Proc/kern_thread.hpp>
 
 #ifndef _KERN_CLIENT_CONNECTION_HPP_
 #define _KERN_CLIENT_CONNECTION_HPP_
@@ -21,8 +24,8 @@ public:
 
 	[[nodiscard]] Connection *GetOwner() const { return this->Owner; }
 
-	void Send(const UINT32 *Content);
-	void Recieve(UINT32 *Content, UINT64 Size);
+	pantheon::Result Send(pantheon::Thread::ThreadLocalRegion *Region);
+	pantheon::Result Recieve(pantheon::Thread::ThreadLocalRegion *Region);
 
 	void ServerClosedHandler();
 
