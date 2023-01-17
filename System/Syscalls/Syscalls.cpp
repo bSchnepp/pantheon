@@ -718,9 +718,9 @@ pantheon::Result pantheon::SvcSleep(pantheon::TrapFrame *CurFrame)
 	/* The total number of jiffies that has to be slept for is RoundedUp. */
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	pantheon::ScopedLock _TL(CurThread);
-	CurThread->SetTimeout(RoundedUp);
 
 	/* This thread will be blocked until we get a reason to connect it back... */
+	CurThread->SetTimeout(RoundedUp);
 
 
 	return pantheon::Result::SYS_OK;

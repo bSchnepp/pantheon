@@ -10,6 +10,7 @@
 #include <Common/Structures/kern_allocatable.hpp>
 
 #include <kern_object.hpp>
+#include <System/IPC/kern_synchronization.hpp>
 
 #ifndef _KERN_THREAD_HPP_
 #define _KERN_THREAD_HPP_
@@ -149,6 +150,8 @@ private:
 	pantheon::Atomic<UINT64> PreemptCount;
 	pantheon::Atomic<UINT64> RemainingTicks;
 	pantheon::Atomic<UINT64> TimeoutTicks;
+
+	pantheon::Synchronization *SyncEvent;
 
 	void *KernelStackSpace;
 	void *UserStackSpace;

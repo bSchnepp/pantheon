@@ -15,7 +15,7 @@ namespace pantheon
 class Synchronization : public pantheon::Object<Synchronization, 2048>
 {
 public:
-    typedef BOOL (*Condition)(Synchronization *Self, VOID *Userdata);
+    typedef BOOL (*Condition)(Synchronization *Self);
     typedef void (*CallbackFn)(Synchronization *Self);
 
 public:
@@ -24,6 +24,8 @@ public:
 
     void Initialize(Condition C, CallbackFn F, VOID *Userdata);
     BOOL Trigger();
+
+    VOID *GetUserdata() { return this->Userdata; }
 
 private:
     Condition Fn;

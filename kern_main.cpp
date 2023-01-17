@@ -18,6 +18,7 @@
 #include <System/IPC/kern_server_port.hpp>
 #include <System/IPC/kern_client_port.hpp>
 #include <System/IPC/kern_connection.hpp>
+#include <System/IPC/kern_synchronization.hpp>
 
 #include <System/Memory/kern_alloc.hpp>
 
@@ -36,6 +37,7 @@ static void kern_basic_init(InitialBootInfo *InitBootInfo)
 	pantheon::ipc::ClientPort::Init();
 	pantheon::ipc::Connection::Init();
 	pantheon::GlobalScheduler::Init();
+	pantheon::Synchronization::Init();
 }
 
 static void kern_stage2_init()

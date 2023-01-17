@@ -2,6 +2,7 @@
 #include <kern_datatypes.hpp>
 #include <Sync/kern_spinlock.hpp>
 
+#include "kern.h"
 #include "kern_cpu.hpp"
 #include "kern_proc.hpp"
 #include "kern_sched.hpp"
@@ -452,6 +453,37 @@ VOID pantheon::Thread::SetupThreadLocalArea()
 	this->MyProc()->MapAddress(this->LocalRegion, pantheon::PageAllocator::Alloc(), Entry);
 }
 
+/** @private
+ * @brief Requires CurThread to be unlocked beforehand
+ */
+static BOOL SetTimeout_Condition(pantheon::Synchronization *Self)
+{
+	pantheon::Thread *CurThread = reinterpret_cast<pantheon::Thread*>(Self->GetUserdata());
+	pantheon::ScopedLock _L(CurThread);
+
+	UINT64 CurTimeout = CurThread->GetTimeout() - 1;
+	CurThread->SetTimeout(CurTimeout);
+
+	if (CurTimeout == 0)
+	{
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/** @private
+ * @brief Requires CurThread to be unlocked beforehand
+ */
+static void SetTimeout_Callback(pantheon::Synchronization *Self)
+{
+	pantheon::Thread *CurThread = reinterpret_cast<pantheon::Thread*>(Self->GetUserdata());
+	pantheon::ScopedLock _L(CurThread);
+
+	/* We're eligible to be run again */
+	CurThread->SetState(pantheon::Thread::STATE_WAITING);
+	pantheon::GlobalScheduler::AppendIntoReadyList(CurThread);
+}
+
 VOID pantheon::Thread::SetTimeout(UINT64 Timeout)
 {
 	OBJECT_SELF_ASSERT();
@@ -461,6 +493,11 @@ VOID pantheon::Thread::SetTimeout(UINT64 Timeout)
 	}
 
 	this->TimeoutTicks.Store(Timeout);
+	this->SetState(pantheon::Thread::STATE_BLOCKED);
+	this->SyncEvent = pantheon::Synchronization::Create();
+	this->SyncEvent->Initialize(SetTimeout_Condition, SetTimeout_Callback, (VOID*)this);
+
+	/* TODO: Put this sync event into something to check it on every timer IRQ */
 }
 
 UINT64 pantheon::Thread::GetTimeout()

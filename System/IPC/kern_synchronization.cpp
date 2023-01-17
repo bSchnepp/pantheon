@@ -16,7 +16,7 @@ void pantheon::Synchronization::Initialize(Condition C, CallbackFn F, VOID *User
 
 BOOL pantheon::Synchronization::Trigger()
 {
-    if (this->Fn(this, Userdata))
+    if (this->Fn(this))
     {
         this->TrueFn(this);
         return TRUE;
