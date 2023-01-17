@@ -109,6 +109,9 @@ public:
 	VOID RefreshTicks();
 	VOID SetTicks(UINT64 TickCount);
 
+	VOID SetTimeout(UINT64 Timeout);
+	UINT64 GetTimeout();
+
 	VOID SetState(Thread::State State);
 	VOID SetPriority(Thread::Priority Priority);
 
@@ -145,6 +148,7 @@ private:
 
 	pantheon::Atomic<UINT64> PreemptCount;
 	pantheon::Atomic<UINT64> RemainingTicks;
+	pantheon::Atomic<UINT64> TimeoutTicks;
 
 	void *KernelStackSpace;
 	void *UserStackSpace;

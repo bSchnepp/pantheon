@@ -451,3 +451,25 @@ VOID pantheon::Thread::SetupThreadLocalArea()
 	pantheon::ScopedLock _L(this->MyProc());
 	this->MyProc()->MapAddress(this->LocalRegion, pantheon::PageAllocator::Alloc(), Entry);
 }
+
+VOID pantheon::Thread::SetTimeout(UINT64 Timeout)
+{
+	OBJECT_SELF_ASSERT();
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("SetTimeout without lock");
+	}
+
+	this->TimeoutTicks.Store(Timeout);
+}
+
+UINT64 pantheon::Thread::GetTimeout()
+{
+	OBJECT_SELF_ASSERT();
+	if (this->IsLocked() == FALSE)
+	{
+		StopError("GetTimeout without lock");
+	}
+
+	return this->TimeoutTicks.Load();
+}

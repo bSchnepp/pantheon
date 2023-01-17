@@ -670,7 +670,6 @@ pantheon::Result pantheon::SVCSendRequest(pantheon::TrapFrame *CurFrame)
 		if (Hand->GetType() != pantheon::HANDLE_TYPE_CLIENT_CONNECTION)
 		{
 			/* This isn't what we were expecting... */
-			SERIAL_LOG("WE DIDNT GET A CLIENT CONNECTION\n");
 			return pantheon::Result::SYS_FAIL;
 		}
 
@@ -678,7 +677,6 @@ pantheon::Result pantheon::SVCSendRequest(pantheon::TrapFrame *CurFrame)
 		pantheon::ipc::ClientConnection *Conn = CurProc->GetHandle(ClientHandle)->GetPtr<pantheon::ipc::ClientConnection>();
 		if (Conn == nullptr)
 		{
-			SERIAL_LOG("WE DIDNT GET A CLIENT CONNECTION THAT IS VALID\n");
 			return pantheon::Result::SYS_FAIL;
 		}
 
@@ -687,7 +685,6 @@ pantheon::Result pantheon::SVCSendRequest(pantheon::TrapFrame *CurFrame)
 		pantheon::Result Res = Conn->Send(Region);
 		if (Res != pantheon::Result::SYS_OK)
 		{
-			SERIAL_LOG("SEND RESULT WAS BAD\n");
 			return Res;
 		}
 
@@ -697,6 +694,33 @@ pantheon::Result pantheon::SVCSendRequest(pantheon::TrapFrame *CurFrame)
 		pantheon::ScopedGlobalSchedulerLock _GL;
 		pantheon::GlobalScheduler::RemoveFromReadyList(CurThread);
 	}
+
+
+	return pantheon::Result::SYS_OK;
+}
+
+pantheon::Result pantheon::SvcSleep(pantheon::TrapFrame *CurFrame)
+{
+	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
+	pantheon::ScopedLock _L(CurProc);
+
+	UINT64 Nanos = ReadArgumentAsInteger(CurFrame->Regs[0]);
+	if (Nanos == 0)
+	{
+		/* Why are you trying to sleep? */
+		return pantheon::Result::SYS_OK;
+	}
+
+	/* This is a time in nanoseconds, so we should convert that to jiffies... */
+	UINT64 JiffiesPerSecond = pantheon::GetSystemTimerClock();
+	UINT64 RoundedUp = (Nanos + (JiffiesPerSecond - 1)) / JiffiesPerSecond;
+
+	/* The total number of jiffies that has to be slept for is RoundedUp. */
+	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
+	pantheon::ScopedLock _TL(CurThread);
+	CurThread->SetTimeout(RoundedUp);
+
+	/* This thread will be blocked until we get a reason to connect it back... */
 
 
 	return pantheon::Result::SYS_OK;
@@ -726,6 +750,7 @@ SyscallFn syscall_table[] =
 	(SyscallFn)pantheon::SVCReplyAndRecieve,
 	(SyscallFn)pantheon::SVCCloseHandle,
 	(SyscallFn)pantheon::SVCSendRequest,
+	(SyscallFn)pantheon::SvcSleep,
 };
 
 UINT64 pantheon::SyscallCount()

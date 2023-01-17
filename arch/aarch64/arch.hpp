@@ -44,6 +44,11 @@ FORCE_INLINE VOID RearmSystemTimer()
 	pantheon::arm::RearmSystemTimer();
 }
 
+FORCE_INLINE UINT64 GetSystemTimerClock()
+{
+	return pantheon::arm::GetSystemTimerClock();
+}
+
 namespace CPU
 {
 

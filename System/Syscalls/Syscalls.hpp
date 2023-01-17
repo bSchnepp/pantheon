@@ -34,6 +34,7 @@ Result SVCAcceptConnection(pantheon::TrapFrame *CurFrame);
 Result SVCReplyAndRecieve(pantheon::TrapFrame *CurFrame);
 Result SVCCloseHandle(pantheon::TrapFrame *CurFrame);
 Result SVCSendRequest(pantheon::TrapFrame *CurFrame);
+Result SvcSleep(pantheon::TrapFrame *CurFrame);
 
 UINT64 SyscallCount();
 BOOL CallSyscall(UINT32 Index, pantheon::TrapFrame *Frame);
