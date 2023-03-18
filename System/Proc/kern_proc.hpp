@@ -39,6 +39,7 @@ typedef enum ProcessCreateFlags
 
 typedef struct ProcessCreateInfo
 {
+	UINT32 ID;
 	String Name;
 	pantheon::vmm::VirtualAddress EntryPoint;
 
@@ -95,6 +96,7 @@ public:
 
 	static const constexpr UINT64 StackPages = 16;
 	static const constexpr pantheon::vmm::VirtualAddress StackAddr = 0xFFFFFFFFF000;
+	static const constexpr pantheon::vmm::VirtualAddress ThreadLocalBase = 0xFFFFFF000000;
 
 	/**
 	 * @brief Obtains the process ID for this process
@@ -129,16 +131,8 @@ public:
 	 */
 	static void Switch(Process *Next)
 	{
-		if (Next == nullptr)
-		{
-			return;
-		}
-		
-		pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
-		if (CurProc && CurProc != Next)
-		{
-			pantheon::CPUReg::W_TTBR0_EL1(Next->GetTTBR0());
-		}
+		pantheon::CPUReg::W_TTBR0_EL1(Next->GetTTBR0());
+		pantheon::CPU::GetCoreInfo()->CurProcess = Next;
 	}
 
 private:

@@ -81,7 +81,7 @@ static void RunElf(ELFFileHeader64 Header, const char *ElfLocation, UINT32 Proc,
 			UEntry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
 			UEntry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
 
-			pantheon::GlobalScheduler::MapPages(Proc, &TargetVAddr, &NewPage, UEntry, 1);
+			pantheon::Scheduler::MapPages(Proc, &TargetVAddr, &NewPage, UEntry, 1);
 		}
 	}
 }
@@ -100,9 +100,12 @@ static void RunExecutable(void *ElfLocation, const char *Name)
 	}
 
 	pantheon::vmm::VirtualAddress Base = pantheon::GenerateALSRBase();
-	UINT32 PID = pantheon::GlobalScheduler::CreateProcess(Name, (void*)(Base + Header().e_entry));
+	UINT32 PID = pantheon::Scheduler::CreateProcess(Name, (void*)(Base + Header().e_entry));
 	RunElf(Header(), (const char*)ElfLocation, PID, Base);
-	pantheon::GlobalScheduler::RunProcess(PID);	
+	pantheon::Scheduler::SetState(PID, pantheon::Process::STATE_RUNNING);	
+
+	/* Create our initial thread */
+	pantheon::Scheduler::CreateThread(PID, (void*)(Base + Header().e_entry), nullptr);
 }
 
 void pantheon::UnpackInitPrograms()

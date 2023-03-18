@@ -8,3 +8,10 @@ extern "C" void _start()
 	svc_ExitProcess();
 	for (;;) {}
 }
+
+ThreadLocalRegion *GetTLS(void)
+{
+	ThreadLocalRegion *RetVal = nullptr;
+	asm volatile ("mrs %0, tpidrro_el0\n" : "=r"(RetVal) ::);
+	return RetVal;
+}

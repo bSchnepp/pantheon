@@ -64,10 +64,7 @@ pantheon::Thread::Thread(Process *OwningProcess, Priority Pri) : pantheon::Locka
 	this->Registers.Wipe();
 	this->CurState = pantheon::Thread::STATE_INIT;
 
-	this->TID = AcquireThreadID();
-
-	/* 45 for NORMAL, 30 for LOW, 15 for VERYLOW, etc. */
-	this->RefreshTicks();
+	this->TID = 0;
 	this->Unlock();
 }
 
@@ -137,7 +134,7 @@ pantheon::Process *pantheon::Thread::MyProc() const
 pantheon::Thread::State pantheon::Thread::MyState() const
 {
 	OBJECT_SELF_ASSERT();
-	UINT64 State = this->CurState;	/* ubsan says this is a problem. */
+	UINT64 State = this->CurState;
 	if (State > pantheon::Thread::STATE_MAX)
 	{
 		StopErrorFmt("Invalid thread state: got 0x%lx\n", this->CurState);
@@ -164,45 +161,29 @@ pantheon::Thread::Priority pantheon::Thread::MyPriority() const
 /**
  * \~english @brief Checks if this thread is valid to interrupt at this moment
  * \~english @author Brian Schnepp
- * \~english @return 0 if not doing system work currently, 1 otherwise.
+ * \~english @return 0 if not doing system work currently, positive integer otherwise.
  */
 [[nodiscard]]
-BOOL pantheon::Thread::Preempted() const
+INT64 pantheon::Thread::Preempted() const
 {
 	OBJECT_SELF_ASSERT();
 	return this->PreemptCount != 0;
 }
 
 /**
- * \~english @brief Gets the number of timer interrupts remaining for the thread
- * \~english @author Brian Schnepp
- * \~english @return The number of times the processor core will need to be
- * interrupted before the thread is preempted and some other work resumes on
- * the current processor core.
- */
-UINT64 pantheon::Thread::TicksLeft() const
-{
-	OBJECT_SELF_ASSERT();
-	return this->RemainingTicks.Load();
-}
-
-/**
  * \~english @brief Counts down the number of timer interrupts for this thread
  * \~english @author Brian Schnepp
  */
-VOID pantheon::Thread::CountTick()
+INT64 pantheon::Thread::CountTick()
 {
 	OBJECT_SELF_ASSERT();
-	if (this->IsLocked() == FALSE)
+	pantheon::ScopedLock _L(this);
+	if (this->RemainingTicks.Load() <= 0)
 	{
-		StopError("CountTicks without lock");
+		this->SetTicks(0);
+		return 0;
 	}
-
-	if (this->RemainingTicks == 0)
-	{
-		return;
-	}
-	this->RemainingTicks.Store(this->RemainingTicks.Load() - 1);
+	return this->RemainingTicks.Sub(1);
 }
 
 [[nodiscard]]
@@ -210,30 +191,6 @@ UINT64 pantheon::Thread::ThreadID() const
 {
 	OBJECT_SELF_ASSERT();
 	return this->TID;
-}
-
-/**
- * \~english @brief Forcefully adds execution time to the current process.
- * \~english @author Brian Schnepp
- */
-VOID pantheon::Thread::AddTicks(UINT64 TickCount)
-{
-	OBJECT_SELF_ASSERT();
-	if (this->IsLocked() == FALSE)
-	{
-		StopError("AddTicks without lock");
-	}
-	this->RemainingTicks.Store(this->RemainingTicks.Load() + TickCount);
-}
-
-VOID pantheon::Thread::RefreshTicks()
-{
-	OBJECT_SELF_ASSERT();
-	if (this->IsLocked() == FALSE)
-	{
-		StopError("RefreshTicks without lock");
-	}
-	this->RemainingTicks = static_cast<UINT64>((this->CurPriority + 1)) * 3;
 }
 
 /**
@@ -245,19 +202,19 @@ VOID pantheon::Thread::SetState(Thread::State St)
 	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
 	{
-		StopError("SetState without lock");
+		StopError("SetState without lock", this);
 	}	
 	this->CurState = St;
 }
 
-VOID pantheon::Thread::SetTicks(UINT64 TickCount)
+VOID pantheon::Thread::SetTicks(INT64 TickCount)
 {
 	OBJECT_SELF_ASSERT();
 	if (this->IsLocked() == FALSE)
 	{
-		StopError("SetTicks without lock");
+		StopError("SetTicks without lock", this);
 	}
-	this->RemainingTicks = TickCount;
+	this->RemainingTicks = (TickCount < 0) ? 0 : TickCount;
 }
 
 /**
@@ -288,11 +245,6 @@ VOID pantheon::Thread::SetPriority(Thread::Priority Pri)
 pantheon::CpuContext *pantheon::Thread::GetRegisters()
 {
 	OBJECT_SELF_ASSERT();
-	if (this->IsLocked() == FALSE)
-	{
-		StopError("GetRegisters without lock");
-	}
-
 	/* TODO: Copy the actual registers to the internal representation! */
 	return &this->Registers;
 }
@@ -340,56 +292,16 @@ pantheon::Thread &pantheon::Thread::operator=(pantheon::Thread &&Other) noexcept
 	return *this;
 }
 
-void pantheon::Thread::SetKernelStackAddr(UINT64 Addr)
-{
-	OBJECT_SELF_ASSERT();
-	if (this->IsLocked() == FALSE)
-	{
-		StopError("SetKernelStackAddr without lock");
-	}
-
-	this->Registers.SetSP(Addr);
-	this->KernelStackSpace = reinterpret_cast<void*>((CHAR*)Addr);
-}
-
-void pantheon::Thread::SetUserStackAddr(UINT64 Addr)
-{
-	OBJECT_SELF_ASSERT();
-	if (this->IsLocked() == FALSE)
-	{
-		StopError("SetUserStackAddr without lock");
-	}
-
-	this->Registers.SetSP(Addr);
-	this->UserStackSpace = reinterpret_cast<void*>((CHAR*)Addr);
-}
-
-void pantheon::Thread::SetProc(pantheon::Process *Proc)
-{
-	OBJECT_SELF_ASSERT();
-	if (this->IsLocked() == FALSE)
-	{
-		StopError("SetProc without lock");
-	}	
-	this->ParentProcess = Proc;
-}
-
 void pantheon::Thread::BlockScheduling()
 {
 	OBJECT_SELF_ASSERT();
-	pantheon::Sync::DSBISH();
-	this->PreemptCount.Store(this->PreemptCount.Load() + 1);
-	pantheon::Sync::DSBISH();
+	this->PreemptCount.Add(1LL);
 }
 
 void pantheon::Thread::EnableScheduling()
 {
 	OBJECT_SELF_ASSERT();
-	this->Lock();
-	pantheon::Sync::DSBISH();
-	this->PreemptCount.Store(this->PreemptCount.Load() - 1);
-	pantheon::Sync::DSBISH();
-	this->Unlock();
+	this->PreemptCount.Sub(1LL);
 }
 
 extern "C" VOID drop_usermode(UINT64 PC, UINT64 PSTATE, UINT64 SP);
@@ -400,9 +312,14 @@ static void true_drop_process(void *StartAddress, pantheon::vmm::VirtualAddress 
 	drop_usermode((UINT64)StartAddress, 0x00, StackAddr);
 }
 
-void pantheon::Thread::Initialize(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority, BOOL UserMode)
+void pantheon::Thread::Initialize(UINT64 TID, pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority, BOOL UserMode)
 {
 	static constexpr UINT64 InitialThreadStackSize = pantheon::vmm::SmallestPageSize * pantheon::Thread::InitialNumStackPages;
+	this->TID = TID;
+	this->CurState = pantheon::Thread::STATE_DEAD;
+
+	this->Lock();
+
 	Optional<void*> StackSpace = BasicMalloc(InitialThreadStackSize);
 	if (StackSpace.GetOkay())
 	{
@@ -412,7 +329,6 @@ void pantheon::Thread::Initialize(pantheon::Process *Proc, void *StartAddr, void
 		#endif
 		IStackSpace += InitialThreadStackSize;
 		this->ParentProcess = Proc;
-		this->Lock();
 
 		UINT64 IStartAddr = (UINT64)true_drop_process;
 		UINT64 IThreadData = (UINT64)ThreadData;
@@ -425,23 +341,32 @@ void pantheon::Thread::Initialize(pantheon::Process *Proc, void *StartAddr, void
 		}
 		this->SetState(pantheon::Thread::STATE_WAITING);
 		this->SetPriority(Priority);
-		this->Unlock();
 	}
-}
 
-[[nodiscard]] BOOL pantheon::Thread::End() const
-{
-	return this->NextThread == nullptr;
-}
+	/* Don't create a TLS for kernel threads */
+	if (UserMode)
+	{
+		this->LocalRegion = pantheon::Process::ThreadLocalBase + (this->ThreadID() * 0x1000);
 
-pantheon::Thread *pantheon::Thread::Next()
-{
-	return this->NextThread.Load();
-}
+		/* Map in the TLR. */
+		pantheon::vmm::PageTableEntry Entry;
+		Entry.SetBlock(TRUE);
+		Entry.SetMapped(TRUE);
+		Entry.SetUserNoExecute(TRUE);
+		Entry.SetKernelNoExecute(TRUE);
 
-void pantheon::Thread::SetNext(pantheon::Thread *Item)
-{
-	this->NextThread = Item;
+		/* Yuck. But we need to make page permissions less bad...*/
+		UINT64 PagePermission = 0x1 << 6;
+		Entry.SetPagePermissions(PagePermission);
+
+		Entry.SetSharable(pantheon::vmm::PAGE_SHARABLE_TYPE_INNER);
+		Entry.SetAccessor(pantheon::vmm::PAGE_MISC_ACCESSED);
+		Entry.SetMAIREntry(pantheon::vmm::MAIREntry_1);
+
+		pantheon::ScopedLock _L(this->MyProc());
+		this->MyProc()->MapAddress(this->LocalRegion, pantheon::PageAllocator::Alloc(), Entry);
+	}
+	this->Unlock();	
 }
 
 pantheon::Thread::ThreadLocalRegion *pantheon::Thread::GetThreadLocalArea() 
@@ -451,4 +376,18 @@ pantheon::Thread::ThreadLocalRegion *pantheon::Thread::GetThreadLocalArea()
 	pantheon::vmm::PhysicalAddress PhyAddr = pantheon::vmm::VirtualToPhysicalAddress(Proc->GetPageTable(), this->LocalRegion);
 	pantheon::vmm::VirtualAddress VirtAddr = pantheon::vmm::PhysicalToVirtualAddress(PhyAddr);
 	return reinterpret_cast<ThreadLocalRegion*>(VirtAddr);
+}
+
+/**
+ * @brief Switches thread context to another thread
+ */
+void pantheon::Thread::Switch(pantheon::Thread *CurThread, pantheon::Thread *NextThread)
+{
+	NextThread->SetState(Thread::STATE_RUNNING);
+	NextThread->SetTicks(Thread::RR_INTERVAL);
+
+	pantheon::ipc::SetThreadLocalRegion(NextThread->LocalRegion);
+	pantheon::CPU::GetCoreInfo()->CurThread = NextThread;
+
+	CurThread->SetState(pantheon::Thread::STATE_WAITING);
 }

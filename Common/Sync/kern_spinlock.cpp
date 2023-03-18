@@ -29,15 +29,17 @@ pantheon::Spinlock::~Spinlock()
 
 void pantheon::Spinlock::Acquire()
 {
+	OBJECT_SELF_ASSERT();
+
 	if (this->DebugName == nullptr)
 	{
-		StopError("bad spinlock", this);
+		StopErrorFmt("Bad Spinlock: was nullptr\n");
 	}
 	
 	pantheon::CPU::PUSHI();
 	if (this->IsHolding())
 	{
-		StopError(this->DebugName, this);
+		StopErrorFmt("Spinlock: %s (source %p), trying to acquire when already held", this->DebugName, this);
 	}
 
 	for (;;)
@@ -55,16 +57,51 @@ void pantheon::Spinlock::Acquire()
 	__sync_synchronize();
 }
 
+BOOL pantheon::Spinlock::TryAcquire()
+{
+	OBJECT_SELF_ASSERT();
+
+	if (this->DebugName == nullptr)
+	{
+		StopErrorFmt("Bad Spinlock: was nullptr\n");
+	}
+	
+	pantheon::CPU::PUSHI();
+	if (this->IsHolding())
+	{
+		StopErrorFmt("Spinlock: %s (source %p), trying to (try) acquire when already held", this->DebugName, this);
+	}
+
+	if (__sync_lock_test_and_set(&this->Locked, TRUE) == FALSE)
+	{
+		this->CoreNo = pantheon::CPU::GetProcessorNumber();
+		__sync_synchronize();
+		return TRUE;
+	}
+	
+	while (__atomic_load_n(&this->Locked, __ATOMIC_RELAXED))
+	{
+		pantheon::CPU::PAUSE();
+	}	
+	__sync_synchronize();
+	pantheon::CPU::POPI();
+	return FALSE;
+}
+
 void pantheon::Spinlock::Release()
 {
+	OBJECT_SELF_ASSERT();
+	
+	__sync_synchronize();
 	if (!this->IsHolding())
 	{
-		pantheon::StopError(this->DebugName, this);
+		StopErrorFmt("Spinlock: %s (source %p), trying to release when not held (holder is %hd)\n", this->DebugName, this, this->Holder());
 	}
 	this->CoreNo = -1;
 	__sync_synchronize();
 	__sync_lock_release(&this->Locked);
 	pantheon::CPU::POPI();
+	__sync_synchronize();
 	
 }
 
@@ -82,12 +119,12 @@ BOOL pantheon::Spinlock::IsLocked() const
 
 /**
  * \~english @brief Gets the current holder of this lock, if it is held.
- * \~english @details Returns 0 is this lock isn't held, otherwise gets the core number.
+ * \~english @details Returns -1 is this lock isn't held, otherwise gets the core number.
  * 
  * \~english @author Brian Schnepp
  */
 [[nodiscard]] 
-UINT8 pantheon::Spinlock::Holder() const
+INT16 pantheon::Spinlock::Holder() const
 {
-	return (this->Locked ? this->CoreNo : 0);
+	return (this->Locked ? this->CoreNo : static_cast<INT16>(-1));
 }

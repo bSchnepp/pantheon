@@ -4,6 +4,9 @@
 #include <kern_datatypes.hpp>
 #include <Sync/kern_spinlock.hpp>
 
+
+#include <Common/Structures/kern_slab.hpp>
+
 typedef struct FreeList
 {
 	struct FreeList *Prev;
@@ -12,7 +15,32 @@ typedef struct FreeList
 
 /* Try to align to 32-bytes, so that allocations can be bitpacked nicely. */
 typedef UINT64 BlockHeader;
-static constexpr UINT64 HeapSpace = 2ULL * 1024ULL * 1024ULL;
+
+typedef struct TinyContent
+{
+	UINT64 Data[4];
+}TinyContent;
+
+typedef struct SmallContent
+{
+	UINT64 Data[0x60];
+}SmallContent;
+
+typedef struct LargeContent
+{
+	UINT64 Data[0x1000];
+}LargeContent;
+
+static constexpr UINT64 HeapSpace = 512ULL * 1024ULL;
+
+alignas(0x1000) static TinyContent TinySlabCache[2 * 1024];
+alignas(0x1000) static SmallContent SmallSlabCache[256];
+alignas(0x1000) static LargeContent LargeSlabCache[8];
+
+static pantheon::mm::SlabCache<TinyContent> SlabTinyContent((VOID*)TinySlabCache, 2 * 1024);
+static pantheon::mm::SlabCache<SmallContent> SlabSmallContent((VOID*)SmallSlabCache, 256);
+static pantheon::mm::SlabCache<LargeContent> SlabLargeContent((VOID*)LargeSlabCache, 8);
+
 static constexpr UINT64 MinBlockSize = sizeof(FreeList) + (2 * sizeof(BlockHeader));
 COMPILER_ASSERT(MinBlockSize == 32);
 
@@ -155,6 +183,23 @@ Optional<void*> BasicMalloc(UINT64 Amt)
 	}
 
 	AllocLock.Acquire();
+	if (Amt <= sizeof(TinyContent) && !SlabTinyContent.Full())
+	{
+		TinyContent *Content = SlabTinyContent.Allocate();
+		AllocLock.Release();
+		return Optional<void*>(Content);
+	} else if (Amt <= sizeof(SmallContent) && !SlabSmallContent.Full()) {
+		SmallContent *Content = SlabSmallContent.Allocate();
+		AllocLock.Release();
+		return Optional<void*>(Content);
+	} else if (Amt <= sizeof(LargeContent) && !SlabLargeContent.Full()) {
+		LargeContent *Content = SlabLargeContent.Allocate();
+		AllocLock.Release();
+		return Optional<void*>(Content);
+	}
+
+	/* Give up and use original explicit free list implementation */
+
 	UINT64 Amount = Max(Align(Amt, (sizeof(BlockHeader))), MinBlockSize);
 	FreeList *Final = nullptr;
 
@@ -200,7 +245,22 @@ void BasicFree(void *Addr)
 	}
 
 	AllocLock.Acquire();
-	
+
+	if (SlabTinyContent.InRange((TinyContent*)Addr))
+	{
+		SlabTinyContent.Deallocate((TinyContent*)Addr);
+		AllocLock.Release();
+		return;
+	} else if (SlabSmallContent.InRange((SmallContent*)Addr)) {
+		SlabSmallContent.Deallocate((SmallContent*)Addr);
+		AllocLock.Release();
+		return;
+	} else if (SlabLargeContent.InRange((LargeContent*)Addr)) {
+		SlabLargeContent.Deallocate((LargeContent*)Addr);
+		AllocLock.Release();
+		return;
+	}
+
 	/* Ensure the current block is consistent, ie, no double frees */
 	CHAR *ActualAddr = (CHAR*)Addr;
 	if (GetAlloc(GetHeader((CHAR*)Addr)) == FALSE)
@@ -251,5 +311,5 @@ void *operator new(UINT64 Sz)
 
 void operator delete(void *Ptr)
 {
-	PANTHEON_UNUSED(Ptr);
+	BasicFree(Ptr);
 }

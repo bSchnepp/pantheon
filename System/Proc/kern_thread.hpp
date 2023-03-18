@@ -64,6 +64,7 @@ public:
 		STATE_INIT,
 		STATE_RUNNING,
 		STATE_WAITING,
+		STATE_BLOCKED,
 		STATE_TERMINATED,
 		STATE_MAX,
 	}State;
@@ -78,6 +79,8 @@ public:
 		PRIORITY_MAX,
 	}Priority;
 
+	static constexpr UINT64 RR_INTERVAL = 6;
+
 public:
 	Thread();
 	Thread(Process *ParentProcess);
@@ -86,46 +89,38 @@ public:
 	Thread(Thread &&Other) noexcept;
 	~Thread() override;
 
-	void Initialize(pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority, BOOL UserMode);
+	void Initialize(UINT64 TID, pantheon::Process *Proc, void *StartAddr, void *ThreadData, pantheon::Thread::Priority Priority, BOOL UserMode);
 
 	[[nodiscard]] Process *MyProc() const;
-
 	[[nodiscard]] Thread::State MyState() const;
 	[[nodiscard]] Thread::Priority MyPriority() const;
-
-	[[nodiscard]] UINT64 TicksLeft() const;
 	[[nodiscard]] UINT64 ThreadID() const;
 
-	VOID AddTicks(UINT64 TickCount);
-	VOID CountTick();
-	VOID RefreshTicks();
-	VOID SetTicks(UINT64 TickCount);
+	INT64 CountTick();
+	VOID SetTicks(INT64 TickCount);
 
 	VOID SetState(Thread::State State);
 	VOID SetPriority(Thread::Priority Priority);
 
-	VOID SetEntryLocation(UINT64 IP, UINT64 SP, VOID* ThreadData);
-
 	CpuContext *GetRegisters();
-	void SetUserStackAddr(UINT64 Addr);
-	void SetKernelStackAddr(UINT64 Addr);
+	ThreadLocalRegion *GetThreadLocalArea();
 	[[nodiscard]] pantheon::vmm::VirtualAddress GetThreadLocalAreaRegister() const { return this->LocalRegion; }
 
 	Thread &operator=(const Thread &Other);
 	Thread &operator=(Thread &&Other) noexcept;
 
-	void SetProc(pantheon::Process *Proc);
-
 	void BlockScheduling();
 	void EnableScheduling();
-	[[nodiscard]] BOOL Preempted() const;
+	[[nodiscard]] INT64 Preempted() const;
 
-	[[nodiscard]] BOOL End() const;
-	Thread *Next();
-	void SetNext(pantheon::Thread *Item);
 
-	ThreadLocalRegion *GetThreadLocalArea();
-	
+	/**
+	 * @brief Switches thread context to another thread
+	 */
+	static void Switch(Thread *CurThread, Thread *NextThread);
+
+private:
+	VOID SetEntryLocation(UINT64 IP, UINT64 SP, VOID* ThreadData);
 
 private:
 	UINT64 TID;
@@ -136,8 +131,8 @@ private:
 	Thread::State CurState;
 	Thread::Priority CurPriority;
 
-	pantheon::Atomic<UINT64> PreemptCount;
-	pantheon::Atomic<UINT64> RemainingTicks;
+	pantheon::AtomicInteger<INT64> PreemptCount;
+	pantheon::AtomicInteger<INT64> RemainingTicks;
 
 	void *KernelStackSpace;
 	void *UserStackSpace;
@@ -145,8 +140,6 @@ private:
 	pantheon::vmm::VirtualAddress LocalRegion;
 
 	static constexpr UINT64 InitialNumStackPages = 4;
-
-	pantheon::Atomic<pantheon::Thread*> NextThread;
 };
 
 }

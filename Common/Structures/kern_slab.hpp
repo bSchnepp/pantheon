@@ -21,9 +21,7 @@ template<typename T>
 class SlabCache
 {
 public:
-	/* Implicitly assume that sizeof(T) >= sizeof(SlabCache<T>) */
-
-	constexpr SlabCache()
+	SlabCache()
 	{
 		this->Size = 0;
 		this->Used = 0;
@@ -31,7 +29,7 @@ public:
 		this->Area = nullptr;
 	}
 
-	constexpr SlabCache(VOID *Area, UINT16 Count = 64)
+	SlabCache(VOID *Area, UINT16 Count = 64)
 	{
 		this->Area = reinterpret_cast<T*>(Area);
 		#if POISON_MEMORY
@@ -59,10 +57,7 @@ public:
 		this->FreeList = reinterpret_cast<SlabNext<T>*>(this->Area);
 	}
 
-	constexpr ~SlabCache()
-	{
-
-	}
+	constexpr ~SlabCache() = default;
 
 	BOOL InRange(T *Ptr)
 	{
@@ -93,6 +88,16 @@ public:
 			T* NewArea = reinterpret_cast<T*>(Current);
 			this->FreeList = Next;
 			this->Used++;
+#ifdef POISON_MEMORY
+			for (UINT64 Address = (UINT64)Current + sizeof(SlabNext<T>); Address < ((UINT64)Current + sizeof(T)); Address++)
+			{
+				UINT8 *AsBytes = (UINT8*)Address;
+				if (*AsBytes != 0xDF)
+				{
+					pantheon::StopErrorFmt("FOUND MEMORY CORRUPTION IN ALLOCATOR (%lx, address %lx)\n", this, Address);
+				}
+			}
+#endif
 			*NewArea = T();
 			return NewArea;
 		}
@@ -115,6 +120,17 @@ public:
 			T* NewArea = reinterpret_cast<T*>(Current);
 			this->FreeList = Next;
 			this->Used++;
+
+#ifdef POISON_MEMORY
+			for (UINT64 Address = (UINT64)Current + sizeof(SlabNext<T>); Address < ((UINT64)Current + sizeof(T)); Address++)
+			{
+				UINT8 *AsBytes = (UINT8*)Address;
+				if (*AsBytes != 0xDF)
+				{
+					pantheon::StopErrorFmt("FOUND MEMORY CORRUPTION IN ALLOCATOR (%lx, address %lx)\n", this, Address);
+				}
+			}
+#endif
 			return NewArea;
 		}
 		return nullptr;
@@ -134,6 +150,9 @@ public:
 			UINT64 BasePtr = Base + (Area * sizeof(T));
 			if (BasePtr == (UINT64)Ptr)
 			{
+#ifdef POISON_MEMORY
+				SetBufferBytes((UINT8*)Ptr, 0xDF, sizeof(T));
+#endif
 				SlabNext<T> *Next = reinterpret_cast<SlabNext<T>*>(Ptr);
 				Next->Next = FreeList;
 				this->FreeList = Next;

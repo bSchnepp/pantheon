@@ -15,8 +15,9 @@ public:
 
 	void Acquire();
 	void Release();
+	BOOL TryAcquire();
 
-	[[nodiscard]] UINT8 Holder() const;
+	[[nodiscard]] INT16 Holder() const;
 	[[nodiscard]] BOOL IsLocked() const;
 
 	void SetDebugName(const char *Name);
@@ -25,7 +26,7 @@ public:
 private:
 	[[nodiscard]] BOOL IsHolding() const;
 	const char *DebugName;
-	UINT16 CoreNo;
+	INT16 CoreNo;
 	BOOL Locked; 
 };
 

@@ -24,34 +24,6 @@ static T ReadArgument(UINT64 Val)
 	return reinterpret_cast<T>(Val);
 }
 
-
-static const CHAR *ReadArgumentAsCharPointer(UINT64 Val)
-{
-	/* Don't allow reading of kernel memory */
-	if (Val > pantheon::vmm::HigherHalfAddress)
-	{
-		return nullptr;
-	}
-
-	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
-	if (CurProc->IsLocked() == FALSE)
-	{
-		pantheon::StopErrorFmt("Attempt to read userspace memory without CurProc lock (PID %hhu)\n", CurProc->ProcessID());
-	}
-
-	/* Make sure we translate this to something in kernel memory, 
-	 * just to be safe. */
-	pantheon::vmm::VirtualAddress RawPtr = Val;
-	const CHAR *Result = nullptr;
-
-	pantheon::vmm::PhysicalAddress PAddr = pantheon::vmm::VirtualToPhysicalAddress(CurProc->GetPageTable(), RawPtr);
-	pantheon::vmm::VirtualAddress VAddr = pantheon::vmm::PhysicalToVirtualAddress(PAddr);
-
-	Result = reinterpret_cast<const char *>(VAddr);
-
-	return Result;
-}
-
 template<typename T>
 static T *ReadArgumentAsPointer(UINT64 Val)
 {
@@ -103,7 +75,7 @@ VOID pantheon::SVCExitProcess(pantheon::TrapFrame *CurFrame)
 	CurThread->SetState(pantheon::Thread::STATE_DEAD);
 	CurThread->Unlock();
 	
-	pantheon::CPU::GetCoreInfo()->CurSched->Reschedule();
+	pantheon::Scheduler::Reschedule();
 }
 
 pantheon::Result pantheon::SVCForkProcess(pantheon::TrapFrame *CurFrame)
@@ -123,7 +95,7 @@ pantheon::Result pantheon::SVCLogText(pantheon::TrapFrame *CurFrame)
 
 	const CHAR *Data = nullptr;
 	
-	Data = ReadArgumentAsCharPointer(CurFrame->GetIntArgument(0));
+	Data = ReadArgumentAsPointer<const char>(CurFrame->GetIntArgument(0));
 	if (Data == nullptr)
 	{
 		return pantheon::Result::SYS_FAIL;
@@ -180,7 +152,7 @@ pantheon::Result pantheon::SVCCreateNamedEvent(pantheon::TrapFrame *CurFrame)
 	pantheon::ScopedLock ScopeLockProc(Proc);
 
 	const CHAR *Name = nullptr;
-	Name = ReadArgumentAsCharPointer(CurFrame->GetIntArgument(0));
+	Name = ReadArgumentAsPointer<const char>(CurFrame->GetIntArgument(0));
 	
 	INT32 *ReadHandle = nullptr;
 	ReadHandle = ReadArgument<INT32*>(CurFrame->GetIntArgument(1));
@@ -354,13 +326,11 @@ pantheon::Result pantheon::SVCPollEvent(pantheon::TrapFrame *CurFrame)
 pantheon::Result pantheon::SVCYield(pantheon::TrapFrame *CurFrame)
 {
 	PANTHEON_UNUSED(CurFrame);
-	pantheon::Scheduler *CurSched = pantheon::CPU::GetCurSched();
 	{
 		pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 		pantheon::ScopedLock ScopeLockThread(CurThread);
-		CurThread->SetTicks(0);
 	}
-	CurSched->Reschedule();
+	pantheon::Scheduler::Reschedule();
 	return pantheon::Result::SYS_OK;
 }
 
@@ -369,18 +339,17 @@ pantheon::Result pantheon::SVCExitThread(pantheon::TrapFrame *CurFrame)
 	PANTHEON_UNUSED(CurFrame);
 	pantheon::Thread *CurThread = pantheon::CPU::GetCurThread();
 	pantheon::Process *CurProc = CurThread->MyProc();
-	pantheon::Scheduler *CurSched = pantheon::CPU::GetCurSched();
 	CurProc->Lock();
 	CurThread->Lock();
 	CurThread->SetState(pantheon::Thread::STATE_TERMINATED);
 	CurThread->Unlock();
 
-	if (pantheon::GlobalScheduler::CountThreads(CurThread->MyProc()->ProcessID()) == 0)
+	if (pantheon::Scheduler::CountThreads(CurThread->MyProc()->ProcessID()) == 0)
 	{
 		CurProc->SetState(pantheon::Process::STATE_ZOMBIE);
 	}
 	CurProc->Unlock();
-	CurSched->Reschedule();
+	pantheon::Scheduler::Reschedule();
 	return pantheon::Result::SYS_OK;
 }
 
@@ -436,7 +405,7 @@ pantheon::Result pantheon::SVCCreatePort(pantheon::TrapFrame *CurFrame)
 	pantheon::ScopedLock _PL(CurProc);
 
 	CHAR Buffer[pantheon::ipc::PortNameLength] = {0};
-	const CHAR *Location = ReadArgumentAsCharPointer(CurFrame->GetIntArgument(0));
+	const CHAR *Location = ReadArgumentAsPointer<const char>(CurFrame->GetIntArgument(0));
 	CopyString(Buffer, Location, pantheon::ipc::PortNameLength);
 
 	pantheon::ipc::PortName Name;
@@ -487,7 +456,7 @@ pantheon::Result pantheon::SVCConnectToNamedPort(pantheon::TrapFrame *CurFrame)
 	pantheon::Process *CurProc = pantheon::CPU::GetCurProcess();
 	pantheon::ScopedLock _L(CurProc);
 
-	const char *Name = ReadArgumentAsCharPointer(CurFrame->GetIntArgument(0));
+	const char *Name = ReadArgumentAsPointer<const char>(CurFrame->GetIntArgument(0));
 	if (Name == nullptr)
 	{
 		return pantheon::Result::SYS_FAIL;	

@@ -23,8 +23,8 @@ void SERIAL_LOG_UNSAFE(const char *Fmt, ...)
 	va_end(Args);	
 }
 
-static pantheon::Spinlock PanicMutex;
-static pantheon::Spinlock PrintMutex;
+static pantheon::Spinlock PanicMutex("Panic Mutex");
+static pantheon::Spinlock PrintMutex("Print Mutex");
 
 void SERIAL_LOG(const char *Fmt, ...)
 {
@@ -50,16 +50,16 @@ void pantheon::StopError(const char *Reason, void *Source)
 	{
 		if (Source)
 		{
-			SERIAL_LOG_UNSAFE("panic: %s [source: %lx, core %x]\n", Reason, Source, pantheon::CPU::GetProcessorNumber());
+			SERIAL_LOG("panic: %s [source: %lx, core %x]\n", Reason, Source, pantheon::CPU::GetProcessorNumber());
 		}
 		else
 		{
-			SERIAL_LOG_UNSAFE("panic: %s [core %lx]\n", Reason, pantheon::CPU::GetProcessorNumber());
+			SERIAL_LOG("panic: %s [core %lx]\n", Reason, pantheon::CPU::GetProcessorNumber());
 		}
 	}
 	else
 	{
-		SERIAL_LOG_UNSAFE("panic: %s [core %lx]\n", "unknown reason", pantheon::CPU::GetProcessorNumber());
+		SERIAL_LOG("panic: %s [core %lx]\n", "unknown reason", pantheon::CPU::GetProcessorNumber());
 	}
 	
 	/* TODO: stop other cores */
@@ -73,7 +73,7 @@ void pantheon::StopError(const char *Reason, void *Source)
 void pantheon::StopErrorFmt(const char *Fmt, ...)
 {
 	PanicMutex.Acquire();
-	SERIAL_LOG_UNSAFE("panic: ");
+	SERIAL_LOG("panic: ");
 	va_list Args;
 	va_start(Args, Fmt);
 	vprintf(Fmt, Args);
@@ -93,8 +93,6 @@ BOOL pantheon::Panicked()
 
 void pantheon::InitBasicRuntime()
 {
-	PrintMutex = pantheon::Spinlock("print_mutex");
-	PanicMutex = pantheon::Spinlock("panic_mutex");
 }
 
 void _putchar(char c)

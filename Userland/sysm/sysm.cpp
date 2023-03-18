@@ -31,7 +31,11 @@ void sysm_Main()
 		Status = svc_AcceptConnection(ServerPortRegistration, &ServerConnection);
 		if (Status == pantheon::Result::SYS_OK)
 		{
-			/* Reply with nothing, forever. */
+			ThreadLocalRegion *Data = GetTLS();
+			for (UINT16 Index = 0; Index < 1000; Index++)
+			{
+				Data->Payload.Data[Index] = 0xAA;
+			}
 			svc_ReplyAndRecieve(0, nullptr, &ServerConnection);
 			svc_LogText("[sysm] Replying to session");
 		}
